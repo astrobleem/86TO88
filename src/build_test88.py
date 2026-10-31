@@ -1,8 +1,8 @@
 import sys, pathlib, struct
-sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
+sys.path.insert(0, "/Users/macsd/winmine-hack/src")
 from asm88 import assemble
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
+ROOT = pathlib.Path("/Users/macsd/winmine-hack")
 tbl = (ROOT / "artifacts/sites-table.bin").read_bytes()
 import json
 ERRCNT_OFF = json.loads((ROOT / "artifacts/tsr-labels.json").read_text())["errcnt"]
@@ -42,8 +42,11 @@ CASES.append(("imul_a", find(4)))
 CASES.append(("imul_b", find(4)))
 # CC (INT 3, relocation-resolved push) cases. All six sites form three adjacent
 # pairs (push FFFF; push FFFF = callback segment+offset), so each pair is one case:
-# CC,key+1..2=wordA, CC at key+3, wordB at key+4..5, far-jump stub at key+6.
-# The checker pops B then A (LIFO).
+# CC,key+1..2=wordA, CC at key+3, wordB at key+4..5. In the real segment the
+# second site is followed by an FF 36 (PUSH [mem]) instruction, and the fixed
+# TSR verifies exactly those context bytes, so the trampoline reproduces them:
+# FF 36 <scratch> at key+6, far-jump stub at key+10. The checker pops the
+# scratch push, then B, then A (LIFO).
 _cc = json.loads((ROOT / "artifacts/cc-sites.json").read_text())
 _offs = sorted(c["off"] for c in _cc)
 _pairs = [(_offs[i], _offs[i+1]) for i in range(0, len(_offs), 2)]
@@ -51,7 +54,7 @@ assert all(b == a + 3 for a, b in _pairs), _pairs
 CCVAL = [(0x5A5A, 0x1234), (0xABCD, 0x0001), (0xFFFE, 0x8000)]
 for _j, (_a, _b) in enumerate(_pairs):
     _va, _vb = CCVAL[_j]
-    CASES.append((f"ccpair{_j}", dict(idx=("ccp", _a), key=_a, type="ccpair", reg=0, imm=_vb, imm2=_va, len=6, src=0)))
+    CASES.append((f"ccpair{_j}", dict(idx=("ccp", _a), key=_a, type="ccpair", reg=0, imm=_vb, imm2=_va, len=10, src=0)))
 
 SHIFT_OP = {1: "SHL", 2: "SHR", 3: "SAR"}
 OPERAND = {1: 0x5A3C, 2: 0xA5C3, 3: 0x96C3}
@@ -165,6 +168,11 @@ def gen(padstart):
             L.append(f" CALL fail_{i}")
             L.append(f"vok_{i}:")
         elif s["type"] == "ccpair":
+            L.append(" POP AX")
+            L.append(" CMP AX, 17767")
+            L.append(f" JE sok3_{i}")
+            L.append(f" CALL fail_{i}")
+            L.append(f"sok3_{i}:")
             L.append(" POP AX")
             L.append(f" CMP AX, {s['imm']}")
             L.append(f" JE vok_{i}")
@@ -409,6 +417,7 @@ def gen(padstart):
     L.append("lastfail: DB 0")
     L.append("nfhit: DB 0")
     L.append("ccnhit: DB 0")
+    L.append("scratch: DW 17767")
     return "\n".join(L)
 
 # pass 1: discover tramp offset
@@ -437,8 +446,11 @@ for i, (name, s) in enumerate(CASES):
         struct.pack_into("<H", img, fo + 1, s["imm2"])
         img[fo+3] = 0xCC
         struct.pack_into("<H", img, fo + 4, s["imm"])
-        img[fo+6] = 0xEA
-        struct.pack_into("<H", img, fo + 7, labels[f"chk_{i}"])
+        img[fo+6] = 0xFF
+        img[fo+7] = 0x36
+        struct.pack_into("<H", img, fo + 8, labels["scratch"])
+        img[fo+10] = 0xEA
+        struct.pack_into("<H", img, fo + 11, labels[f"chk_{i}"])
     else:
         img[fo] = 0xCD
         img[fo+1] = 0xF8

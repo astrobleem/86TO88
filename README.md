@@ -20,9 +20,17 @@ an 8088-based Tandy 1000 EX (7.16 MHz, 640 KB). It is a small DOS TSR plus a
 | Imports `ShellAbout` from module `SHELL` ordinal 22; Windows 3.0 has no `SHELL.DLL` | We ship a 361-byte `SHELL.DLL` exporting exactly that entry (it forwards the app's own strings to `MessageBox`) plus `WEP` |
 | Everything else (`KERNEL`, `USER`, `GDI`, `SOUND` imports) | Resolves to genuine Windows 3.0 components — module `SOUND` is provided by the stock `SOUND.DRV`. **No Windows file is patched, hooked, or replaced** |
 
-Safety: before hooking anything, the TSR verifies the target (file size,
-MZ/NE signatures, version bytes, and a reconstruction of every trap site).
-An unrecognized binary is left completely alone.
+Safety: before tracking any handle, the TSR verifies the opened file in
+full — exact size (27,776 bytes) and a CRC-32 of the entire contents — so a
+foreign file that merely shares the name `WINMINE.EXE` is never patched.
+Tracked handles are keyed by (handle, owning PSP) and purged when the
+owning process exits, because DOS closes a dead process's files internally
+and recycles the handle number; a recycled handle can therefore never
+inherit the patch. The `INT 3h` handler verifies the surrounding
+instruction bytes in memory before emulating a site, and the `INT F8h`
+lookup is range-checked: traps from unrelated code are chained to the
+previous handler or counted as errors, never mis-emulated. An
+unrecognized binary is left completely alone.
 
 ## What you supply
 
@@ -58,15 +66,46 @@ preference persistence to `WINMINE.INI`, a logically solved **win** (best-time
 dialog, `Time1=801` recorded by the game itself), and a **loss** with all ten
 mines exposed. DOS-level suites (`tests/TEST88.COM`, `tests/RTEST2.COM`)
 verify the instruction emulation (flags/stack/registers) and the read
-interception (partial/overlapping reads, seeks, EOF) exactly.
+interception (partial/overlapping reads, seeks, EOF) exactly; the
+handle-safety suite (`tests/LEAK.COM`, `CHECK.COM`, `FCHECK.COM`) and the
+trap-ownership probes (`tests/T88B.COM`) verify that recycled handles,
+same-named foreign files, and colliding trap offsets in unrelated code are
+never patched or emulated. Those four review findings were reproduced
+against the original TSR and are fixed in the current build
+(`WM88TSR.COM` SHA-256 `c04950d3…`, 12,316 bytes); the fixed TSR was then
+re-run through the full Windows gameplay regression (window opens, flag
+plants with the counter decrementing, numbered reveal with the timer
+running — see `evidence/fixed-tsr-*.png`).
 
 > **Caveat:** the full *Windows* sessions above ran on an **emulated 286**
 > (DOSBox-X `cputype=286`), because DOSBox-X's 8086 core hangs even a
 > completely stock Windows 3.0 — an emulator limitation, confirmed with
 > unmodified boot disks. The emulation handler itself is CPU-exact and the
 > DOS suites pass on 8088-class settings, but **literal-8088 end-to-end
-> validation (PCjs, DOSBox-X `machine=tandy`, physical Tandy 1000 EX) is
-> still in progress and is not claimed here.**
+> validation on physical hardware (Tandy 1000 EX) is still outstanding and
+> is not claimed here.**
+>
+> The literal-8088 question has since been bisected on two further,
+> independent emulators:
+>
+> * **PCjs** — the identical XT machine, BIOS, chipset, and hard disk with
+>   *only the CPU model swapped* from 8088 to 80286 boots Windows 3.0 to
+>   Program Manager (`evidence/pcjs-xt286cpu-*.png`); with the 8088 model it
+>   dies in real-mode KERNEL startup (wild far transfer while loading the
+>   display driver).
+> * **86Box** — stock Windows 3.0 on an XT/8088 (ibmxt86, 4.77 MHz, EGA)
+>   shows the Windows splash, then wedges on a black screen: no disk I/O,
+>   host CPU spinning, interrupts dead (`evidence/emu86-8088-blackhang.png`).
+>   Keyboard type, DOS `CONFIG.SYS` drivers, and mouse presence were each
+>   bisected out as causes. The *same disk image* on an XT Model 286
+>   (80286, 6 MHz) boots all the way to Program Manager
+>   (`evidence/emu86-xt286-progman.png`).
+>
+> Windows 3.0 demonstrably ran on real 8088 machines, so the remaining gap
+> is emulator 8088-core fidelity in real-mode KERNEL startup, seen
+> independently in both PCjs and 86Box — not the disk image, the Windows
+> installation, or this bridge (the bridge's DOS-level suites already pass
+> on 8088-class cores).
 
 Real vs simulated: all of Windows and 100% of the game logic are the genuine
 original code. The single simulated piece is `ShellAbout`: instead of the
@@ -74,7 +113,7 @@ richer 3.1 About box you get a plain `MessageBox` with the app's name and
 "by Robert Donner and Curt Johnson". No game API is stubbed.
 
 Performance (DOSBox-X, 10,000 fixed cycles): DOS boot → playable window in
-about 2.3 s. The TSR is 10,253 bytes on disk, ≈9.3 KB resident. On a real
+about 2.3 s. The TSR is 12,316 bytes on disk, ≈11 KB resident. On a real
 7.16 MHz 8088 expect slower flood-fill redraws; functional, not yet measured.
 
 ## Repository layout

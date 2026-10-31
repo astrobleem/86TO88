@@ -1,8 +1,8 @@
 import sys, pathlib
-sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
+sys.path.insert(0,"/Users/macsd/winmine-hack/src")
 from asm88 import assemble
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
+ROOT=pathlib.Path("/Users/macsd/winmine-hack")
 tbl=(ROOT/"artifacts/sites-table.bin").read_bytes()
 pb=(ROOT/"artifacts/patchbytes.bin").read_bytes()
 def db_lines(data):
@@ -33,6 +33,18 @@ handler:
  MOV AX, [BP+2]
  SUB AX, 2
  MOV CS:[site_off], AX
+ ; explicit range check: a key below the first table entry would otherwise
+ ; underflow DI to FFFFh in the search and read far outside the table
+ MOV AX, [table]
+ CMP CS:[site_off], AX
+ JB notfound
+ MOV BX, __NF8M1__
+ SHL BX, 1
+ SHL BX, 1
+ SHL BX, 1
+ MOV AX, [BX+table]
+ CMP CS:[site_off], AX
+ JA notfound
  XOR SI, SI
  MOV DI, __NF8M1__
 bs_loop:
@@ -212,9 +224,29 @@ int3h:
 cc_scan:
  MOV AX, CS:[site_off]
  CMP AX, CS:[SI+cctab]
- JE cc_found
- ADD SI, 2
+ JE cc_match
+ ADD SI, 4
  LOOP cc_scan
+ JMP cc_chain
+cc_match:
+ ; offset match is not enough: verify the runtime context in the caller's
+ ; code segment so a foreign INT 3 at the same offset is never intercepted.
+ ; entry: [off][ctx3][ctx4]; ctx4=0 means "do not check" (loader-written).
+ MOV AX, [BP+4]
+ MOV ES, AX
+ MOV BX, CS:[site_off]
+ CMP BYTE ES:[BX], 0CCh
+ JNE cc_chain
+ MOV AL, CS:[SI+cctab+2]
+ CMP ES:[BX+3], AL
+ JNE cc_chain
+ MOV AL, CS:[SI+cctab+3]
+ CMP AL, 0
+ JE cc_found
+ CMP ES:[BX+4], AL
+ JNE cc_chain
+ JMP cc_found
+cc_chain:
  POP ES
  POP DS
  POP DI
@@ -274,7 +306,55 @@ hk_2: CMP AH, 042h
 hk_3: CMP AH, 03Eh
  JNE hk_4
  JMP h_close
-hk_4: JMPL CS:[old21]
+hk_4: CMP AH, 04Ch
+ JE h_term
+ CMP AH, 0
+ JE h_term
+ JMPL CS:[old21]
+; ---- TERMINATE (00h/4Ch): drop every record owned by the exiting PSP ----
+; A program that exits without closing the target must not leave a stale
+; handle number behind for DOS to reuse against an unrelated file.
+h_term:
+ PUSH AX
+ PUSH BX
+ PUSH CX
+ PUSH DX
+ PUSH SI
+ PUSH DI
+ PUSH DS
+ PUSH ES
+ CALL get_psp
+ MOV CS:[cur_psp], AX
+ XOR SI, SI
+tm_loop:
+ CMP WORD CS:[SI+handles], 0FFFFh
+ JE tm_next
+ MOV AX, CS:[SI+handles+6]
+ CMP AX, CS:[cur_psp]
+ JNE tm_next
+ MOV WORD CS:[SI+handles], 0FFFFh
+tm_next:
+ ADD SI, 8
+ CMP SI, 128
+ JB tm_loop
+ POP ES
+ POP DS
+ POP DI
+ POP SI
+ POP DX
+ POP CX
+ POP BX
+ POP AX
+ JMPL CS:[old21]
+; get_psp: returns current PSP segment in AX (preserves all other regs)
+get_psp:
+ PUSH BX
+ MOV AH, 62h
+ PUSHF
+ CALLI CS:[old21]
+ MOV AX, BX
+ POP BX
+ RET
 ; ---- OPEN ----
 h_open:
  PUSH AX
@@ -343,6 +423,13 @@ fo_done:
  JE open_done
  TEST WORD [BP+6], 1
  JNZ open_done
+ ; filename matched, but that is not proof: fully verify size + CRC32 of
+ ; the just-opened file before tracking it (foreign WINMINE.EXE rejected)
+ MOV CS:[vfy_handle], AX
+ CALL verify_target
+ CMP BYTE CS:[vf_ok], 0
+ JE open_done
+ MOV AX, CS:[vfy_handle]
  MOV BX, AX
  CALL find_slot
  CMP BX, 0FFFFh
@@ -350,6 +437,8 @@ fo_done:
  MOV CS:[BX+handles], AX
  MOV WORD CS:[BX+handles+2], 0
  MOV WORD CS:[BX+handles+4], 0
+ CALL get_psp
+ MOV CS:[BX+handles+6], AX
 open_done:
  POP ES
  POP DS
@@ -366,21 +455,29 @@ find_slot:
  XOR BX, BX
 fs_loop: CMP WORD CS:[BX+handles], 0FFFFh
  JE fs_ret
- ADD BX, 6
- CMP BX, 96
+ ADD BX, 8
+ CMP BX, 128
  JB fs_loop
  MOV BX, 0FFFFh
 fs_ret: RET
-; find_handle: BX=handle in; returns BX=slot offset or FFFF; preserves AX,CX,DX,SI,DI
+; find_handle: BX=handle in; returns BX=slot offset or FFFF.
+; A record only matches when BOTH the handle number and the current PSP
+; match, so a reused handle number from another program can never alias.
+; preserves AX,CX,DX,SI,DI
 find_handle:
  PUSH AX
  PUSH SI
+ CALL get_psp
+ MOV CS:[cur_psp], AX
  XOR SI, SI
 fh_loop: MOV AX, CS:[SI+handles]
  CMP AX, BX
+ JNE fh_next
+ MOV AX, CS:[SI+handles+6]
+ CMP AX, CS:[cur_psp]
  JE fh_yes
- ADD SI, 6
- CMP SI, 96
+fh_next: ADD SI, 8
+ CMP SI, 128
  JB fh_loop
  POP SI
  POP AX
@@ -592,8 +689,106 @@ cl_pre_done:
  POP BX
  POP AX
  JMPL CS:[old21]
+; ---- verify_target: CS:[vf_handle] -> CS:[vf_ok]=1 iff exact pinned file ----
+; Runs after the real open has returned, calling the original INT 21 vector
+; directly. Filename alone is never trusted: size must be exactly 27776 and
+; the CRC32 of the entire file must match the pinned specimen. The file
+; position is always restored to 0, exactly as a plain open leaves it.
+verify_target:
+ MOV BYTE CS:[vf_ok], 0
+ MOV BX, CS:[vfy_handle]
+ MOV AX, 4202h
+ XOR CX, CX
+ XOR DX, DX
+ PUSHF
+ CALLI CS:[old21]
+ MOV SI, AX
+ MOV DI, DX
+ PUSHF
+ POP AX
+ TEST AX, 1
+ JNZ vf_seek0
+ CMP DI, 0
+ JNE vf_seek0
+ CMP SI, 27776
+ JNE vf_seek0
+ MOV BX, CS:[vfy_handle]
+ MOV AX, 4200h
+ XOR CX, CX
+ XOR DX, DX
+ PUSHF
+ CALLI CS:[old21]
+ MOV WORD CS:[crc_lo], 0FFFFh
+ MOV WORD CS:[crc_hi], 0FFFFh
+vf_read:
+ MOV BX, CS:[vfy_handle]
+ PUSH DS
+ PUSH CS
+ POP DS
+ MOV DX, crcbuf
+ MOV CX, 512
+ MOV AX, 3F00h
+ PUSHF
+ CALLI CS:[old21]
+ POP DS
+ PUSHF
+ POP CX
+ TEST CX, 1
+ JNZ vf_seek0
+ CMP AX, 0
+ JE vf_fin
+ MOV CS:[vf_n], AX
+ MOV AX, CS:[crc_lo]
+ MOV DX, CS:[crc_hi]
+ XOR SI, SI
+vf_byte:
+ MOV BL, CS:[SI+crcbuf]
+ XOR BL, AL
+ XOR BH, BH
+ SHL BX, 1
+ SHL BX, 1
+ MOV AL, AH
+ MOV AH, DL
+ MOV DL, DH
+ XOR DH, DH
+ XOR AX, CS:[BX+crctab]
+ XOR DX, CS:[BX+crctab+2]
+ INC SI
+ CMP SI, CS:[vf_n]
+ JB vf_byte
+ MOV CS:[crc_lo], AX
+ MOV CS:[crc_hi], DX
+ JMP vf_read
+vf_fin:
+ MOV AX, CS:[crc_lo]
+ MOV DX, CS:[crc_hi]
+ XOR AX, 0FFFFh
+ XOR DX, 0FFFFh
+ CMP AX, __CRCLO__
+ JNE vf_seek0
+ CMP DX, __CRCHI__
+ JNE vf_seek0
+ MOV BYTE CS:[vf_ok], 1
+vf_seek0:
+ MOV BX, CS:[vfy_handle]
+ MOV AX, 4200h
+ XOR CX, CX
+ XOR DX, DX
+ PUSHF
+ CALLI CS:[old21]
+ RET
+vfy_handle: DW 0
+vf_ok: DB 0
+vf_n: DW 0
+crc_lo: DW 0
+crc_hi: DW 0
+cur_psp: DW 0
 patchbytes:
 __PATCH__
+crctab:
+__CRCTAB__
+crcbuf:
+__CRCBUF__
 resident_end:
 ; ---------------- install (transient) ----------------
 install:
@@ -831,6 +1026,16 @@ vbuf: DB 0
 import struct as _struct
 ccb=(ROOT/"artifacts/cc-sites.bin").read_bytes()
 cc_offs=[_struct.unpack_from("<H",ccb,i)[0] for i in range(0,len(ccb),2)]
+ccctx=(ROOT/"artifacts/cc-ctx.bin").read_bytes()
+assert len(ccctx)==4*len(cc_offs), "cc-ctx.bin out of sync with cc-sites.bin"
+speccrc=_struct.unpack("<I",(ROOT/"artifacts/spec-crc.bin").read_bytes())[0]
+# standard reflected CRC32 table (poly ED B88320h), generated, not specimen data
+_crctab=bytearray()
+for _n in range(256):
+    _c=_n
+    for _ in range(8):
+        _c=(_c>>1)^0xEDB88320 if _c&1 else _c>>1
+    _crctab+=_struct.pack("<I",_c)
 ccv=[]
 for _off in cc_offs:
     ccv += [f" MOV BX, {_off}",
@@ -843,14 +1048,18 @@ for _off in cc_offs:
             " CMP BYTE [BX+vbuf], 255",
             " JNE badsite"]
 ASM = ASM.replace("__SITES__", db_lines(tbl))
-ASM = ASM.replace("__CCTAB__", db_lines(ccb))
+ASM = ASM.replace("__CCTAB__", db_lines(ccctx))
+ASM = ASM.replace("__CRCLO__", str(speccrc & 0xFFFF))
+ASM = ASM.replace("__CRCHI__", str((speccrc >> 16) & 0xFFFF))
+ASM = ASM.replace("__CRCTAB__", db_lines(bytes(_crctab)))
+ASM = ASM.replace("__CRCBUF__", db_lines(bytes(512)))
 ASM = ASM.replace("__NF8M1__", str(len(tbl)//8 - 1))
 ASM = ASM.replace("__NF8__", str(len(tbl)//8))
 ASM = ASM.replace("__NCC__", str(len(cc_offs)))
 ASM = ASM.replace("__CCVERIFY__", "\n".join(ccv))
 ASM = ASM.replace("__PATCH__", db_lines(pb))
 ASM = ASM.replace("__NPATCH__", str(len(pb)//4))
-handles_db = "\n".join(" DB "+",".join(str(b) for b in b"\xff\xff\x00\x00\x00\x00") for _ in range(16))
+handles_db = "\n".join(" DB "+",".join(str(b) for b in b"\xff\xff\x00\x00\x00\x00\x00\x00") for _ in range(16))
 ASM = ASM.replace("__HANDLES__", handles_db)
 
 code, labels = assemble(ASM, org=0x100)
