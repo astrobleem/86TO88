@@ -1,0 +1,43 @@
+{
+  "byname": {
+    "WEP": 18,
+    "WAITSOUNDSTATE": 11,
+    "SETVOICEACCENT": 5,
+    "SETVOICEQUEUESIZE": 3,
+    "SETVOICESOUND": 8,
+    "STOPSOUND": 10,
+    "GETTHRESHOLDEVENT": 14,
+    "SETVOICENOTE": 4,
+    "SETSOUNDNOISE": 7,
+    "STARTSOUND": 9,
+    "SETVOICETHRESHOLD": 16,
+    "CLOSESOUND": 2,
+    "DOBEEP": 17,
+    "COUNTVOICENOTES": 13,
+    "SETVOICEENVELOPE": 6,
+    "OPENSOUND": 1,
+    "SYNCALLVOICES": 12,
+    "GETTHRESHOLDSTATUS": 15
+  },
+  "ordinals": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18
+  ],
+  "complete": true
+}

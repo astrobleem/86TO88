@@ -1,0 +1,596 @@
+[
+  {
+    "module": "USER",
+    "ordinal": 107,
+    "win30_name": "DEFWINDOWPROC",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 108,
+    "win30_name": "GETMESSAGE",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 109,
+    "win30_name": "PEEKMESSAGE",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 110,
+    "win30_name": "POSTMESSAGE",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 111,
+    "win30_name": "SENDMESSAGE",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 127,
+    "win30_name": "GETPRIVATEPROFILEINT",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 128,
+    "win30_name": "GETPRIVATEPROFILESTRING",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 113,
+    "win30_name": "TRANSLATEMESSAGE",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 129,
+    "win30_name": "WRITEPRIVATEPROFILESTRING",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 1,
+    "win30_name": "FATALEXIT",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 114,
+    "win30_name": "DISPATCHMESSAGE",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 5,
+    "win30_name": "LOCALALLOC",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 6,
+    "win30_name": "LOCALREALLOC",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 7,
+    "win30_name": "LOCALFREE",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 137,
+    "win30_name": "FATALAPPEXIT",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 124,
+    "win30_name": "UPDATEWINDOW",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 4,
+    "win30_name": "SETROP2",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 125,
+    "win30_name": "INVALIDATERECT",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 15,
+    "win30_name": "GLOBALALLOC",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 16,
+    "win30_name": "GLOBALREALLOC",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 1,
+    "win30_name": "MESSAGEBOX",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 17,
+    "win30_name": "GLOBALFREE",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 19,
+    "win30_name": "GLOBALUNLOCK",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 5,
+    "win30_name": "INITAPP",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 6,
+    "win30_name": "POSTQUITMESSAGE",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 23,
+    "win30_name": "LOCKSEGMENT",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 24,
+    "win30_name": "UNLOCKSEGMENT",
+    "status": "OK"
+  },
+  {
+    "module": "SOUND",
+    "ordinal": 1,
+    "win30_name": "OPENSOUND",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 10,
+    "win30_name": "SETTIMER",
+    "status": "OK"
+  },
+  {
+    "module": "SOUND",
+    "ordinal": 2,
+    "win30_name": "CLOSESOUND",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 19,
+    "win30_name": "LINETO",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 12,
+    "win30_name": "KILLTIMER",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 20,
+    "win30_name": "MOVETO",
+    "status": "OK"
+  },
+  {
+    "module": "SOUND",
+    "ordinal": 4,
+    "win30_name": "SETVOICENOTE",
+    "status": "OK"
+  },
+  {
+    "module": "SOUND",
+    "ordinal": 5,
+    "win30_name": "SETVOICEACCENT",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 30,
+    "win30_name": "WAITEVENT",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 15,
+    "win30_name": "GETCURRENTTIME",
+    "status": "OK"
+  },
+  {
+    "module": "SOUND",
+    "ordinal": 9,
+    "win30_name": "STARTSOUND",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 18,
+    "win30_name": "SETCAPTURE",
+    "status": "OK"
+  },
+  {
+    "module": "SOUND",
+    "ordinal": 10,
+    "win30_name": "STOPSOUND",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 19,
+    "win30_name": "RELEASECAPTURE",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 150,
+    "win30_name": "LOADMENU",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 31,
+    "win30_name": "SETPIXEL",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 154,
+    "win30_name": "CHECKMENUITEM",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 34,
+    "win30_name": "BITBLT",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 155,
+    "win30_name": "ENABLEMENUITEM",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 28,
+    "win30_name": "CLIENTTOSCREEN",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 286,
+    "win30_name": "GETDESKTOPWINDOW",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 158,
+    "win30_name": "SETMENU",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 31,
+    "win30_name": "ISICONIC",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 287,
+    "win30_name": "GETLASTACTIVEPOPUP",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 51,
+    "win30_name": "MAKEPROCINSTANCE",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 52,
+    "win30_name": "FREEPROCINSTANCE",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 420,
+    "win30_name": "_WSPRINTF",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 45,
+    "win30_name": "SELECTOBJECT",
+    "status": "OK"
+  },
+  {
+    "module": "SHELL",
+    "ordinal": 22,
+    "win30_name": "ShellAbout (Win3.1 SHELL.22)",
+    "status": "MISSING - no SHELL.DLL in Win3.0"
+  },
+  {
+    "module": "USER",
+    "ordinal": 39,
+    "win30_name": "BEGINPAINT",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 40,
+    "win30_name": "ENDPAINT",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 41,
+    "win30_name": "CREATEWINDOW",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 42,
+    "win30_name": "SHOWWINDOW",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 171,
+    "win30_name": "WINHELP",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 60,
+    "win30_name": "FINDRESOURCE",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 52,
+    "win30_name": "CREATECOMPATIBLEDC",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 173,
+    "win30_name": "LOADCURSOR",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 45,
+    "win30_name": "BRINGWINDOWTOTOP",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 61,
+    "win30_name": "LOADRESOURCE",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 174,
+    "win30_name": "LOADICON",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 62,
+    "win30_name": "LOCKRESOURCE",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 176,
+    "win30_name": "LOADSTRING",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 177,
+    "win30_name": "LOADACCELERATORS",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 178,
+    "win30_name": "TRANSLATEACCELERATOR",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 50,
+    "win30_name": "FINDWINDOW",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 442,
+    "win30_name": "CREATEDIBITMAP",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 179,
+    "win30_name": "GETSYSTEMMETRICS",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 443,
+    "win30_name": "SETDIBITSTODEVICE",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 53,
+    "win30_name": "DESTROYWINDOW",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 61,
+    "win30_name": "CREATEPEN",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 56,
+    "win30_name": "MOVEWINDOW",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 57,
+    "win30_name": "REGISTERCLASS",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 66,
+    "win30_name": "CREATESOLIDBRUSH",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 178,
+    "win30_name": "__WINFLAGS",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 68,
+    "win30_name": "DELETEDC",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 69,
+    "win30_name": "DELETEOBJECT",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 66,
+    "win30_name": "GETDC",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 68,
+    "win30_name": "RELEASEDC",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 88,
+    "win30_name": "LSTRCPY",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 72,
+    "win30_name": "SETRECT",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 80,
+    "win30_name": "GETDEVICECAPS",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 91,
+    "win30_name": "INITTASK",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 76,
+    "win30_name": "PTINRECT",
+    "status": "OK"
+  },
+  {
+    "module": "GDI",
+    "ordinal": 87,
+    "win30_name": "GETSTOCKOBJECT",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 102,
+    "win30_name": "DOS3CALL",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 87,
+    "win30_name": "DIALOGBOX",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 88,
+    "win30_name": "ENDDIALOG",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 92,
+    "win30_name": "SETDLGITEMTEXT",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 93,
+    "win30_name": "GETDLGITEMTEXT",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 94,
+    "win30_name": "SETDLGITEMINT",
+    "status": "OK"
+  },
+  {
+    "module": "USER",
+    "ordinal": 95,
+    "win30_name": "GETDLGITEMINT",
+    "status": "OK"
+  },
+  {
+    "module": "KERNEL",
+    "ordinal": 115,
+    "win30_name": "OUTPUTDEBUGSTRING",
+    "status": "OK"
+  }
+]
