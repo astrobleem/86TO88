@@ -17,10 +17,13 @@ from the emulator tests documented below.
 
 ## Why the 3.1 binary won't start on Windows 3.0, and what the bridge does
 
-![Windows 3.0 Run dialog showing winmine.exe and Launch error 10](evidence/win30-winmine-refusal.png)
+| Without the bridge (86Box) | Running with the bridge (DOSBox-X, 286) |
+|---|---|
+| ![Windows 3.0 refusing winmine.exe with Launch error 10](evidence/win30-winmine-refusal.png) | ![Minesweeper running under Windows 3.0 with a solved board](evidence/finalD-wonboard.png) |
 
-*Windows 3.0 refusing the unmodified game with the bridge unloaded.
-Captured in 86Box using the Windows XT Run dialog.*
+![WM88 TSR reporting Installed and WINMINE.EXE verified](evidence/wm88-tsr-installed.png)
+
+*Loading the TSR in 86Box, from an earlier test build.*
 
 | Barrier in the stock binary | Bridge fix (all outside the file) |
 |---|---|
