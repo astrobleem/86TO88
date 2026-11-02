@@ -19,7 +19,7 @@ from the emulator tests documented below.
 
 | Without the bridge (86Box) | Running with the bridge (DOSBox-X, 286) |
 |---|---|
-| ![Windows 3.0 refusing winmine.exe with Launch error 10](evidence/win30-winmine-refusal.png) | ![Minesweeper running under Windows 3.0 with a solved board](evidence/finalD-wonboard.png) |
+| ![Windows 3.0 Program Manager refusing Minesweeper: This application requires a newer version of Microsoft Windows](evidence/win30-winmine-refusal.png) | ![Minesweeper running under Windows 3.0 with a solved board](evidence/finalD-wonboard.png) |
 
 ![WM88 TSR reporting Installed and WINMINE.EXE verified](evidence/wm88-tsr-installed.png)
 
