@@ -77,7 +77,18 @@ published; use media you are entitled to use. See
 |---|---|
 | ![Windows 3.0 refusing the original Minesweeper without the bridge](evidence/pcjs-browser-refusal.jpg) | ![Original Minesweeper running under Windows 3.0 with revealed cells and a question mark](evidence/pcjs-browser-gameplay.jpg) |
 
-![WM88 reporting Installed and WINMINE.EXE verified, followed by T88PASS and RT2PASS](evidence/pcjs-browser-dos-tests.jpg)
+**Installing the TSR: emulator vs. real hardware.** Same step, same message: the TSR
+reports `Installed. WINMINE.EXE verified (27776B pinned image)`, then Windows starts.
+
+| Emulator (PCjs, 286) | Real Tandy 1000 EX (8088) |
+| --- | --- |
+| ![WM88 reporting Installed and WINMINE.EXE verified, followed by T88PASS and RT2PASS](evidence/pcjs-browser-dos-tests.jpg) | ![The Tandy 1000 EX's monitor: wm88tsr prints Installed, WINMINE.EXE verified (27776B pinned image), then win /r winmine.exe is typed](evidence/tandy-ex-tsr-installed.jpg) |
+
+The hardware photo shows the directory listing (`WINMINE.EXE` 27,776 bytes, `WM88TSR.COM`
+12,897 bytes), `wm88tsr` installing, and `win /r winmine.exe` about to start Windows in
+real mode. That `WM88TSR.COM` is the hardened build used for the hardware run, so its size
+differs from the published 12,316-byte binary the emulator uses. See the
+[evidence section](#status--real-hardware-and-emulator-evidence) for the separation between runs.
 
 Earlier evidence remains available: [86Box refusal](evidence/win30-winmine-refusal.png),
 [DOSBox-X solved board](evidence/finalD-wonboard.png), and
