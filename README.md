@@ -32,7 +32,8 @@ is separate evidence.
 original Windows 3.1 Minesweeper beside Program Manager, driven by the WM88 bridge.*
 
 **2. On real hardware.** Chad runs the original Windows 3.1 Minesweeper on a
-Tandy 1000 EX (8088) under Windows 3.0. Frames from his phone video of the
+Tandy 1000 EX (8088, expanded to 640 KB, with a 3-in-1 serial / CompactFlash / memory
+upgrade card) under Windows 3.0. Frames from his phone video of the
 EX's own screen (Tandy CM-5 monitor), cropped and otherwise unedited:
 
 | The board | The game's own About box |
