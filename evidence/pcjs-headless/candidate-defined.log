@@ -1,0 +1,51 @@
+judge286.romBIOS: load("/workspace/scratch/a84592844d2c/judge-pcjs-20261102/private-run/vendor/ATBIOS-REV3.json5")
+judge286.romEGA: load("/workspace/scratch/a84592844d2c/judge-pcjs-20261102/private-run/vendor/IBM-EGA.json5")
+PCx86 v2.xx
+Copyright © 2012-2026 Jeff Parsons <Jeff@pcjs.org>
+License: MIT <https://www.pcjs.org/LICENSE.txt>
+getResource(/workspace/scratch/a84592844d2c/judge-pcjs-20261102/private-run/vendor/ATBIOS-REV3.json5)
+Busx86: 64Kb ROM at 0xF0000
+getResource(/workspace/scratch/a84592844d2c/judge-pcjs-20261102/private-run/vendor/IBM-EGA.json5)
+Busx86: 16Kb ROM at 0xC0000
+note: speaker disabled
+HDC: Type 2 "judge disk" is fixed disk 0
+getResource(/workspace/scratch/a84592844d2c/judge-pcjs-20261102/private-run/disk.json)
+HDC: Mounted disk "judge disk" in drive C
+Busx86: 640Kb RAM at 0x0
+Busx86: 32Kb VIDEO at 0xB8000
+Type ? for help with PCx86 Debugger commands
+AX=0000 BX=0000 CX=0000 DX=0000 SP=0000 BP=0000 SI=0000 DI=0000
+SS=0000 DS=0000 ES=0000 PS=0002 V0 D0 I0 T0 S0 Z0 A0 P0 C0
+&F000:FFF0 EA5BE000F0       JMP      &F000:E05B
+CPU component true
+running
+
+
+
+EGA Device Driver Version 2.10.18
+Copyright (C) Microsoft Corporation 1984-1990
+Copyright (C) IBM 1986-1987
+Portions Copyright (C) Hewlett-Packard Co. 1987
+
+Command line parameters:
+
+   FUNC=XX, to change INT 2FH function number.
+   (where XX is 80 through FF hexadecimal inclusive)
+
+For example:  DEVICE=EGA FUNC=AC
+
+Using default value of BCH for interrupt 2FH function calls.
+A copy of the EGA Device Driver is being installed.
+
+
+C>ECHO OFF
+WM88 - original WINMINE 8088 bridge
+Installed. WINMINE.EXE verified (27776B pinned image).
+T88PASS
+
+C>
+STATE {"cycles":277567683,"cs":705,"ip":18276,"msw":65520,"ax":1280,"run":true}
+stopped (54610517 opcodes, 277567683 cycles, 9807 ms, 28303017 hz)
+AX=0500 BX=02C1 CX=0007 DX=02C1 SP=09E8 BP=0000 SI=00D3 DI=01A9
+SS=02C1 DS=02C1 ES=02C1 PS=0202 V0 D0 I1 T0 S0 Z0 A0 P0 C0
+&02C1:4764 8EC3             MOV      ES,BX

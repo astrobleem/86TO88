@@ -1,8 +1,8 @@
 import sys, pathlib, struct
-sys.path.insert(0, "/Users/macsd/winmine-hack/src")
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from asm88 import assemble
 
-ROOT = pathlib.Path("/Users/macsd/winmine-hack")
+ROOT = pathlib.Path(__file__).resolve().parent.parent
 tbl = (ROOT / "artifacts/sites-table.bin").read_bytes()
 import json
 ERRCNT_OFF = json.loads((ROOT / "artifacts/tsr-labels.json").read_text())["errcnt"]
@@ -212,7 +212,17 @@ def gen(padstart):
             L.append(f"rok_{i}_{r}:")
         # flags
         L.append(" MOV AX, [gotflags]")
-        L.append(" CMP AX, [expflags]")
+        if s["type"] == 4:
+            # IMUL defines CF/OF, but SF/ZF/AF/PF are undefined. Comparing
+            # those four bits to native IMUL creates emulator/CPU-dependent
+            # false failures. Keep checking every other bit (including the
+            # unaffected control flags), not just the result and CF/OF.
+            # Intel 80286 Programmer's Reference Manual, section 3.3.3.
+            L.append(" XOR AX, [expflags]")
+            L.append(" AND AX, 0FF2Bh")
+            L.append(" CMP AX, 0")
+        else:
+            L.append(" CMP AX, [expflags]")
         L.append(f" JE fok_{i}")
         L.append(f" CALL fail_{i}")
         L.append(f"fok_{i}:")

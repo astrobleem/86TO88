@@ -1,0 +1,16 @@
+{
+  "sourceDiskSha256": "de9ec058a44090f13f7b6e47c647f09390fe0ee39c2333998a87281f402eb6aa",
+  "sourceDiskUnchanged": true,
+  "diskSha256": "de9ec058a44090f13f7b6e47c647f09390fe0ee39c2333998a87281f402eb6aa",
+  "cpu": 80286,
+  "ramKiB": 640,
+  "clockMultiplier": 1,
+  "coreCommit": "9e5409ab6ef706c6fc676ae1985978ad0eb0daee",
+  "mode": "gameplay",
+  "interruptF8Count": 2032,
+  "msw": 65520,
+  "protectedMode": false,
+  "videoMode": 16,
+  "qualification": "Headless PCjs source core; reconstructed EGA VRAM; not browser QA, not 8088 proof",
+  "consoleOutput": "\n\n\r\nEGA Device Driver Version 2.10.18\r\nCopyright (C) Microsoft Corporation 1984-1990\r\nCopyright (C) IBM 1986-1987\r\nPortions Copyright (C) Hewlett-Packard Co. 1987\r\n\r\nCommand line parameters:\r\n\r\n   FUNC=XX, to change INT 2FH function number.\r\n   (where XX is 80 through FF hexadecimal inclusive)\r\n\r\nFor example:  DEVICE=EGA FUNC=AC\r\n\r\nUsing default value of BCH for interrupt 2FH function calls.\r\nA copy of the EGA Device Driver is being installed.\r\n\r\n\r\nC>ECHO OFF\r\n86TO88 judge fixture - 80286, Windows 3.0 real mode\r\nThe 286 browser demo is NOT an 8088 hardware proof.\r\nWM88 - original WINMINE 8088 bridge\r\nInstalled. WINMINE.EXE verified (27776B pinned image).\r\nT88PASS\r\n0123456789ABCDERT2PASS\r\nStarting Windows 3.0 with WIN /R WINMINE.EXE\r\n"
+}

@@ -1,0 +1,16 @@
+{
+  "sourceDiskSha256": "de9ec058a44090f13f7b6e47c647f09390fe0ee39c2333998a87281f402eb6aa",
+  "sourceDiskUnchanged": true,
+  "diskSha256": "06733311c15c240c8b55fd2eee7a3c2052fe896cf3f72978fe79b8012405b277",
+  "cpu": 80286,
+  "ramKiB": 640,
+  "clockMultiplier": 1,
+  "coreCommit": "9e5409ab6ef706c6fc676ae1985978ad0eb0daee",
+  "mode": "control",
+  "interruptF8Count": 0,
+  "msw": 65520,
+  "protectedMode": false,
+  "videoMode": 16,
+  "qualification": "Headless PCjs source core; reconstructed EGA VRAM; not browser QA, not 8088 proof",
+  "consoleOutput": "\n\n\r\nEGA Device Driver Version 2.10.18\r\nCopyright (C) Microsoft Corporation 1984-1990\r\nCopyright (C) IBM 1986-1987\r\nPortions Copyright (C) Hewlett-Packard Co. 1987\r\n\r\nCommand line parameters:\r\n\r\n   FUNC=XX, to change INT 2FH function number.\r\n   (where XX is 80 through FF hexadecimal inclusive)\r\n\r\nFor example:  DEVICE=EGA FUNC=AC\r\n\r\nUsing default value of BCH for interrupt 2FH function calls.\r\nA copy of the EGA Device Driver is being installed.\r\n\r\n\r\nC>PATH C:\\;C:\\WINDOWS\r\n\r\nC>CD \\WINDOWS\r\n\r\nC>WIN /R WINMINE.EXE\r\n"
+}

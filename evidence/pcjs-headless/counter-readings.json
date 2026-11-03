@@ -1,0 +1,30 @@
+[
+  {
+    "file": "evidence/pcjs-headless/gameplay-initial.png",
+    "mine_counter": "010",
+    "timer": "000",
+    "mismatching_bright_pixels": 0,
+    "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates"
+  },
+  {
+    "file": "evidence/pcjs-headless/gameplay-reveal.png",
+    "mine_counter": "010",
+    "timer": "004",
+    "mismatching_bright_pixels": 0,
+    "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates"
+  },
+  {
+    "file": "evidence/pcjs-headless/gameplay-flag-timer.png",
+    "mine_counter": "009",
+    "timer": "011",
+    "mismatching_bright_pixels": 0,
+    "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates"
+  },
+  {
+    "file": "evidence/pcjs-headless/gameplay-ega.png",
+    "mine_counter": "010",
+    "timer": "000",
+    "mismatching_bright_pixels": 0,
+    "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates"
+  }
+]

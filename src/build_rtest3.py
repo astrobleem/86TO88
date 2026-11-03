@@ -1,8 +1,8 @@
 import sys, pathlib, struct
-sys.path.insert(0, "/Users/macsd/winmine-hack/src")
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from asm88 import assemble
 
-ROOT = pathlib.Path("/Users/macsd/winmine-hack")
+ROOT = pathlib.Path(__file__).resolve().parent.parent
 ART = ROOT / "artifacts"
 
 def build(name, src):

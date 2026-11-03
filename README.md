@@ -9,6 +9,31 @@ an 8088-based Tandy 1000 EX. It is a small DOS TSR plus a
 on his Tandy 1000 EX under Windows 3.0. That hardware result is separate
 from the emulator tests documented below.
 
+## Try it locally - judge quick start
+
+From a clone of this repository, with Python 3.9+ and internet access:
+
+```sh
+python3 tools/prepare_pcjs.py --reference-media --out ../86to88-private-judge
+python3 -m http.server 8080 --bind 127.0.0.1 --directory ../86to88-private-judge
+```
+
+Leave the server running and open **<http://127.0.0.1:8080/judge.html>** in a
+normal desktop browser. On Windows, use `py -3` or `python` instead of `python3`.
+No browser extension, account, compiler or installed emulator is needed.
+Wait for DOS and Windows to boot, steer the guest's visible mouse arrow to a
+square, then left-click to reveal or right-click to flag. F2 starts a new game.
+
+**This browser fixture emulates a 286, not an 8088.** It runs the original game
+under Windows 3.0 real mode; the Tandy hardware result is separate evidence.
+Chrome boot, gameplay, loss and restart were tested. Fullscreen is optional;
+direct file launch and complete wins remain unverified.
+
+The script downloads hash-pinned archival reference media into a private local
+fixture. DOS/Windows/ROM media is not in this repo and must not be published.
+Use media you are entitled to use. See [setup, provenance and validation limits](emulator/pcjs/README.md)
+for details and the own-media option. Ctrl+C stops the local server.
+
 > **The original `WINMINE.EXE` stays byte-for-byte unchanged on disk.** The
 > TSR intercepts DOS file reads of that one file and translates the bytes
 > **in memory only** (in the caller's read buffer). The disk file is never

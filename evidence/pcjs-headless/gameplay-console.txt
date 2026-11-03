@@ -1,0 +1,27 @@
+
+
+
+EGA Device Driver Version 2.10.18
+Copyright (C) Microsoft Corporation 1984-1990
+Copyright (C) IBM 1986-1987
+Portions Copyright (C) Hewlett-Packard Co. 1987
+
+Command line parameters:
+
+   FUNC=XX, to change INT 2FH function number.
+   (where XX is 80 through FF hexadecimal inclusive)
+
+For example:  DEVICE=EGA FUNC=AC
+
+Using default value of BCH for interrupt 2FH function calls.
+A copy of the EGA Device Driver is being installed.
+
+
+C>ECHO OFF
+86TO88 judge fixture - 80286, Windows 3.0 real mode
+The 286 browser demo is NOT an 8088 hardware proof.
+WM88 - original WINMINE 8088 bridge
+Installed. WINMINE.EXE verified (27776B pinned image).
+T88PASS
+0123456789ABCDERT2PASS
+Starting Windows 3.0 with WIN /R WINMINE.EXE

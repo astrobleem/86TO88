@@ -1,0 +1,183 @@
+{
+  "qualification": "Headless source-core timing mode; exact bitmap-mask digit readings, not browser QA",
+  "timer_seconds_advanced": 5,
+  "host_elapsed_seconds": 4.995241299000001,
+  "observed_game_seconds_per_host_second": 1.0009526468723247,
+  "bios_ticks_advanced": 91,
+  "pause_host_seconds": 2.002685926000002,
+  "paused_timer_unchanged": true,
+  "paused_guest_ticks_unchanged": true,
+  "paused_cpu_cycles_unchanged": true,
+  "mine_counter_after_flag": "009",
+  "mine_counter_after_question": "010",
+  "mine_counter_after_blank": "010",
+  "mine_counter_after_reset": "010",
+  "timer_after_reset": "000",
+  "samples": {
+    "before-pause": {
+      "file": "timing-before-pause.png",
+      "mine_counter": "010",
+      "timer": "008",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 26345.104665,
+      "guestTicks": 1170232,
+      "cpuCycles": 206275405,
+      "running": true
+    },
+    "blank": {
+      "file": "timing-blank.png",
+      "mine_counter": "010",
+      "timer": "014",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 34147.350902,
+      "guestTicks": 1170338,
+      "cpuCycles": 252652731,
+      "running": true
+    },
+    "flag": {
+      "file": "timing-flag.png",
+      "mine_counter": "009",
+      "timer": "012",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 32145.303912,
+      "guestTicks": 1170301,
+      "cpuCycles": 236604260,
+      "running": true
+    },
+    "initial": {
+      "file": "timing-initial.png",
+      "mine_counter": "010",
+      "timer": "000",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 12346.466552,
+      "guestTicks": 1169981,
+      "cpuCycles": 94344392,
+      "running": true
+    },
+    "paused": {
+      "file": "timing-paused.png",
+      "mine_counter": "010",
+      "timer": "008",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 28347.790591,
+      "guestTicks": 1170232,
+      "cpuCycles": 206275405,
+      "running": false
+    },
+    "position": {
+      "file": "timing-position.png",
+      "mine_counter": "010",
+      "timer": "000",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 18350.384412,
+      "guestTicks": 1170087,
+      "cpuCycles": 142353678,
+      "running": true
+    },
+    "question": {
+      "file": "timing-question.png",
+      "mine_counter": "010",
+      "timer": "013",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 33156.446135,
+      "guestTicks": 1170320,
+      "cpuCycles": 244764529,
+      "running": true
+    },
+    "reset": {
+      "file": "timing-reset.png",
+      "mine_counter": "010",
+      "timer": "000",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 36344.929143,
+      "guestTicks": 1170378,
+      "cpuCycles": 270197284,
+      "running": true
+    },
+    "resumed": {
+      "file": "timing-resumed.png",
+      "mine_counter": "010",
+      "timer": "010",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 30349.756997,
+      "guestTicks": 1170269,
+      "cpuCycles": 222323863,
+      "running": true
+    },
+    "second-20": {
+      "file": "timing-second-20.png",
+      "mine_counter": "010",
+      "timer": "002",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 20349.79281,
+      "guestTicks": 1170123,
+      "cpuCycles": 158402060,
+      "running": true
+    },
+    "second-21": {
+      "file": "timing-second-21.png",
+      "mine_counter": "010",
+      "timer": "003",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 21345.528602,
+      "guestTicks": 1170141,
+      "cpuCycles": 166290288,
+      "running": true
+    },
+    "second-22": {
+      "file": "timing-second-22.png",
+      "mine_counter": "010",
+      "timer": "004",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 22345.121284,
+      "guestTicks": 1170159,
+      "cpuCycles": 174178496,
+      "running": true
+    },
+    "second-23": {
+      "file": "timing-second-23.png",
+      "mine_counter": "010",
+      "timer": "005",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 23349.866911,
+      "guestTicks": 1170178,
+      "cpuCycles": 182338693,
+      "running": true
+    },
+    "second-24": {
+      "file": "timing-second-24.png",
+      "mine_counter": "010",
+      "timer": "006",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 24345.603584,
+      "guestTicks": 1170196,
+      "cpuCycles": 190226928,
+      "running": true
+    },
+    "second-25": {
+      "file": "timing-second-25.png",
+      "mine_counter": "010",
+      "timer": "007",
+      "mismatching_bright_pixels": 0,
+      "method": "exact original WINMINE digit resource bright-red masks; fixed reference window coordinates",
+      "hostMonotonicMs": 25345.034109,
+      "guestTicks": 1170214,
+      "cpuCycles": 198251187,
+      "running": true
+    }
+  }
+}

@@ -1,8 +1,8 @@
 import sys, pathlib
-sys.path.insert(0,"/Users/macsd/winmine-hack/src")
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from asm88 import assemble
 
-ROOT=pathlib.Path("/Users/macsd/winmine-hack")
+ROOT=pathlib.Path(__file__).resolve().parent.parent
 tbl=(ROOT/"artifacts/sites-table.bin").read_bytes()
 pb=(ROOT/"artifacts/patchbytes.bin").read_bytes()
 def db_lines(data):
@@ -1069,11 +1069,15 @@ import json as _json
 (ROOT/"artifacts/tsr-labels.json").write_text(_json.dumps({k: labels[k] for k in ("errcnt","handles","handler","hook21","resident_end","old21","rd_found","int3h","old3","cctab")}))
 print("WM88TSR.COM", len(code), "resident_end", hex(labels['resident_end']), "handler", hex(labels['handler']), "hook", hex(labels['hook21']), "table", hex(labels['table']), "errcnt", hex(labels['errcnt']), "handles", hex(labels['handles']))
 # Verify no forbidden 186 opcodes in our own code (except inside data tables)
-import capstone
-md=capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_16)
-bad=[]
-# disassemble only up to table
-for ins in md.disasm(code[:labels['table']-0x100], 0x100):
-    raw=bytes(ins.bytes)
-    if raw[0] in (0x68,0x6A,0x6B,0xC0,0xC1): bad.append((hex(ins.address),ins.mnemonic,ins.op_str))
-print("186 opcodes in TSR code region:", bad)
+try:
+    import capstone
+except ImportError:
+    print("Optional opcode audit skipped: install capstone to run it (binary build succeeded).")
+else:
+    md=capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_16)
+    bad=[]
+    # disassemble only up to table
+    for ins in md.disasm(code[:labels['table']-0x100], 0x100):
+        raw=bytes(ins.bytes)
+        if raw[0] in (0x68,0x6A,0x6B,0xC0,0xC1): bad.append((hex(ins.address),ins.mnemonic,ins.op_str))
+    print("186 opcodes in TSR code region:", bad)

@@ -1,0 +1,35 @@
+{
+  "pcjs_commit": "9e5409ab6ef706c6fc676ae1985978ad0eb0daee",
+  "assets": [
+    {
+      "name": "pcx86.js",
+      "url": "https://raw.githubusercontent.com/jeffpar/pcjs/9e5409ab6ef706c6fc676ae1985978ad0eb0daee/machines/pcx86/releases/2.26/pcx86.js",
+      "sha256": "724c396d9bf602554194bd118a5c164e739447080d487161af375bb9a4d5de4a",
+      "bytes": 485321
+    },
+    {
+      "name": "components.css",
+      "url": "https://raw.githubusercontent.com/jeffpar/pcjs/9e5409ab6ef706c6fc676ae1985978ad0eb0daee/machines/pcx86/xsl/components.css",
+      "sha256": "853e6100d7c60d505eb57098a82000bc60c3124a6e45e86cfb647b7184216eee",
+      "bytes": 8267
+    },
+    {
+      "name": "ATBIOS-REV3.json5",
+      "url": "https://raw.githubusercontent.com/jeffpar/pcjs/9e5409ab6ef706c6fc676ae1985978ad0eb0daee/machines/pcx86/ibm/5170/rom/bios/1985-11-15/ATBIOS-REV3.json5",
+      "sha256": "7977701c277a8a02b7341b261c3d0fc4dc65306c1ad432be6aa539a073cae5ea",
+      "bytes": 469780
+    },
+    {
+      "name": "IBM-EGA.json5",
+      "url": "https://raw.githubusercontent.com/jeffpar/pcjs/9e5409ab6ef706c6fc676ae1985978ad0eb0daee/machines/pcx86/ibm/video/ega/1984-09-13/IBM-EGA.json5",
+      "sha256": "0eba1177dfbe939ccd1c05c44dbdc3fa34dfa2e5ce4de5fb9bf21bb50d47bd6f",
+      "bytes": 115039
+    },
+    {
+      "name": "PCJS-LICENSE.txt",
+      "url": "https://raw.githubusercontent.com/jeffpar/pcjs/9e5409ab6ef706c6fc676ae1985978ad0eb0daee/LICENSE.txt",
+      "sha256": "515a42b2797c14eb4daf655f47e6dafe7d3b4d8250310a2c12065b9e70bc13f6",
+      "bytes": 1412
+    }
+  ]
+}

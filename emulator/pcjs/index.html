@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>86TO88 — PCjs judge demo</title>
+  <link rel="stylesheet" href="vendor/components.css">
+  <link rel="stylesheet" href="judge.css">
+</head>
+<body>
+  <main>
+    <header><p class="eyebrow">86TO88 / ORIGINAL BINARY, NEW BRIDGE</p>
+      <h1>Windows 3.1 Minesweeper.<br>Windows 3.0 underneath.</h1>
+      <p>The game is Microsoft's original, unmodified <code>WINMINE.EXE</code>. The open-source WM88 bridge translates file reads in memory; Windows and the game are not reimplemented.</p>
+    </header>
+    <aside><strong>This browser fixture emulates an 80286, not an 8088.</strong> Windows is launched with <code>WIN /R</code> (real mode), with 640 KiB conventional RAM and no extended RAM. This is a compatibility/gameplay demo, not an 8088 hardware proof. The project's real Tandy 1000 EX report and its earlier emulator startup failures are separate evidence.</aside>
+    <section aria-label="Quick guide" class="guide">
+      <div><h2>1 · Wait for boot</h2><p>DOS loads the bridge, runs the <code>TEST88</code> and <code>RTEST2</code> suites, then opens the game. Boot speed depends on your device.</p></div>
+      <div><h2>2 · Play the original</h2><p>Click inside the screen. Left-click reveals; right-click flags. F2 starts a new game. If a click first focuses the emulator, click again.</p></div>
+      <div><h2>3 · Inspect the evidence</h2><p><a href="PREPARED.json" target="_blank" rel="noopener">Local input hashes & preparation manifest</a>. Source files are never edited. Reload discards session changes and starts fresh.</p></div>
+    </section>
+    <section aria-label="PCjs emulated computer" class="emulator">
+      <p><strong>Original EGA display:</strong> the dark-red digit segments are dithered by the stock display driver. Their shapes match the original game bitmap exactly. The default 1× speed preserves normal timer pace; the Speed button changes emulated time too. The guest mouse uses relative movement: steer its visible arrow to a cell, then click. If Full screen is unavailable, continue in the page.</p>
+      <!-- PCJS_MACHINE -->
+    </section>
+    <details><summary>What this proves — and what it doesn't</summary>
+      <p>The browser executes the original DOS, Windows 3.0 and Windows 3.1 Minesweeper code. WM88TSR translates the known 27,776-byte specimen and the 361-byte SHELL.DLL shim supplies ShellAbout. A working 286 run does not prove 8088 instruction compatibility or timing. A passing DOS test is not proof of complete Windows startup or gameplay.</p>
+      <p>PCjs session changes are memory-only here. Reload restores the generated disk; no automatic session resume is enabled. A Reset restarts the guest with its current in-memory disk. Do not publish this generated directory: it contains third-party DOS/Windows and ROM media.</p>
+      <p>PCjs <a href="vendor/PCJS-LICENSE.txt">MIT license</a> excludes third-party programs, images and documentation. Public archival access does not grant redistribution permission.</p>
+    </details>
+    <footer><a href="https://github.com/astrobleem/86TO88">86TO88 source & evidence</a> · <a href="https://www.pcjs.org/">PCjs by Jeff Parsons</a> · Prepared locally; no hosted game service required.</footer>
+  </main>
+  <script src="vendor/pcx86.js"></script>
+</body>
+</html>

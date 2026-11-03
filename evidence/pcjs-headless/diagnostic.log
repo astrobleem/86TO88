@@ -1,0 +1,53 @@
+judge286.romBIOS: load("/workspace/scratch/a84592844d2c/judge-pcjs-20261102/private-run/vendor/ATBIOS-REV3.json5")
+judge286.romEGA: load("/workspace/scratch/a84592844d2c/judge-pcjs-20261102/private-run/vendor/IBM-EGA.json5")
+PCx86 v2.xx
+Copyright © 2012-2026 Jeff Parsons <Jeff@pcjs.org>
+License: MIT <https://www.pcjs.org/LICENSE.txt>
+getResource(/workspace/scratch/a84592844d2c/judge-pcjs-20261102/private-run/vendor/ATBIOS-REV3.json5)
+Busx86: 64Kb ROM at 0xF0000
+getResource(/workspace/scratch/a84592844d2c/judge-pcjs-20261102/private-run/vendor/IBM-EGA.json5)
+Busx86: 16Kb ROM at 0xC0000
+note: speaker disabled
+HDC: Type 2 "judge disk" is fixed disk 0
+getResource(/workspace/scratch/a84592844d2c/judge-pcjs-20261102/private-run/disk.json)
+HDC: Mounted disk "judge disk" in drive C
+Busx86: 640Kb RAM at 0x0
+Busx86: 32Kb VIDEO at 0xB8000
+Type ? for help with PCx86 Debugger commands
+AX=0000 BX=0000 CX=0000 DX=0000 SP=0000 BP=0000 SI=0000 DI=0000
+SS=0000 DS=0000 ES=0000 PS=0002 V0 D0 I0 T0 S0 Z0 A0 P0 C0
+&F000:FFF0 EA5BE000F0       JMP      &F000:E05B
+CPU component true
+running
+
+
+
+EGA Device Driver Version 2.10.18
+Copyright (C) Microsoft Corporation 1984-1990
+Copyright (C) IBM 1986-1987
+Portions Copyright (C) Hewlett-Packard Co. 1987
+
+Command line parameters:
+
+   FUNC=XX, to change INT 2FH function number.
+   (where XX is 80 through FF hexadecimal inclusive)
+
+For example:  DEVICE=EGA FUNC=AC
+
+Using default value of BCH for interrupt 2FH function calls.
+A copy of the EGA Device Driver is being installed.
+
+
+C>ECHO OFF
+WM88 - original WINMINE 8088 bridge
+Installed. WINMINE.EXE verified (27776B pinned image).
+DIAGNOSTIC {"ip":2601,"case":"fail_9","ax":646,"bx":3018,"cx":8738,"dx":13107,"g_ax":503,"g_bx":3018,"gotflags":646,"expflags":582,"expval":3018,"sp":65528,"esp0":65534}
+DIAGNOSTIC {"ip":2835,"case":"fail_10","ax":2695,"bx":49152,"cx":8738,"dx":13107,"g_ax":8192,"g_bx":49152,"gotflags":2695,"expflags":2631,"expval":49152,"sp":65528,"esp0":65534}
+T88FAIL L=1111 4444 C000 0257 0257 10
+
+C>
+STATE {"cycles":294241362,"cs":705,"ip":7452,"msw":65520,"ax":256,"run":true}
+stopped (57893422 opcodes, 294241362 cycles, 9810 ms, 29994023 hz)
+AX=0100 BX=0000 CX=0007 DX=007F SP=09FC BP=0000 SI=00D3 DI=01A9
+SS=02C1 DS=02C1 ES=02C1 PS=0246 V0 D0 I1 T0 S0 Z1 A0 P1 C0
+&02C1:1D1C 7513             JNZ      1D31

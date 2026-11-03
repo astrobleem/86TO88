@@ -1,7 +1,7 @@
 # Building 86TO88 from source
 
 You only need Python 3 (standard library; `capstone` is needed solely for the
-optional site-regeneration step). No C compiler is used anywhere — the TSR and
+optional site-regeneration step and post-build opcode audit). No C compiler is used anywhere — the TSR and
 the shim are assembled by the small two-pass 8086 assembler in `src/asm88.py`.
 
 All commands run from the repository root. Builders write to `artifacts/`.
@@ -42,6 +42,10 @@ python3 src/build_readtest2.py WINMINE.EXE  # -> artifacts/RTEST2.COM (arg: your
 * `TEST88.COM` — 14 cases checking the `INT F8h`/`INT 3h` emulation exactly:
   results, flag bits (merge mask `08C5h`, unaffected bits preserved), stack
   effect, and register behaviour. Prints `T88PASS` on success.
+  For IMUL, the test excludes SF/ZF/AF/PF from comparison because Intel
+  documents those flags as undefined; CF/OF and unaffected control flags
+  are still checked. The original all-flags assertion produced false failures
+  on PCjs despite correct IMUL results. This changes only the test, not WM88TSR.
 * `RTEST2.COM` — 15 cases checking the read interception: partial and
   overlapping reads, reads starting inside a patch site, version-span reads,
   sequential continuation, seeks from start/current/end, EOF partial reads,

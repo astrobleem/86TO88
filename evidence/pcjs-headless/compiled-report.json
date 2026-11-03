@@ -1,0 +1,11 @@
+{
+  "sourceDiskSha256": "de9ec058a44090f13f7b6e47c647f09390fe0ee39c2333998a87281f402eb6aa",
+  "sourceDiskUnchanged": true,
+  "bundleSha256": "724c396d9bf602554194bd118a5c164e739447080d487161af375bb9a4d5de4a",
+  "cpu": 80286,
+  "clockMultiplier": 1,
+  "msw": 65520,
+  "protectedMode": false,
+  "videoMode": 16,
+  "qualification": "Exact compiled bundle in Node using PCjs resource-cache and JSON initialization. Saved EGA state, not browser DOM/input QA. Inspect rendered frame; process exit alone is not a game pass."
+}

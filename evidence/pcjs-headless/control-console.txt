@@ -1,0 +1,24 @@
+
+
+
+EGA Device Driver Version 2.10.18
+Copyright (C) Microsoft Corporation 1984-1990
+Copyright (C) IBM 1986-1987
+Portions Copyright (C) Hewlett-Packard Co. 1987
+
+Command line parameters:
+
+   FUNC=XX, to change INT 2FH function number.
+   (where XX is 80 through FF hexadecimal inclusive)
+
+For example:  DEVICE=EGA FUNC=AC
+
+Using default value of BCH for interrupt 2FH function calls.
+A copy of the EGA Device Driver is being installed.
+
+
+C>PATH C:\;C:\WINDOWS
+
+C>CD \WINDOWS
+
+C>WIN /R WINMINE.EXE
