@@ -40,6 +40,10 @@ EX's own screen (Tandy CM-5 monitor), cropped and otherwise unedited:
 | --- | --- |
 | ![Minesweeper board on the Tandy 1000 EX's monitor](evidence/tandy-ex-board.png) | ![Minesweeper About box, by Robert Donner and Curt Johnson, on the Tandy 1000 EX's monitor](evidence/tandy-ex-about-box.png) |
 
+The machine itself, with the lid off so the memory / 3-in-1 upgrade card is visible:
+
+![Tandy 1000 EX with the lid off, the upgrade card visible, and Minesweeper on the CM-5 monitor](evidence/tandy-ex-machine-lid-off.jpg)
+
 The right edge of the About box is clipped by the display. The explainer video
 is in the submission.
 
