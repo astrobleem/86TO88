@@ -9,30 +9,49 @@ an 8088-based Tandy 1000 EX. It is a small DOS TSR plus a
 on his Tandy 1000 EX under Windows 3.0. That hardware result is separate
 from the emulator tests documented below.
 
-## Try it locally - judge quick start
+## Try it
 
-From a clone of this repository, with Python 3.9+ and internet access:
+**1. In your browser, one click: <https://astrobleem.github.io/86TO88/>**
+
+Open the page in a desktop browser and press **Download media & run**. Your
+browser fetches the hash-pinned public reference disks and ROMs, checks every
+SHA-256, pulls the original `WINMINE.EXE` out of the Windows 3.1 disk
+(exactly 27,776 bytes, hash-checked), builds the guest disk in memory and boots
+**Windows 3.0 in real mode** with the WM88 bridge. About 10 MB is downloaded.
+This site hosts **no Microsoft software and no ROMs**; if any check fails, the
+page stops and Windows is not launched. Steer the guest's mouse arrow to a
+square, left-click to reveal, right-click to flag, F2 for a new game.
+
+**This is an emulated 80286 (PCjs), not an 8088.** It proves the original game
+runs under Windows 3.0 real mode through the bridge; the Tandy 1000 EX result
+is separate evidence.
+
+![The original Minesweeper running next to Windows 3.0 Program Manager; the About box reads Microsoft Windows Version 3.0, Real Mode](evidence/hosted-hero-real-mode.png)
+
+*Captured from the hosted page: Windows 3.0 **Real Mode** (About box), the
+original Windows 3.1 Minesweeper beside Program Manager, driven by the WM88 bridge.*
+
+**2. On real hardware.** Chad runs the original Windows 3.1 Minesweeper on a
+Tandy 1000 EX (8088) under Windows 3.0. Hardware photos and the explainer
+video are in the submission.
+
+**3. Locally, from a clone** (Python 3.9+, internet access):
 
 ```sh
 python3 tools/prepare_pcjs.py --reference-media --out ../86to88-private-judge
 python3 -m http.server 8080 --bind 127.0.0.1 --directory ../86to88-private-judge
 ```
 
-Leave the server running and open **<http://127.0.0.1:8080/judge.html>** in a
-normal desktop browser. On Windows, use `py -3` or `python` instead of `python3`.
-No browser extension, account, compiler or installed emulator is needed.
-Wait for DOS and Windows to boot, steer the guest's visible mouse arrow to a
-square, then left-click to reveal or right-click to flag. F2 starts a new game.
+Open **<http://127.0.0.1:8080/judge.html>**. On Windows, use `py -3` or
+`python` instead of `python3`. Ctrl+C stops the server. This builds the same
+fixture as the hosted page, from the same pinned media, on your machine.
 
-**This browser fixture emulates a 286, not an 8088.** It runs the original game
-under Windows 3.0 real mode; the Tandy hardware result is separate evidence.
-Chrome boot, gameplay, loss and restart were tested. Fullscreen is optional;
-direct file launch and complete wins remain unverified.
-
-The script downloads hash-pinned archival reference media into a private local
-fixture. DOS/Windows/ROM media is not in this repo and must not be published.
-Use media you are entitled to use. See [setup, provenance and validation limits](emulator/pcjs/README.md)
-for details and the own-media option. Ctrl+C stops the local server.
+Chrome boot, gameplay, loss and restart were tested. Firefox and Safari are
+untested; fullscreen is optional and complete wins through the hosted page
+remain unverified. DOS/Windows/ROM media is not in this repo and must not be
+published; use media you are entitled to use. See
+[setup, provenance and validation limits](emulator/pcjs/README.md) and
+[the hosted site's design](site/README.md).
 
 > **The original `WINMINE.EXE` stays byte-for-byte unchanged on disk.** The
 > TSR intercepts DOS file reads of that one file and translates the bytes
