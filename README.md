@@ -42,13 +42,15 @@ for details and the own-media option. Ctrl+C stops the local server.
 
 ## Why the 3.1 binary won't start on Windows 3.0, and what the bridge does
 
-| Without the bridge (86Box) | Running with the bridge (DOSBox-X, 286) |
+| Without the bridge (PCjs, 286) | Running with the bridge (PCjs, 286) |
 |---|---|
-| ![Windows 3.0 Program Manager refusing Minesweeper: This application requires a newer version of Microsoft Windows](evidence/win30-winmine-refusal.png) | ![Minesweeper running under Windows 3.0 with a solved board](evidence/finalD-wonboard.png) |
+| ![Windows 3.0 refusing the original Minesweeper without the bridge](evidence/pcjs-browser-refusal.jpg) | ![Original Minesweeper running under Windows 3.0 with revealed cells and a question mark](evidence/pcjs-browser-gameplay.jpg) |
 
-![WM88 TSR reporting Installed and WINMINE.EXE verified](evidence/wm88-tsr-installed.png)
+![WM88 reporting Installed and WINMINE.EXE verified, followed by T88PASS and RT2PASS](evidence/pcjs-browser-dos-tests.jpg)
 
-*Loading the TSR in 86Box, from an earlier test build.*
+Earlier evidence remains available: [86Box refusal](evidence/win30-winmine-refusal.png),
+[DOSBox-X solved board](evidence/finalD-wonboard.png), and
+[TSR installation in 86Box](evidence/wm88-tsr-installed.png).
 
 | Barrier in the stock binary | Bridge fix (all outside the file) |
 |---|---|
