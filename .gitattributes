@@ -1,0 +1,2 @@
+# DOS files must keep CRLF and exact bytes on every platform
+site/ours/* -text

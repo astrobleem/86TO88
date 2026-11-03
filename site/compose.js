@@ -29,6 +29,15 @@ export function specimenFromWin31(win31Text) {
   return new FatDisk(raw).readFile('WINDOWS/WINMINE.EXE');
 }
 
+function toCrlf(bytes) {
+  const out = [];
+  for (let i = 0; i < bytes.length; i++) {
+    if (bytes[i] === 0x0a && (i === 0 || bytes[i - 1] !== 0x0d)) out.push(0x0d);
+    out.push(bytes[i]);
+  }
+  return new Uint8Array(out);
+}
+
 // win30Bytes: raw bytes of the Windows 3.0 reference JSON (hash already checked by caller or here).
 // ours: { name: Uint8Array } with WM88TSR.COM, SHELL.DLL, WM88.BAT, TEST88.COM, RTEST2.COM, CONFIG.SYS, AUTOEXEC.BAT
 export async function compose(win30Bytes, specimen, ours, { check = true } = {}) {
@@ -38,6 +47,9 @@ export async function compose(win30Bytes, specimen, ours, { check = true } = {})
     await checked(ours['WM88TSR.COM'], PINS.tsr, 'WM88TSR.COM');
     await checked(ours['SHELL.DLL'], PINS.shim, 'SHELL.DLL');
   }
+  // DOS needs CRLF. Git checkouts with autocrlf can turn these into LF, so normalize (idempotent).
+  ours = { ...ours };
+  for (const n of ['CONFIG.SYS', 'AUTOEXEC.BAT']) ours[n] = toCrlf(ours[n]);
   if (specimen.length !== PINS.specimenBytes) throw new Error('Unexpected WINMINE.EXE length');
   const text = new TextDecoder('utf-8').decode(win30Bytes);
   const { raw, geometry } = decodePcjs(text);
