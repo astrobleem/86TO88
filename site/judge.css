@@ -1,0 +1,41 @@
+:root { color-scheme: light; font-family: system-ui, sans-serif; color:#182826; background:#f3f1e8; }
+body { margin:0; }
+main { max-width:1320px; margin:auto; padding:32px 24px; }
+header { max-width:850px; }
+.eyebrow { font:700 .75rem/1.5 ui-monospace, monospace; letter-spacing:.14em; color:#27634d; }
+h1 { font-size:clamp(2rem,4vw,3.5rem); line-height:1.06; letter-spacing:-.04em; margin:.5em 0; }
+p { line-height:1.55; }
+aside { border-left:4px solid #ad7023; background:#fff5db; padding:18px 22px; margin:24px 0; line-height:1.55; }
+.guide { display:grid; grid-template-columns:repeat(3,1fr); gap:28px; }
+h2 { font-size:1rem; }
+.emulator { margin:24px 0; }
+.pcjs-canvas { width:100%; max-width:1280px; image-rendering:pixelated; }
+.pcjs-screen { max-width:1280px; margin:auto; }
+.pcx86-panel { clear:both; }
+.pcx86-panel textarea { width:100%; box-sizing:border-box; background:#182826; color:#e5f4da; font:12px/1.4 monospace; }
+.pcjs-controls button { cursor:pointer; margin:4px; padding:7px 15px; }
+code { font-family:ui-monospace, monospace; font-size:.9em; }
+a { color:#176249; }
+details { padding:18px; border:1px solid #b6c5b9; border-radius:8px; }
+summary { cursor:pointer; font-weight:650; }
+footer { font-size:.85rem; padding:24px 0; }
+@media(max-width:720px) { main { padding:20px 12px; } .guide { grid-template-columns:1fr; gap:0; } }
+
+/* hosted page additions */
+.run{background:#fff;border:1px solid #d8d2c2;border-radius:12px;padding:20px;margin:20px 0}
+.run button.go{font:inherit;font-weight:700;font-size:1.1rem;padding:12px 22px;border-radius:10px;border:0;background:#1f6f54;color:#fff;cursor:pointer}
+.run button.go:disabled{background:#8aa89c;cursor:default}
+.run .notice{font-size:.95rem;margin:0 0 14px}
+ol.steps{list-style:none;padding:0;margin:16px 0 0}
+ol.steps li{padding:4px 0 4px 26px;position:relative;color:#6b6659}
+ol.steps li::before{content:"\25CB";position:absolute;left:0}
+ol.steps li.active{color:#1b2a2e;font-weight:600}
+ol.steps li.active::before{content:"\25D4"}
+ol.steps li.done{color:#1f6f54}
+ol.steps li.done::before{content:"\2713"}
+ol.steps li.fail{color:#a12828;font-weight:700}
+ol.steps li.fail::before{content:"\2717"}
+#fail{display:none;background:#fdecec;border:1px solid #e0a0a0;border-radius:8px;padding:12px;margin-top:12px;color:#7a1f1f}
+#emulator-wrap[hidden]{display:none}
+details.byo{margin-top:14px}
+details.byo label{display:block;margin:8px 0 2px;font-size:.9rem}

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>86TO88: run it in your browser</title>
+  <link rel="stylesheet" href="vendor/components.css">
+  <link rel="stylesheet" href="judge.css">
+</head>
+<body>
+  <main>
+    <header><p class="eyebrow">86TO88 / ORIGINAL BINARY, NEW BRIDGE</p>
+      <h1>Windows 3.1 Minesweeper.<br>Windows 3.0 underneath.</h1>
+      <p>The game is Microsoft's original, unmodified <code>WINMINE.EXE</code>. The open-source WM88 bridge translates file reads in memory; Windows and the game are not reimplemented. Click once and play it here.</p>
+    </header>
+    <aside><strong>This browser run emulates an 80286, not an 8088.</strong> It is a compatibility and gameplay demo. The 8088 result is the real Tandy 1000 EX run, shown in the <a href="https://github.com/astrobleem/86TO88">repository</a> and video.</aside>
+
+    <section class="run" aria-label="Run it">
+      <p class="notice"><strong>What this does.</strong> This site hosts no Microsoft software. When you click, your browser downloads public reference disk images of PC DOS 3.20 with Windows 3.0 and of Windows 3.1 (about 10 MB over the wire, about 29 MB unpacked) from the public Foxlum PCjs archive on GitHub, plus the PCjs ROM files from the PCjs repository. Every file is checked against a pinned SHA-256, the original Minesweeper is cut from the Windows 3.1 image and must match a pinned 27,776-byte hash, and everything is combined in this tab's memory only. Nothing is uploaded or stored. You are responsible for using media you are entitled to use.</p>
+      <button class="go" id="go" type="button">Download media &amp; run (about 10 MB)</button>
+      <ol class="steps" id="steps" aria-live="polite">
+        <li data-s="roms">Fetch and verify PCjs ROM files</li>
+        <li data-s="win30">Fetch and verify the Windows 3.0 reference disk</li>
+        <li data-s="win31">Fetch and verify the Windows 3.1 reference disk</li>
+        <li data-s="build">Extract WINMINE.EXE, check its hash, build the guest disk</li>
+        <li data-s="boot">Boot: DOS, the bridge, its tests, then Windows</li>
+      </ol>
+      <div id="fail" role="alert"></div>
+      <details class="byo"><summary>Use my own files instead (nothing is downloaded except the PCjs ROMs)</summary>
+        <label for="own30">Windows 3.0 reference disk JSON (<code>PCDOS320-WIN300-EGA.json</code>)</label><input id="own30" type="file">
+        <label for="ownmine"><code>WINMINE.EXE</code> from Windows 3.1 (27,776 bytes)</label><input id="ownmine" type="file">
+        <p><button class="go" id="goown" type="button">Run with my files</button></p>
+      </details>
+    </section>
+
+    <div id="emulator-wrap" hidden>
+    <section aria-label="Quick guide" class="guide">
+      <div><h2>1 &middot; Wait for boot</h2><p>DOS loads the bridge and runs the <code>TEST88</code> and <code>RTEST2</code> suites, then opens the game. Look for <code>T88PASS</code> and <code>0123456789ABCDERT2PASS</code>.</p></div>
+      <div><h2>2 &middot; Play the original</h2><p>Click inside the screen. Left-click reveals; right-click flags; F2 starts a new game. The guest mouse is relative: steer its visible arrow to a cell, then click.</p></div>
+      <div><h2>3 &middot; Reload to reset</h2><p>Nothing is saved. Reloading the page discards the session and starts fresh.</p></div>
+    </section>
+    <section aria-label="PCjs emulated computer" class="emulator">
+      <p><strong>Original EGA display:</strong> the dark-red digit segments are dithered by the stock display driver. Their shapes match the original game bitmap exactly. If a click first focuses the emulator, click again.</p>
+      <div id="judge286" class="machine pcx86 " style=""><div id="judge286.machine" class="pcx86-machine pcx86-component" style="margin:0 auto;clear:both;" data-value="">
+<h3 style="">80286 / EGA / 640 KiB — Windows 3.0 real mode</h3>
+<div class="pcjs-container" style="border:1px solid black;border-radius:15px;overflow:auto;background-color:#fff8e7;">
+
+<div id="judge286.computer" class="pcx86-computer pcx86-component" style="" data-value=""><div class="pcjs-container" style=""><div class="pcx86-computer-object" data-value="{id:'judge286.computer',name:'PCjs judge 286',autoPower:true,busWidth:24,resume:'0',state:''}"></div></div></div>
+<div id="judge286.ramLow" class="pcx86-ram pcx86-component" style="" data-value=""><div class="pcjs-container" style=""><div class="pcx86-ram-object" data-value="{id:'judge286.ramLow',name:'',addr:0x00000,size:0xa0000,file:'',load:null,exec:null,test:false}"></div></div></div>
+<div id="judge286.romBIOS" class="pcx86-rom pcx86-component" style="" data-value=""><div class="pcjs-container" style=""><div class="pcx86-rom-object" data-value="{id:'judge286.romBIOS',name:'',addr:0xf0000,size:0x10000,alias:0xff0000,file:'vendor/ATBIOS-REV3.json5',notify:''}"></div></div></div>
+<div id="judge286.videoEGA" class="pcx86-video pcx86-component" style="margin:0 auto;clear:both;padding:8px;" data-value=""><div class="pcjs-container" style="">
+<div class="pcx86-video-object pcjs-screen" data-value="{id:'judge286.videoEGA',name:'',model:'ega',mode:null,screenWidth:1280,screenHeight:700,screenColor:'black',screenRotate:0,bufferAddr:0,bufferRAM:false,bufferFormat:'1bpp',bufferCols:0,bufferRows:0,bufferBits:1,bufferLeft:0,bufferRotate:0,memory:0x20000,switches:'',scale:false,cellWidth:1,cellHeight:1,charCols:80,charRows:25,fontROM:'',fontColor:'',touchScreen:'mouse',autoLock:false,aspectRatio:0,smoothing:null,interruptRate:0,refreshRate:60,flicker:0.5,irq:null}"><canvas class="pcjs-canvas" width="1280" height="700" style="height: auto; background-color: black;"></canvas></div>
+<div class="pcjs-controls"><div class="pcx86-control" style="float:left;"><button class="pcx86-binding" style="-webkit-user-select:none;" data-value="{type:'button',binding:'fullScreen',value:''}">Full screen</button></div></div>
+<div id="judge286.romEGA" class="pcx86-rom pcx86-component" style="" data-value=""><div class="pcjs-container" style=""><div class="pcx86-rom-object" data-value="{id:'judge286.romEGA',name:'',addr:0xc0000,size:0x4000,alias:null,file:'vendor/IBM-EGA.json5',notify:'videoEGA'}"></div></div></div>
+
+</div></div>
+<div id="judge286.fdc" class="pcx86-fdc pcx86-component" style="" data-value=""><div class="pcjs-container" style=""><div class="pcx86-fdc-object" data-value="{id:'judge286.fdc',name:'',autoMount:'',diskettes:'',drives:'',server:'',sortBy:''}"></div></div></div>
+<div id="judge286.hdc" class="pcx86-hdc pcx86-component" style="" data-value=""><div class="pcjs-container" style=""><div class="pcx86-hdc-object" data-value="{id:'judge286.hdc',name:'',drives:'[{name:&quot;86TO88 private judge disk&quot;,type:2,path:&quot;disk.json&quot;}]',type:'AT'}"></div></div></div>
+<div id="judge286.keyboard" class="pcx86-keyboard pcx86-component" style="" data-value=""><div class="pcjs-container" style=""><div class="pcx86-keyboard-object" data-value="{id:'judge286.keyboard',name:'',model:'US84'}"></div></div></div>
+<div id="judge286.cpu" class="pcx86-cpu pcx86-component" style="float:left;padding:8px;" data-value=""><div class="pcjs-container" style="">
+<div class="pcx86-cpu-object" data-value="{id:'judge286.cpu',name:'',model:'80286',stepping:'',fpu:0,cycles:8000000,multiplier:1,autoStart:true,addrReset:0,csStart:-1,csInterval:-1,csStop:-1}"></div>
+<div class="pcjs-controls">
+<div class="pcx86-control" style="float:left;"><button class="pcx86-binding" style="-webkit-user-select:none;" data-value="{type:'button',binding:'run',value:''}">Run</button></div>
+<div class="pcx86-control" style="float:left;"><button class="pcx86-binding" style="-webkit-user-select:none;" data-value="{type:'button',binding:'reset',value:''}">Reset</button></div>
+<div class="pcx86-control" style="float:left;"><button class="pcx86-binding" style="-webkit-user-select:none;" data-value="{type:'button',binding:'setSpeed',value:''}">Speed</button></div>
+</div>
+</div></div>
+<div id="judge286.chipset" class="pcx86-chipset pcx86-component" style="" data-value=""><div class="pcjs-container" style=""><div class="pcx86-chipset-object" data-value="{id:'judge286.chipset',name:'',model:'5170',scaleTimers:false,sw1:'',sw2:'',sound:true,floppies:[1200,1200],monitor:'',dateRTC:''}"></div></div></div>
+<div id="judge286.com1" class="pcx86-serial pcx86-component" style="" data-value=""><div class="pcjs-container" style=""><div class="pcx86-serial-object" data-value="{id:'judge286.com1',name:'',adapter:1,baudReceive:0,baudTransmit:0,binding:'',tabSize:0,charBOL:0,upperCase:false}"></div></div></div>
+<div id="judge286.mouse" class="pcx86-mouse pcx86-component" style="" data-value=""><div class="pcjs-container" style=""><div class="pcx86-mouse-object" data-value="{id:'judge286.mouse',name:'',adapter:0,binding:'',type:'',scaleMouse:0.5,serial:'com1'}"></div></div></div>
+<div id="judge286.panel" class="pcx86-panel pcx86-component" style="" data-value=""><div class="pcjs-container" style="">
+<div class="pcx86-panel-object" data-value="{id:'judge286.panel',name:''}"></div>
+<div class="pcjs-controls"><div class="pcx86-control" style="float:left;"><textarea class="pcx86-binding" style="" data-value="{type:'textarea',binding:'print'}" readonly autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea></div></div>
+</div></div>
+</div>
+<div class="pcjs-copyright">
+<a href="https://www.pcjs.org" target="_blank">PCx86</a> v2.26 © 2012-2026 <a href="https://github.com/jeffpar" target="_blank">Jeff Parsons</a>
+</div>
+<div style="clear:both"></div>
+</div></div>
+
+    
+    </section>
+    </div>
+
+    <details><summary>What this proves, and what it doesn't</summary>
+      <p>The browser executes the original DOS, Windows 3.0 and Windows 3.1 Minesweeper code on an emulated 80286. WM88TSR translates the known 27,776-byte specimen and the 361-byte SHELL.DLL shim supplies ShellAbout. A working 286 run does not prove 8088 instruction compatibility or timing.</p>
+      <p>PCjs <a href="vendor/PCJS-LICENSE.txt">MIT license</a> excludes third-party programs, images and documentation. Public archival access does not grant redistribution permission.</p>
+    </details>
+    <footer><a href="https://github.com/astrobleem/86TO88">86TO88 source &amp; evidence</a> &middot; <a href="https://www.pcjs.org/">PCjs by Jeff Parsons</a></footer>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

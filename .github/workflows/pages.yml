@@ -1,0 +1,35 @@
+name: Deploy site to GitHub Pages
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Refuse to publish Microsoft media or ROMs
+        run: |
+          if find site -type f \( -iname 'winmine.exe' -o -iname '*.rom' -o -iname 'ATBIOS*' -o -iname 'IBM-EGA*' -o -iname 'disk.json' -o -iname 'PCDOS*' \) | grep -q .; then
+            echo "Third-party media found under site/"; exit 1; fi
+      - name: Check pinned runtime hashes
+        run: |
+          echo "724c396d9bf602554194bd118a5c164e739447080d487161af375bb9a4d5de4a  site/vendor/pcx86.js" | sha256sum -c -
+          echo "853e6100d7c60d505eb57098a82000bc60c3124a6e45e86cfb647b7184216eee  site/vendor/components.css" | sha256sum -c -
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
