@@ -32,8 +32,15 @@ is separate evidence.
 original Windows 3.1 Minesweeper beside Program Manager, driven by the WM88 bridge.*
 
 **2. On real hardware.** Chad runs the original Windows 3.1 Minesweeper on a
-Tandy 1000 EX (8088) under Windows 3.0. Hardware photos and the explainer
-video are in the submission.
+Tandy 1000 EX (8088) under Windows 3.0. Frames from his phone video of the
+EX's own screen (Tandy CM-5 monitor), cropped and otherwise unedited:
+
+| The board | The game's own About box |
+| --- | --- |
+| ![Minesweeper board on the Tandy 1000 EX's monitor](evidence/tandy-ex-board.png) | ![Minesweeper About box, by Robert Donner and Curt Johnson, on the Tandy 1000 EX's monitor](evidence/tandy-ex-about-box.png) |
+
+The right edge of the About box is clipped by the display. The explainer video
+is in the submission.
 
 **3. Locally, from a clone** (Python 3.9+, internet access):
 
