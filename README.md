@@ -257,8 +257,9 @@ not exercised in this configuration.
 
 **What this means.** The bridge handles `WINMINE.EXE`'s 80186 instructions, but a stock
 8088 also needs a display driver that is free of them. CGA works; the EGA/VGA drivers
-shipped with Windows 3.0 do not. Whether the Tandy display driver is 80186-clean has not
-been checked. The earlier DOSBox-X gameplay sessions used an emulated 286.
+shipped with Windows 3.0 do not. The TANDY88 display driver was audited separately: no unsupported
+opcodes in 13,707 emitted instruction rows, and an 8086-prefetch test passed all 4,096
+generated-rotate cases (audit by the project author; not re-run here). The earlier DOSBox-X gameplay sessions used an emulated 286.
 
 Real vs simulated: all of Windows and 100% of the game logic are the genuine
 original code. The single simulated piece is `ShellAbout`: instead of the
