@@ -37,7 +37,7 @@ is separate evidence.
 original Windows 3.1 Minesweeper beside Program Manager, driven by the WM88 bridge.*
 
 **2. On real hardware.** Chad runs the original Windows 3.1 Minesweeper on a
-Tandy 1000 EX (8088, expanded to 640 KB, with a 3-in-1 serial / CompactFlash / memory
+Tandy 1000 EX (CPU: NEC V20, an 8088-compatible chip that also executes 80186 instructions; expanded to 640 KB, with a 3-in-1 serial / CompactFlash / memory
 upgrade card, run with the lid off so the upgrade is visible) under Windows 3.0. Frames from his phone video of the
 EX's own screen (Tandy CM-5 monitor), cropped and otherwise unedited:
 
@@ -49,7 +49,17 @@ The machine itself, with the lid off so the memory / 3-in-1 upgrade card is visi
 
 ![Tandy 1000 EX with the lid off, the upgrade card visible, and Minesweeper on the CM-5 monitor](evidence/tandy-ex-machine-lid-off.jpg)
 
-The right edge of the About box is clipped by the display. The explainer video
+The right edge of the About box is clipped by the display.
+
+**What the Tandy run does and does not show.** The EX in these photos has an NEC V20 in
+place of the stock 8088. The V20 is pin-compatible but executes the 80186 instructions
+(`PUSH imm`, `IMUL imm`, shifts by an immediate) natively, so on this machine the
+missing-instruction barrier does not exist. The TSR does not detect the CPU and still
+rewrites those sites to `INT F8h`, so the handler ran on real hardware, but the game
+would not have faulted without it. The run does show the version-stamp change, the
+`SHELL.DLL` shim and the TSR working on a real machine under Windows 3.0 real mode.
+**It is not a test on a stock 8088.** The 8088 case rests on the handler's DOS-level
+tests and the emulator evidence below. The explainer video
 is in the submission.
 
 **3. Locally, from a clone** (Python 3.9+, internet access):
@@ -95,7 +105,7 @@ published; use media you are entitled to use. See
 **Installing the TSR: emulator vs. real hardware.** Same step, same message: the TSR
 reports `Installed. WINMINE.EXE verified (27776B pinned image)`, then Windows starts.
 
-| Emulator (PCjs, 286) | Real Tandy 1000 EX (8088) |
+| Emulator (PCjs, 286) | Real Tandy 1000 EX (NEC V20) |
 | --- | --- |
 | ![WM88 reporting Installed and WINMINE.EXE verified, followed by T88PASS and RT2PASS](evidence/pcjs-browser-dos-tests.jpg) | ![The Tandy 1000 EX's monitor: wm88tsr prints Installed, WINMINE.EXE verified (27776B pinned image), then win /r winmine.exe is typed](evidence/tandy-ex-tsr-installed.jpg) |
 
@@ -182,8 +192,10 @@ Put a Windows 3.0 installation plus the copies above into one folder, point
 ### Real hardware
 
 Chad reports that Windows 3.1 Minesweeper worked on his physical **Tandy
-1000 EX under Windows 3.0**. Real-hardware operation is therefore no longer
-an outstanding milestone.
+1000 EX under Windows 3.0**. That machine has an NEC V20 (8088-compatible, with
+the 80186 instruction set) in place of the stock 8088, so this run does not test
+the missing-instruction fix on a CPU that lacks those instructions. A run on a
+stock 8088 has not been done.
 
 ### Recorded gameplay and safety checks
 
