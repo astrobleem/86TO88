@@ -63,6 +63,16 @@ Open **<http://127.0.0.1:8080/judge.html>**. On Windows, use `py -3` or
 `python` instead of `python3`. Ctrl+C stops the server. This builds the same
 fixture as the hosted page, from the same pinned media, on your machine.
 
+**Or with Docker** (serves the same page locally):
+
+```sh
+docker build -t 86to88 .
+docker run --rm -p 8080:80 86to88
+```
+
+Then open <http://localhost:8080/>. The image holds no Microsoft files; the page
+downloads the pinned public media in your browser, exactly as the hosted site does.
+
 Chrome boot, gameplay, loss and restart were tested. Firefox and Safari are
 untested; fullscreen is optional and complete wins through the hosted page
 remain unverified. DOS/Windows/ROM media is not in this repo and must not be

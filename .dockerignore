@@ -1,0 +1,10 @@
+artifacts
+evidence
+deliverable
+emulator
+tests
+tools
+src
+.git
+*.md
+!site/README.md
