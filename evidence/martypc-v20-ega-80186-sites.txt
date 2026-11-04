@@ -1,0 +1,64 @@
+total=18401571 unique=63
+12082413	90	1e51:09ca [c1 ea 03] shr dx, 03h	<- eb 54 ; 88 46 fd ; 89 5e f0
+12082608	46	1e51:172f [c1 eb 02] shr bx, 02h	<- 8b 46 ec ; 8a dc ; 83 e3 1c
+12086436	44	1e51:09ca [c1 ea 03] shr dx, 03h	<- 8a cc ; 88 46 fd ; 89 5e f0
+12086839	624	1be3:0562 [c0 c0 04] rol al, 4h	<- bd f0 0f ; 32 ff ; ac
+12086845	240	1be3:056e [c0 c0 04] rol al, 4h	<- 0a c7 ; 8a fc ; ac
+12086855	624	1be3:0583 [c0 c0 04] rol al, 4h	<- 0a c4 ; aa ; ac
+12086861	304	1be3:058f [c0 c0 04] rol al, 4h	<- 0a c7 ; 8a fc ; aa
+12091989	376	1be3:0562 [c0 c0 03] rol al, 3h	<- bd f8 07 ; 32 ff ; ac
+12091995	120	1be3:056e [c0 c0 03] rol al, 3h	<- 0a c7 ; 8a fc ; ac
+12092005	376	1be3:0583 [c0 c0 03] rol al, 3h	<- 0a c4 ; aa ; ac
+12092011	120	1be3:058f [c0 c0 03] rol al, 3h	<- 0a c7 ; 8a fc ; aa
+12097083	360	1be3:0562 [c0 c0 02] rol al, 2h	<- bd fc 03 ; 32 ff ; ac
+12097089	112	1be3:056e [c0 c0 02] rol al, 2h	<- 0a c7 ; 8a fc ; ac
+12097099	360	1be3:0583 [c0 c0 02] rol al, 2h	<- 0a c4 ; aa ; ac
+12097105	112	1be3:058f [c0 c0 02] rol al, 2h	<- 0a c7 ; 8a fc ; aa
+12105933	169	1be3:0562 [c0 c8 02] ror al, 2h	<- bd c0 3f ; 32 ff ; ac
+12105939	120	1be3:056e [c0 c8 02] ror al, 2h	<- 0a c7 ; 8a fc ; ac
+12105949	133	1be3:0583 [c0 c8 02] ror al, 2h	<- 0a c4 ; aa ; ac
+12105955	133	1be3:058f [c0 c8 02] ror al, 2h	<- 0a c7 ; 8a fc ; aa
+12120841	412	1be3:0562 [c0 c8 03] ror al, 3h	<- bd e0 1f ; 32 ff ; ac
+12120850	44	1be3:0576 [c0 c8 03] ror al, 3h	<- 25 c0 3f ; 0a c4 ; aa
+12124750	36	1be3:0576 [c0 c8 02] ror al, 2h	<- 25 80 7f ; 0a c4 ; aa
+12128465	334	1be3:0562 [c0 c8 01] ror al, 1h	<- bd 80 7f ; 32 ff ; ac
+12128471	78	1be3:056e [c0 c8 01] ror al, 1h	<- 0a c7 ; 8a fc ; ac
+12128481	320	1be3:0583 [c0 c8 01] ror al, 1h	<- 0a c4 ; aa ; ac
+12128487	64	1be3:058f [c0 c8 01] ror al, 1h	<- 0a c7 ; 8a fc ; aa
+12139396	367	1be3:0562 [c0 c0 01] rol al, 1h	<- bd fe 01 ; 32 ff ; ac
+12139406	331	1be3:0577 [c0 c0 01] rol al, 1h	<- 0a c4 ; aa ; ac
+12139413	230	1be3:0584 [c0 c0 01] rol al, 1h	<- 8a fc ; aa ; ac
+12139419	75	1be3:0590 [c0 c0 01] rol al, 1h	<- 0a c7 ; 8a fc ; aa
+12150090	56	1be3:056e [c0 c8 03] ror al, 3h	<- 0a c7 ; 8a fc ; ac
+12150100	368	1be3:0583 [c0 c8 03] ror al, 3h	<- 0a c4 ; aa ; ac
+12150106	56	1be3:058f [c0 c8 03] ror al, 3h	<- 0a c7 ; 8a fc ; aa
+12174590	14	1be3:0581 [c0 c8 01] ror al, 1h	<- 25 fe 01 ; 0a c4 ; aa
+12177549	36	1be3:0596 [c0 c0 01] rol al, 1h	<- b9 02 00 ; e9 1a 00 ; ac
+12177564	36	1be3:057c [c0 c0 01] rol al, 1h	<- aa ; e2 ca ; ac
+12177592	36	1be3:05b1 [c0 c0 01] rol al, 1h	<- 8a fc ; aa ; e2 ca
+14608462	128	1ad5:1245 [c0 c0 04] rol al, 4h	<- 8a fc ; aa ; ac
+15683205	192	1ad5:11cf [c0 c0 02] rol al, 2h	<- 8a fc ; aa ; ac
+15753921	256	1ad5:13bb [c0 c8 01] ror al, 1h	<- 26 22 05 ; aa ; ac
+15753936	128	1ad5:13da [c0 c8 01] ror al, 1h	<- 8a fc ; 26 22 05 ; aa
+15768061	256	1ad5:13bb [c0 c8 01] ror al, 1h	<- 26 32 05 ; aa ; ac
+15768076	128	1ad5:13da [c0 c8 01] ror al, 1h	<- 8a fc ; 26 32 05 ; aa
+15805508	256	1ad5:13bb [c0 c0 04] rol al, 4h	<- 26 22 05 ; aa ; ac
+15805523	128	1ad5:13da [c0 c0 04] rol al, 4h	<- 8a fc ; 26 22 05 ; aa
+15819645	256	1ad5:13bb [c0 c0 04] rol al, 4h	<- 26 32 05 ; aa ; ac
+15819660	128	1ad5:13da [c0 c0 04] rol al, 4h	<- 8a fc ; 26 32 05 ; aa
+15856209	312	1ad5:13bb [c0 c8 03] ror al, 3h	<- 26 22 05 ; aa ; ac
+15856224	156	1ad5:13da [c0 c8 03] ror al, 3h	<- 8a fc ; 26 22 05 ; aa
+15870352	312	1ad5:13bb [c0 c8 03] ror al, 3h	<- 26 32 05 ; aa ; ac
+15870367	156	1ad5:13da [c0 c8 03] ror al, 3h	<- 8a fc ; 26 32 05 ; aa
+15908254	256	1ad5:13bb [c0 c0 03] rol al, 3h	<- 26 22 05 ; aa ; ac
+15908269	128	1ad5:13da [c0 c0 03] rol al, 3h	<- 8a fc ; 26 22 05 ; aa
+15922391	256	1ad5:13bb [c0 c0 03] rol al, 3h	<- 26 32 05 ; aa ; ac
+15922406	128	1ad5:13da [c0 c0 03] rol al, 3h	<- 8a fc ; 26 32 05 ; aa
+16003598	256	1ad5:13bb [c0 c0 01] rol al, 1h	<- 26 22 05 ; aa ; ac
+16003613	128	1ad5:13da [c0 c0 01] rol al, 1h	<- 8a fc ; 26 22 05 ; aa
+16018742	256	1ad5:13bb [c0 c0 01] rol al, 1h	<- 26 32 05 ; aa ; ac
+16018757	128	1ad5:13da [c0 c0 01] rol al, 1h	<- 8a fc ; 26 32 05 ; aa
+16106740	56	1ad5:1365 [c0 c0 02] rol al, 2h	<- 26 22 05 ; aa ; ac
+16106755	28	1ad5:1384 [c0 c0 02] rol al, 2h	<- 8a fc ; 26 22 05 ; aa
+16113826	56	1ad5:1365 [c0 c0 02] rol al, 2h	<- 26 32 05 ; aa ; ac
+16113841	28	1ad5:1384 [c0 c0 02] rol al, 2h	<- 8a fc ; 26 32 05 ; aa

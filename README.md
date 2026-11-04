@@ -58,9 +58,10 @@ missing-instruction barrier does not exist. The TSR does not detect the CPU and 
 rewrites those sites to `INT F8h`, so the handler ran on real hardware, but the game
 would not have faulted without it. The run does show the version-stamp change, the
 `SHELL.DLL` shim and the TSR working on a real machine under Windows 3.0 real mode.
-**It is not a test on a stock 8088.** The 8088 case rests on the handler's DOS-level
-tests and the emulator evidence below. The explainer video
-is in the submission.
+**It is not a test on a physical stock 8088.** The stock-8088 result comes from a
+cycle-accurate 8088 emulator; see
+[Stock 8088: why it crashes and what works](#stock-8088-why-it-crashes-and-what-works).
+The explainer video is in the submission.
 
 **3. Locally, from a clone** (Python 3.9+, internet access):
 
@@ -194,8 +195,9 @@ Put a Windows 3.0 installation plus the copies above into one folder, point
 Chad reports that Windows 3.1 Minesweeper worked on his physical **Tandy
 1000 EX under Windows 3.0**. That machine has an NEC V20 (8088-compatible, with
 the 80186 instruction set) in place of the stock 8088, so this run does not test
-the missing-instruction fix on a CPU that lacks those instructions. A run on a
-stock 8088 has not been done.
+the missing-instruction fix on a CPU that lacks those instructions. The stock-8088
+case was run on a cycle-accurate 8088 emulator instead; see
+[Stock 8088](#stock-8088-why-it-crashes-and-what-works) below.
 
 ### Recorded gameplay and safety checks
 
@@ -217,37 +219,46 @@ re-run through the full Windows gameplay regression (window opens, flag
 plants with the counter decrementing, numbered reveal with the timer
 running — see `evidence/fixed-tsr-*.png`).
 
-### The 8088 emulator startup investigation
+### Stock 8088: why it crashes and what works
 
-The full Windows gameplay sessions above used **DOSBox-X with an emulated
-286** (`cputype=286`). The project's earlier investigation found that its
-8086 core also hung a stock Windows 3.0 installation. Passing DOS-level
-instruction tests and starting Windows are separate checks; the former
-alone did not establish that the complete game worked on a physical 8088.
-Chad's hardware report now supplies the real-machine result.
+**Cause.** The stock Windows 3.0 disk crashes on a real 8088 because its own EGA display
+driver, `WINDOWS\SYSTEM\EGA.DRV`, uses 80186 instructions. The bridge is not involved.
+On an 8088 the opcode `C1` executes as `RET` (and `C0`, `60`–`6F`, `0F` are aliased the
+same way, with no fault), so the first `shr dx,3` (`C1 EA 03`) sends execution into
+garbage. That is the black-screen hang and the KERNEL-startup failure seen earlier in PCjs
+and 86Box; those emulators were behaving correctly.
 
-The earlier investigation also compared two independent emulators:
+**How it was established.** MartyPC 0.5.0 (cycle-accurate 8088, GLaBIOS, XT-IDE, IBM EGA)
+was traced instruction by instruction.
 
-* **PCjs** — the earlier README records an XT configuration with the same
-  BIOS, chipset, and hard disk, changing only the CPU model. Its 80286 model
-  reached Program Manager; its 8088 model failed in real-mode KERNEL startup
-  while loading the display driver. The `pcjs-xt286cpu-*.png` screenshots
-  named in that account are not present in this repository, so this remains
-  a historical finding rather than an inspectable capture here.
-* **86Box** — the recorded XT/8088 configuration (`ibmxt86`, 4.77 MHz, EGA)
-  showed the Windows splash and then a black-screen hang. The earlier
-  investigation reports no disk I/O, a spinning host CPU, and disabled
-  interrupts, after checking keyboard type, DOS `CONFIG.SYS` drivers, and
-  mouse presence. The same disk image on an XT Model 286 (80286, 6 MHz)
-  reached Program Manager. Both endpoint captures are retained:
-  [8088 black screen](evidence/emu86-8088-blackhang.png) and
-  [286 Program Manager](evidence/emu86-xt286-progman.png).
+* On the 8088 core the first 80186 opcode executed is `C1 EA 03` at `1e51:09ca`, in
+  `EGA.DRV` (file offset 5412). The machine fails at that point.
+* On the same machine with the V20 core, Windows reaches Program Manager. Every 80186
+  instruction executed on the way, 63 unique sites, belongs to `EGA.DRV`: two static
+  (`shr dx,3` and `shr bx,2`, each occurring exactly once in the file) and the rest in
+  bitblt code the driver generates at run time (`rol/ror al,n`). KERNEL, KRNL286, USER,
+  GDI, PROGMAN, SYSTEM.DRV, KEYBOARD and MOUSE execute none
+  ([site list](evidence/martypc-v20-ega-80186-sites.txt)).
+* `EGA.DRV` is byte-identical in the project's disk and in Windows 3.0 (720K and 360K)
+  and 3.0a (720K) retail sets, so those offer no different EGA driver. `VGA.DRV` and
+  `8514.DRV` contain the same patterns.
 
-These comparisons pointed toward emulator CPU/startup behavior in those
-configurations. They do not establish a universal limitation of current
-PCjs or 86Box versions, and they do not contradict the physical Tandy
-result. The useful distinction is between a stock Windows startup problem
-in those emulator runs and the bridge's translation and gameplay checks.
+**Result on a stock 8088.** With `CGA.DRV` and the CGA fonts in place of the EGA driver,
+Windows 3.0 reaches Program Manager on the 8088 core, with no 80186 opcode executed in
+20.6 million instructions
+([capture](evidence/martypc-8088-cga-progman.png)). With the WM88 bridge added, the
+original Windows 3.1 `WINMINE.EXE` launches and runs on the 8088 core with none executed
+in about 19 million instructions
+([capture](evidence/martypc-8088-cga-minesweeper.png)). The CGA screen is 640x200
+monochrome, so the window extends past the bottom of the display. Gameplay (clicks) was
+not exercised in this configuration.
+
+![The original Minesweeper under Windows 3.0 and the WM88 bridge on a cycle-accurate 8088 (MartyPC, CGA driver)](evidence/martypc-8088-cga-minesweeper.png)
+
+**What this means.** The bridge handles `WINMINE.EXE`'s 80186 instructions, but a stock
+8088 also needs a display driver that is free of them. CGA works; the EGA/VGA drivers
+shipped with Windows 3.0 do not. Whether the Tandy display driver is 80186-clean has not
+been checked. The earlier DOSBox-X gameplay sessions used an emulated 286.
 
 Real vs simulated: all of Windows and 100% of the game logic are the genuine
 original code. The single simulated piece is `ShellAbout`: instead of the
