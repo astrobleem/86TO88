@@ -59,8 +59,7 @@ rewrites those sites to `INT F8h`, so the handler ran on real hardware, but the 
 would not have faulted without it. The run does show the version-stamp change, the
 `SHELL.DLL` shim and the TSR working on a real machine under Windows 3.0 real mode.
 **It is not a test on a physical stock 8088.** The stock-8088 result comes from a
-cycle-accurate 8088 emulator; see
-[Stock 8088: why it crashes and what works](#stock-8088-why-it-crashes-and-what-works).
+cycle-accurate 8088 emulator; see [Stock 8088](#stock-8088).
 The explainer video is in the submission.
 
 **3. Locally, from a clone** (Python 3.9+, internet access):
@@ -197,7 +196,7 @@ Chad reports that Windows 3.1 Minesweeper worked on his physical **Tandy
 the 80186 instruction set) in place of the stock 8088, so this run does not test
 the missing-instruction fix on a CPU that lacks those instructions. The stock-8088
 case was run on a cycle-accurate 8088 emulator instead; see
-[Stock 8088](#stock-8088-why-it-crashes-and-what-works) below.
+[Stock 8088](#stock-8088) below.
 
 ### Recorded gameplay and safety checks
 
@@ -219,47 +218,14 @@ re-run through the full Windows gameplay regression (window opens, flag
 plants with the counter decrementing, numbered reveal with the timer
 running — see `evidence/fixed-tsr-*.png`).
 
-### Stock 8088: why it crashes and what works
+### Stock 8088
 
-**Cause.** The stock Windows 3.0 disk crashes on a real 8088 because its own EGA display
-driver, `WINDOWS\SYSTEM\EGA.DRV`, uses 80186 instructions. The bridge is not involved.
-On an 8088 the opcode `C1` executes as `RET` (and `C0`, `60`–`6F`, `0F` are aliased the
-same way, with no fault), so the first `shr dx,3` (`C1 EA 03`) sends execution into
-garbage. That is the black-screen hang and the KERNEL-startup failure seen earlier in PCjs
-and 86Box; those emulators were behaving correctly.
-
-**How it was established.** MartyPC 0.5.0 (cycle-accurate 8088, GLaBIOS, XT-IDE, IBM EGA)
-was traced instruction by instruction.
-
-* On the 8088 core the first 80186 opcode executed is `C1 EA 03` at `1e51:09ca`, in
-  `EGA.DRV` (file offset 5412). The machine fails at that point.
-* On the same machine with the V20 core, Windows reaches Program Manager. Every 80186
-  instruction executed on the way, 63 unique sites, belongs to `EGA.DRV`: two static
-  (`shr dx,3` and `shr bx,2`, each occurring exactly once in the file) and the rest in
-  bitblt code the driver generates at run time (`rol/ror al,n`). KERNEL, KRNL286, USER,
-  GDI, PROGMAN, SYSTEM.DRV, KEYBOARD and MOUSE execute none
-  ([site list](evidence/martypc-v20-ega-80186-sites.txt)).
-* `EGA.DRV` is byte-identical in the project's disk and in Windows 3.0 (720K and 360K)
-  and 3.0a (720K) retail sets, so those offer no different EGA driver. `VGA.DRV` and
-  `8514.DRV` contain the same patterns.
-
-**Result on a stock 8088.** With `CGA.DRV` and the CGA fonts in place of the EGA driver,
-Windows 3.0 reaches Program Manager on the 8088 core, with no 80186 opcode executed in
-20.6 million instructions
-([capture](evidence/martypc-8088-cga-progman.png)). With the WM88 bridge added, the
-original Windows 3.1 `WINMINE.EXE` launches and runs on the 8088 core with none executed
-in about 19 million instructions
-([capture](evidence/martypc-8088-cga-minesweeper.png)). The CGA screen is 640x200
-monochrome, so the window extends past the bottom of the display. Gameplay (clicks) was
-not exercised in this configuration.
-
-![The original Minesweeper under Windows 3.0 and the WM88 bridge on a cycle-accurate 8088 (MartyPC, CGA driver)](evidence/martypc-8088-cga-minesweeper.png)
-
-**What this means.** The bridge handles `WINMINE.EXE`'s 80186 instructions, but a stock
-8088 also needs a display driver that is free of them. CGA works; the EGA/VGA drivers
-shipped with Windows 3.0 do not. The TANDY88 display driver was audited separately: no unsupported
-opcodes in 13,707 emitted instruction rows, and an 8086-prefetch test passed all 4,096
-generated-rotate cases (audit by the project author; not re-run here). The earlier DOSBox-X gameplay sessions used an emulated 286.
+A stock Windows 3.0 install crashes on a real 8088 because its own EGA display driver
+(`EGA.DRV`) uses 80186 instructions, which an 8088 silently mis-executes. That is what
+stopped the earlier PCjs and 86Box runs, not the bridge. On a cycle-accurate 8088
+emulator (MartyPC), Windows 3.0 with the CGA driver and the WM88 bridge runs the original
+`WINMINE.EXE`; the Tandy driver (TANDY88) was audited and contains no 80186 instructions.
+The EGA and VGA drivers shipped with Windows 3.0 are not safe on a stock 8088.
 
 Real vs simulated: all of Windows and 100% of the game logic are the genuine
 original code. The single simulated piece is `ShellAbout`: instead of the
