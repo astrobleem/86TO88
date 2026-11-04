@@ -9,6 +9,11 @@ an 8088-based Tandy 1000 EX. It is a small DOS TSR plus a
 on his Tandy 1000 EX under Windows 3.0. That hardware result is separate
 from the emulator tests documented below.
 
+**Video (under 3 minutes):** <https://youtu.be/L1UxVt3oN9A>
+
+Submission for the Meta Global AI Developer Hackathon. The bridge was built by
+Meta's **Muse Wonder** model; see [How this was built](#how-this-was-built).
+
 ## Try it
 
 **1. In your browser, one click: <https://astrobleem.github.io/86TO88/>**
@@ -231,6 +236,18 @@ Performance (DOSBox-X, 10,000 fixed cycles): DOS boot → playable window in
 about 2.3 s. This is a historical emulator measurement, not a Tandy benchmark;
 physical hardware performance has not been measured in the available report.
 The TSR is 12,316 bytes on disk, ≈11 KB resident.
+
+## How this was built
+
+- **Muse Wonder (Meta)** built the core bridge: the `WM88TSR.COM` TSR and its instruction
+  handler, the 361-byte `SHELL.DLL` shim, the DOS test suites and the original validation.
+  It started from a prompt that described the problem and pointed to where the public
+  Windows 3.0 and Windows 3.1 disk images could be found.
+- **Claude (Anthropic)** later built the hosted GitHub Pages site (`site/`), the explainer
+  video and the README and evidence write-up, working on top of Muse Wonder's output. It did
+  not write the bridge logic.
+- The hardware run used a hardened derivative of the published TSR; see
+  [Status](#status--real-hardware-and-emulator-evidence) for what each run does and does not prove.
 
 ## License
 
