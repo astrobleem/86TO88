@@ -59,7 +59,7 @@ rewrites those sites to `INT F8h`, so the handler ran on real hardware, but the 
 would not have faulted without it. The run does show the version-stamp change, the
 `SHELL.DLL` shim and the TSR working on a real machine under Windows 3.0 real mode.
 **It is not a test on a physical stock 8088.** The stock-8088 result comes from a
-cycle-accurate 8088 emulator; see [Stock 8088](#stock-8088).
+cycle-accurate 8088 emulator; see [docs/STOCK-8088.md](docs/STOCK-8088.md).
 The explainer video is in the submission.
 
 **3. Locally, from a clone** (Python 3.9+, internet access):
@@ -196,7 +196,7 @@ Chad reports that Windows 3.1 Minesweeper worked on his physical **Tandy
 the 80186 instruction set) in place of the stock 8088, so this run does not test
 the missing-instruction fix on a CPU that lacks those instructions. The stock-8088
 case was run on a cycle-accurate 8088 emulator instead; see
-[Stock 8088](#stock-8088) below.
+[docs/STOCK-8088.md](docs/STOCK-8088.md).
 
 ### Recorded gameplay and safety checks
 
@@ -220,12 +220,9 @@ running — see `evidence/fixed-tsr-*.png`).
 
 ### Stock 8088
 
-A stock Windows 3.0 install crashes on a real 8088 because its own EGA display driver
-(`EGA.DRV`) uses 80186 instructions, which an 8088 silently mis-executes. That is what
-stopped the earlier PCjs and 86Box runs, not the bridge. On a cycle-accurate 8088
-emulator (MartyPC), Windows 3.0 with the CGA driver and the WM88 bridge runs the original
-`WINMINE.EXE`; the Tandy driver (TANDY88) was audited and contains no 80186 instructions.
-The EGA and VGA drivers shipped with Windows 3.0 are not safe on a stock 8088.
+A stock Windows 3.0 install crashes on a real 8088 because its own EGA display driver uses
+80186 instructions, not because of the bridge. Details and evidence are in
+[docs/STOCK-8088.md](docs/STOCK-8088.md).
 
 Real vs simulated: all of Windows and 100% of the game logic are the genuine
 original code. The single simulated piece is `ShellAbout`: instead of the
