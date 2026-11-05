@@ -224,6 +224,26 @@ A stock Windows 3.0 install crashes on a real 8088 because its own EGA display d
 80186 instructions, not because of the bridge. Details and evidence are in
 [docs/STOCK-8088.md](docs/STOCK-8088.md).
 
+### More games: the Entertainment Pack
+
+The same idea now covers other Windows Entertainment Pack games on an emulated stock 8088
+(MartyPC). An offline analyzer finds the 80186 instructions in each game and its helper DLLs;
+a small second TSR loads the per-file patch module only when Windows opens that file. Golf,
+Tut's Tomb, FreeCell, TetraVex, JezzBall and TriPeaks run this way, and Tetris runs with a
+640x480 16-colour driver instead (see [windows-3-vga-8088](https://github.com/astrobleem/windows-3-vga-8088)).
+Blackjack, Chips and Rodent do not run: they need protected mode. This is emulator-only; none of it has been
+tried on real hardware. You supply the games (for example the
+[Best of Microsoft Entertainment Pack](https://archive.org/details/wep_best-of) disk image).
+Details, results and the full list: [docs/WEP-LIBRARY.md](docs/WEP-LIBRARY.md).
+
+| Tetris (VGA driver) | Golf |
+| --- | --- |
+| ![Tetris for Windows About box, 16 colours, on an emulated 8088](evidence/wep-tetris-vga88.png) | ![Golf dealt on an emulated 8088](evidence/wep-golf.png) |
+
+| Tut's Tomb | FreeCell |
+| --- | --- |
+| ![Tut's Tomb dealt on an emulated 8088](evidence/wep-tuts-tomb.png) | ![FreeCell dealt on an emulated 8088](evidence/wep-freecell.png) |
+
 Real vs simulated: all of Windows and 100% of the game logic are the genuine
 original code. The single simulated piece is `ShellAbout`: instead of the
 richer 3.1 About box you get a plain `MessageBox` with the app's name and
@@ -243,6 +263,8 @@ The TSR is 12,316 bytes on disk, ≈11 KB resident.
 - **Claude (Anthropic)** later built the hosted GitHub Pages site (`site/`), the explainer
   video and the README and evidence write-up, working on top of Muse Wonder's output. It did
   not write the bridge logic.
+- **Claude (Anthropic)** also built the Entertainment Pack extension: the analyzer, the module
+  library and the `WM88X3.COM` loader TSR.
 - The hardware run used a hardened derivative of the published TSR; see
   [Status](#status--real-hardware-and-emulator-evidence) for what each run does and does not prove.
 
@@ -257,6 +279,7 @@ The TSR is 12,316 bytes on disk, ≈11 KB resident.
 * `artifacts/` — generated patch/site tables the builders embed, plus export maps used during analysis
 * `tests/` — prebuilt DOS verification suites
 * `tools/` — host-side test tooling (serial-mouse server, board reader)
+* `tools/wep/` — the Entertainment Pack analyzer, module-library tool and tests (see [docs/WEP-LIBRARY.md](docs/WEP-LIBRARY.md))
 * `emulator/` — the scripted-test DOSBox-X configuration (serial mouse)
 * `evidence/` — curated screenshots and test outputs from the runs described above
 
