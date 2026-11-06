@@ -78,14 +78,26 @@ class NE:
 
 
 def classify(ins):
-    """Return (type, reg, srcreg, imm) if ins is an 80186+ form the bridge emulates, else None."""
+    """Return (type, reg, srcreg, imm) if ins is an 80186 form the bridge emulates.
+    Return ('unsup-...', None, None, rawhex) for any other form that an 8088 cannot execute (80186-only forms the
+    bridge does not handle, plus 80286/386 forms: 0F xx, ARPL, FS/GS and 66/67 size prefixes).  None = plain 8088 code."""
     raw = bytes(ins.bytes)
     m = ins.mnemonic
-    # strip prefixes for opcode lookup
+    # strip prefixes for opcode lookup; 64-67 are 386 prefixes and never valid on an 8088 (they alias INC/DEC/POPs... or are undefined)
     i = 0
-    while i < len(raw) and raw[i] in (0x26, 0x2e, 0x36, 0x3e, 0xf0, 0xf2, 0xf3):
+    pre = set()
+    while i < len(raw) and raw[i] in (0x26, 0x2e, 0x36, 0x3e, 0xf0, 0xf2, 0xf3, 0x64, 0x65, 0x66, 0x67):
+        pre.add(raw[i])
         i += 1
+    if pre & {0x64, 0x65, 0x66, 0x67}:
+        return ('unsup-386-prefix', None, None, raw.hex())
+    if i >= len(raw):
+        return ('unsup-prefix-only', None, None, raw.hex())
     op = raw[i]
+    if op == 0x0f:
+        return ('unsup-0f', None, None, raw.hex())
+    if op == 0x63:
+        return ('unsup-arpl', None, None, raw.hex())
     if op in (0x68, 0x6a):
         return ('push', 0, 0, ins.operands[0].imm & 0xFFFF)
     if op in (0xc0, 0xc1):
@@ -96,17 +108,21 @@ def classify(ins):
         nm = {4: 'shl', 5: 'shr', 7: 'sar', 6: 'shl'}.get(r)
         if nm is None:
             return ('unsup-shift', None, None, raw.hex())
+        if op == 0xc1 and (modrm & 7) == 4:      # SP: the handler has no slot for it
+            return ('unsup-sp-reg', None, None, raw.hex())
         return (nm, (modrm & 7) | (8 if op == 0xc0 else 0), 0, raw[i + 2] & 31)   # reg bit 3 = byte register form (C0)
     if op in (0x69, 0x6b):
         modrm = raw[i + 1]
         if (modrm >> 6) != 3:
+            if (modrm >> 3 & 7) == 4:
+                return ('unsup-sp-reg', None, None, raw.hex())
             return ('unsup-mem-imul', None, None, raw.hex())
+        if (modrm >> 3 & 7) == 4 or (modrm & 7) == 4:
+            return ('unsup-sp-reg', None, None, raw.hex())
         imm = raw[i + 2] | (raw[i + 3] << 8) if op == 0x69 else (raw[i + 2] - 256 if raw[i + 2] > 127 else raw[i + 2]) & 0xFFFF
         return ('imul', modrm >> 3 & 7, modrm & 7, imm)
     if op in (0x60, 0x61, 0x62, 0xc8, 0xc9, 0x6c, 0x6d, 0x6e, 0x6f):
         return ('unsup-' + ins.mnemonic, None, None, raw.hex())
-    if op == 0xc0 or op == 0xc1:
-        return ('unsup', None, None, raw.hex())
     return None
 
 

@@ -176,6 +176,7 @@ sh_word:
  MOV AX, SS:[BX]
  MOV CX, [SI+4]
  AND CX, 31
+ JE sh_nop
  MOV DL, [SI+2]
  CMP DL, 1
  JE sh_shl
@@ -194,6 +195,9 @@ sh_done:
  CALL merge_flags
  CALL set_newip
  JMP restore_iret
+sh_nop:
+ CALL set_newip
+ JMP restore_iret
 do_shiftb:
  AND AL, 7
  MOV [tmp_hi], AL
@@ -208,6 +212,7 @@ sb_lo:
  MOV AL, SS:[BX]
  MOV CX, [SI+4]
  AND CX, 31
+ JE sh_nop
  MOV DL, [SI+2]
  CMP DL, 1
  JE sb_shl
@@ -478,6 +483,7 @@ tmp_ea: DB 0
 tmp_w: DB 0
 tmp_hi: DB 0
 vecidx: DB 0
+v20: DB 0
 site_off: DW 0
 save_bp: DW 0
 tmp_imm: DW 0
@@ -1132,6 +1138,11 @@ rd_img_ok:
 rd_loop:
  CMP CX, 0
  JE read_done
+ CMP BYTE [v20], 0
+ JE rd_go
+ CMP BYTE [SI+2], 8
+ JNE rd_next
+rd_go:
  MOV AX, [SI+8]
  MOV DL, [SI+10]
  MOV BH, 0
@@ -1329,9 +1340,19 @@ not_inst:
  MOV SI, 81h
  MOV DI, lpath
 ic_sk0: CMP BYTE [SI], 32
- JNE ic_c1
+ JNE ic_opt
  INC SI
  JMP ic_sk0
+ic_opt: CMP BYTE [SI], 47
+ JNE ic_c1
+ MOV AL, [SI+1]
+ AND AL, 0DFh
+ CMP AL, 86
+ JNE ic_bad
+ MOV BYTE [v20], 1
+ ADD SI, 2
+ JMP ic_sk0
+ic_bad: JMP usage
 ic_c1: MOV AL, [SI]
  CMP AL, 13
  JE ic_e1
@@ -1472,7 +1493,7 @@ def build():
         hv += [f" MOV DX, stub{i}", f" MOV AX, {0x2500 | (0xF8 + i)}", " INT 21h"]
     a = a.replace("__HOOKVEC__", "\n".join(hv))
     msgs = {"TITLE": "WM88X3 - Win3.0 8088 bridge (library driven)", "OK": "Installed. Library modules load on demand.", "ALREADY": "Already installed.",
-            "USAGE": "usage: WM88X3 [library dir, default C:\\W8X]"}
+            "USAGE": "usage: WM88X3 [/V] [library dir, default C:\\W8X]  (/V = NEC V20/V30: leave 80186 code native)"}
     for k, v in msgs.items(): a = a.replace(f"__MSG_{k}__", dbs(v))
     code, labels = assemble(a + "\n", org=0x100)
     # scratch labels: assemble() needs them defined; append zero-length via extra pass

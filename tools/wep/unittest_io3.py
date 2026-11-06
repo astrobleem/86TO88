@@ -15,6 +15,8 @@ TS, UC, DSEG, SSEG = 0x1000, 0x9000, 0x6000, 0x5000
 mu = Uc(UC_ARCH_X86, UC_MODE_16); mu.mem_map(0, 0x100000)
 mu.mem_write(TS*16+0x100, code[:L['arena']-0x100])
 def w16(l, v): mu.mem_write(TS*16+L[l], struct.pack('<H', v))
+V20 = bool(int(os.environ.get('V20', '0')))   # V20=1: run the installer's /V mode (only type 8 compatibility patches are applied)
+mu.mem_write(TS*16+L['v20'], bytes([int(V20)]))
 w16('arena_top', L['arena']); w16('arena_end', L['arena'] + int(os.environ.get('ARENA', '12000')))
 lp = b'C:\\W8X\\'; mu.mem_write(TS*16+L['lpath'], lp); w16('libend', L['lpath'] + len(lp))
 mu.mem_write(TS*16+L['old21'], struct.pack('<HH', 0, UC))
@@ -73,7 +75,8 @@ for mi, (d, path) in enumerate(specs):
     h = ax
     data = files[mi]; ne = A.NE(data)
     # read whole file in 1 KB.. 20 KB chunks like a loader: per segment
-    for s in ne.segs:
+    hdr = dict(n='hdr', fo=0, ln=struct.unpack_from('<I', data, 0x3c)[0] + 0x40)   # the NE header read carries the version-stamp / protected-mode flag patches
+    for s in [hdr] + list(ne.segs):
         if not s['ln']: continue
         mu.mem_write(0x3000*16+0x2000, b'')  # noop
         call21({'AX': 0x4200, 'BX': h, 'CX': s['fo'] >> 16, 'DX': s['fo'] & 0xFFFF, 'DS': DSEG})
@@ -92,7 +95,10 @@ for mi, (d, path) in enumerate(specs):
             fo = fl | fh << 16
             if not (s['fo'] <= fo < s['fo']+s['ln']): continue
             o = fo - s['fo']
-            if typ == 8: exp[o] = imm & 255; exp[o+1] = imm >> 8
+            if V20 and typ != 8: continue
+            if typ == 8:
+                exp[o] = imm & 255
+                if ln != 1: exp[o+1] = imm >> 8
             elif typ in (5, 6): exp[o] = 0xCC
             else: exp[o] = 0xCD; exp[o+1] = 0xF8 + (mv & 7)
         print('  seg', s['n'], 'len', s['ln'], 'read', ax, 'match' if got == bytes(exp) else 'MISMATCH', sum(1 for a, b in zip(got, exp) if a != b))
