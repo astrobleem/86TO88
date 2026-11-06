@@ -32,6 +32,7 @@ direct flow (this removed a false `shr cl,0` inside a `mov ax,imm` in one game).
 | 4 | `imul r,r,imm` | |
 | 5 / 6 | calling-convention push / leave | `INT 3` key, ctx-aware |
 | 7 | `imul reg,[ea],imm8` | |
+| 9 | `imul reg,[ea],imm16` | the immediate is read from the code stream by the handler |
 | 8 | static byte patch | never trapped; used for the version stamp and similar |
 
 Immediates that are covered by a relocation fix-up are resolved by the generator rather
@@ -53,9 +54,9 @@ read window), then 12 bytes per site, then a list of conflicting modules.
   validates it and keeps up to six modules resident. The terminating process's modules
   are freed on exit. The library directory is the TSR's command-line argument (default `C:\W8X`).
 * Footprint: about 3.1 KB of resident code. The arena is twice the largest image,
-  clamped to 2–32 KB (about 8 KB for this library).
+  clamped to 2–32 KB .
 
-The whole library for the ten games below is four modules (`ABOUTWEP`, `TETRAVEX`, `WEP4UTIL`, `WEPUTIL`), 9,912 bytes of images.
+A pack's library is a handful of modules, 7-17 KB of images in total (Pack 1: 16.9 KB, Pack 3: 10.9 KB).
 
 ## Verification
 
@@ -69,41 +70,53 @@ Dependencies: Python 3, `capstone`, `unicorn`. The tools take the original files
 no Microsoft files are in this repository. The source disk used here is the
 *Best of Microsoft Entertainment Pack* image at <https://archive.org/details/wep_best-of>.
 
-## Results (MartyPC, 8088, CGA unless noted)
+## Results (MartyPC, 8088 + CGA, each game with its own pack's library)
 
-| game | result |
-| --- | --- |
-| TetraVex | plays, bridged from the library |
-| Golf | deals and plays |
-| Tut's Tomb | deals and plays |
-| FreeCell | starts empty by design; F2 deals |
-| JezzBall | plays (its time counter runs in real time) |
-| TriPeaks | reaches the player-name dialog |
-| Pipe Dream, Taipei | reach the splash screen; not driven further |
-| Tetris | needs no bridge, only a 16-colour 640x480 display driver ([windows-3-vga-8088](https://github.com/astrobleem/windows-3-vga-8088)); reaches About box and game window |
-| Blackjack, Chips, Rodent | **do not run**, see below |
+Each pack gets its own library, because the same file name can be a different build in different
+releases (`TETRAVEX.EXE` differs between the 1994 disk and Pack 3).
 
-Not tested: Ski.
+| pack | runs | does not run |
+| --- | --- | --- |
+| Pack 1 (1991) | Cruel, Idlewild (a screen saver, it blanks the display), Pegged, TicTactics, Taipei (splash), WinMine (the Windows 3.0 build) | |
+| Pack 2 (1991) | FreeCell (empty until F2), Pipe Dream (title and board), Tut's Tomb | Stones, Jigsawed, Rattler, Rodent |
+| Pack 3 (1991) | Fuji Golf, Klotski, LifeGenesis, Ski, TetraVex, TriPeaks (name dialog), WordZap | |
+| Best of (1994) | TetraVex, Golf, Tut's Tomb, FreeCell, JezzBall, TriPeaks, Pipe Dream and Taipei (splash); Tetris with the 16-colour driver | Blackjack, Chips, Rodent |
+
+"Runs" means the game window came up and, where I looked, dealt or drew; I did not play any game
+through. Pipe Dream and Taipei were only taken as far as their opening screens. Tetris needs no
+bridge, only the 640x480 16-colour display driver
+([windows-3-vga-8088](https://github.com/astrobleem/windows-3-vga-8088)). Fuji Golf also needs
+`FUJIGOLF.DAT`, which the disk stores packed as `FUJIGOLF.DA$`.
 
 ### What does not run
 
-These games are flagged as protected-mode-only in their NE headers or their runtime DLL,
-so real-mode Windows 3.0 refuses them. Clearing the flag and the `GetWinFlags` gate does
-not make them work, and it is not a bridge problem:
+These are real-mode limits, not bridge faults. Each was checked on a V20 with no bridge and fails the same way
+(or, for Blackjack, behaves worse with the module).
 
-* **Blackjack** contains no 80186 code at all. With the gate patched it exits quietly on a V20
-  with no bridge; with the module loaded it corrupts memory, so it is not shipped.
-* **Chips** ("Insufficient memory to run this application") fails the same way on a V20
-  with no bridge.
-* **Rodent** needs VBRUN100.DLL, which is flagged protected-mode-only. With the flag cleared
-  it hangs on both an 8088 and a V20.
+* **Blackjack** is flagged protected-mode-only and contains no 80186 code at all. With the flag and the
+  `GetWinFlags` gate patched it exits quietly; with the module loaded it corrupts memory, so it is not shipped.
+* **Chips** ("Insufficient memory to run this application").
+* **Rodent, Rattler, Jigsawed** use VBRUN100.DLL, which is flagged protected-mode-only. With the flag cleared Rodent hangs
+  on an 8088 and on a V20. Rattler and Jigsawed also hang on the hourglass.
+* **Stones**: its style DLLs (`STONE00`..`STONEE03`) carry the protected-mode flag and the game reports that they
+  are corrupted or missing; clearing the flag does not change that.
 
 ## Reproducing
 
-1. Extract the games from the disk image into one directory.
-2. `python3 tools/wep/w8lib.py auto LIB TETRAVEX.EXE GOLF.EXE ...` and copy `LIB` into the guest.
-3. Add `WM88X3.COM <libdir>` to `AUTOEXEC.BAT` before starting Windows
+1. Get the game files. The 1994 disk (<https://archive.org/details/wep_best-of>) is a normal installable disk. The 1991 packs
+   keep everything in `BIN\` as packed `*.EX$`, `*.DL$` and `*.DA$` files; the disk's own `EXPAND.EXE` (Pack 1)
+   unpacks them under DOS (`EXPAND GOLF.EX$ GOLF.EXE`). I ran it inside MartyPC and read the results back from the disk image.
+2. `python3 tools/wep/w8lib.py auto LIB TETRAVEX.EXE GOLF.EXE ...` per pack. Games that load DLLs by name rather than by import
+   (Stones) need `w8lib.py add LIB FILE 1` for each DLL.
+3. Copy `LIB` into the guest and add `WM88X3.COM <libdir>` to `AUTOEXEC.BAT` before starting Windows
    (`artifacts/WM88X3.COM`, built by `src/build_tsr3.py`).
 
 The test-disk and emulator-runner scripts are not included: they are tied to a local
-MartyPC setup.
+MartyPC setup. MartyPC's CGA card crashes with turbo on; use normal speed.
+
+## Bug found by testing
+
+Idlewild contains two `imul reg,[bp-4],imm16` instructions (opcode `69`). The first version of the loader only
+handled the `6B` (imm8) form, so those two ran unpatched on the 8088 and Idlewild hung on the hourglass.
+Type 9 fixes that; its differential test passes. Running a game on a V20 with no bridge, as a reference, is what
+separated bridge faults from real-mode limits.

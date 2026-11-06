@@ -228,10 +228,11 @@ A stock Windows 3.0 install crashes on a real 8088 because its own EGA display d
 
 The same idea now covers other Windows Entertainment Pack games on an emulated stock 8088
 (MartyPC). An offline analyzer finds the 80186 instructions in each game and its helper DLLs;
-a small second TSR loads the per-file patch module only when Windows opens that file. Golf,
-Tut's Tomb, FreeCell, TetraVex, JezzBall and TriPeaks run this way, and Tetris runs with a
+a small second TSR loads the per-file patch module only when Windows opens that file. From the
+three 1991 Entertainment Packs and the 1994 *Best of*, 19 distinct games come up this way (Golf, Cruel, Pegged,
+FreeCell, Tut's Tomb, TetraVex, Klotski, Ski, WinMine, Fuji Golf and others; counted when the game window appears), and Tetris runs with a
 640x480 16-colour driver instead (see [windows-3-vga-8088](https://github.com/astrobleem/windows-3-vga-8088)).
-Blackjack, Chips and Rodent do not run: they need protected mode. This is emulator-only; none of it has been
+Blackjack, Chips, Stones and the Visual Basic games (Rodent, Rattler, Jigsawed) do not run: they need protected mode. This is emulator-only; none of it has been
 tried on real hardware. You supply the games (for example the
 [Best of Microsoft Entertainment Pack](https://archive.org/details/wep_best-of) disk image).
 Details, results and the full list: [docs/WEP-LIBRARY.md](docs/WEP-LIBRARY.md).
@@ -243,6 +244,10 @@ Details, results and the full list: [docs/WEP-LIBRARY.md](docs/WEP-LIBRARY.md).
 | Tut's Tomb | FreeCell |
 | --- | --- |
 | ![Tut's Tomb dealt on an emulated 8088](evidence/wep-tuts-tomb.png) | ![FreeCell dealt on an emulated 8088](evidence/wep-freecell.png) |
+
+| Fuji Golf (Pack 3) | TetraVex (Pack 3) |
+| --- | --- |
+| ![Fuji Golf clubhouse on an emulated 8088](evidence/wep-fuji-golf.png) | ![TetraVex on an emulated 8088](evidence/wep-tetravex.png) |
 
 Real vs simulated: all of Windows and 100% of the game logic are the genuine
 original code. The single simulated piece is `ShellAbout`: instead of the

@@ -82,7 +82,7 @@ def collect(specs):
                 elif u['kind'] == 'unsup-mem-imul':
                     op, mrm = raw[0], raw[1]
                     mod_, rm = mrm >> 6, mrm & 7
-                    if op != 0x6b or mod_ == 3:
+                    if op not in (0x69, 0x6b) or mod_ == 3 or (op == 0x69 and all(0x20 <= c < 0x7f for c in raw)):
                         print('  UNSUPPORTED', name, sg['seg'], hex(off), u['kind'], u['raw']); continue
                     if mod_ == 0:
                         if rm == 6: ea = 8; disp = struct.unpack_from('<H', raw, 2)[0]
@@ -94,7 +94,8 @@ def collect(specs):
                     imm8 = raw[-1]
                     assert not ({off, off + 1} & chain)
                     assert len(raw) < 16
-                    add(off, 7, (mrm >> 3) & 7, imm8, disp & 0xFFFF, len(raw) | (ea << 4))
+                    if op == 0x69: add(off, 9, (mrm >> 3) & 7, 0, disp & 0xFFFF, len(raw) | (ea << 4))   # imm16 is read from the code stream by the handler
+                    else: add(off, 7, (mrm >> 3) & 7, imm8, disp & 0xFFFF, len(raw) | (ea << 4))
                 else:
                     print('  UNSUPPORTED', name, sg['seg'], hex(off), u['kind'], u['raw'])
     return mods, entries

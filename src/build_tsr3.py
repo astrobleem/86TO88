@@ -81,6 +81,10 @@ not_imul:
  JNE not_imulm
  JMP do_imulm
 not_imulm:
+ CMP AL, 9
+ JNE not_imulw
+ JMP do_imulw
+not_imulw:
  JMP do_shift
 ; lookup: vecidx + site_off -> BX = entry ptr or FFFF ; clobbers AX,CX,DX,SI,DI
 lookup:
@@ -229,7 +233,12 @@ do_imul:
  MOV AX, SS:[BX]
  MOV BX, [SI+4]
  JMP imul_tail
+do_imulw:
+ MOV BYTE [tmp_w], 1
+ JMP imulm_body
 do_imulm:
+ MOV BYTE [tmp_w], 0
+imulm_body:
  MOV AL, [SI+6]
  MOV CL, 4
  SHR AL, CL
@@ -269,6 +278,21 @@ ea_seg:
  MOV ES, AX
  MOV BX, DX
  MOV AX, ES:[BX]
+ MOV DL, [tmp_w]
+ CMP DL, 0
+ JE im_b8
+ PUSH AX
+ MOV AX, [BP+4]
+ MOV ES, AX
+ MOV BL, [SI+6]
+ AND BL, 15
+ XOR BH, BH
+ ADD BX, [site_off]
+ SUB BX, 2
+ MOV BX, ES:[BX]
+ POP AX
+ JMP imul_tail
+im_b8:
  MOV BL, [SI+7]
  MOV BH, 0
  TEST BX, 80h
@@ -451,6 +475,7 @@ regslot: DB 254,250,248,252,0,0,246,244
 eab1: DB 3,3,5,5,6,7,5,3
 eab2: DB 6,7,6,7,255,255,255,255
 tmp_ea: DB 0
+tmp_w: DB 0
 tmp_hi: DB 0
 vecidx: DB 0
 site_off: DW 0

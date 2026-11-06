@@ -103,12 +103,12 @@ for e in entries:
         if e['type'] in (1, 2, 3):
             mask = 0x0C5 if (e['imm'] & 31) != 1 else 0x8C5   # CF PF ZF SF (+OF when count==1)
             if (e['imm'] & 31) == 0: mask = 0x8C5
-        elif e['type'] in (4, 7): mask = 0x801
+        elif e['type'] in (4, 7, 9): mask = 0x801
         else: mask = 0x8D5
         # stack contents compare around SP
         sa = a.mem_read(SS_SEG * 16 + ra['SP'], 16)
         sb = b.mem_read(SS_SEG * 16 + rb['SP'], 16)
-        ok = ra == rb and (fa & mask) == (fb & mask) and (e['type'] in (1, 2, 3, 4, 7) or bytes(sa) == bytes(sb) or e['type'] == 6)
+        ok = ra == rb and (fa & mask) == (fb & mask) and (e['type'] in (1, 2, 3, 4, 7, 9) or bytes(sa) == bytes(sb) or e['type'] == 6)
         # for LEAVE the stack garbage below the new SP differs (handler frame) - registers decide
         total[e['type']] += 1
         if not ok:
