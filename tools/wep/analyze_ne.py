@@ -49,6 +49,7 @@ class NE:
                 for r in range(cnt):
                     at, rf, ro, mi, val = struct.unpack_from('<BBHHH', data, p + 2 + 8 * r)
                     seg['relocs'].append((at, rf, ro, mi, val))
+                seg['reloc_fo'] = p + 2          # file offset of relocation record 0 (8 bytes each: at, flags, offset, module/segment, ordinal/offset)
                 seg['reloc_end'] = p + 2 + 8 * cnt
             self.segs.append(seg)
         # entry table -> ordinal -> (segment, offset)
