@@ -1337,7 +1337,12 @@ install:
  CMP BYTE ES:[BX-1], 56
  JE already_p
 not_inst:
- MOV SI, 81h
+ MOV AX, 0100h
+ DB 0D5h, 010h
+ CMP AL, 10
+ JNE ic_nov
+ MOV BYTE [v20], 1
+ic_nov: MOV SI, 81h
  MOV DI, lpath
 ic_sk0: CMP BYTE [SI], 32
  JNE ic_opt
@@ -1348,8 +1353,13 @@ ic_opt: CMP BYTE [SI], 47
  MOV AL, [SI+1]
  AND AL, 0DFh
  CMP AL, 86
+ JE ic_v
+ CMP AL, 56
  JNE ic_bad
- MOV BYTE [v20], 1
+ MOV BYTE [v20], 0
+ ADD SI, 2
+ JMP ic_sk0
+ic_v: MOV BYTE [v20], 1
  ADD SI, 2
  JMP ic_sk0
 ic_bad: JMP usage
@@ -1493,7 +1503,7 @@ def build():
         hv += [f" MOV DX, stub{i}", f" MOV AX, {0x2500 | (0xF8 + i)}", " INT 21h"]
     a = a.replace("__HOOKVEC__", "\n".join(hv))
     msgs = {"TITLE": "WM88X3 - Win3.0 8088 bridge (library driven)", "OK": "Installed. Library modules load on demand.", "ALREADY": "Already installed.",
-            "USAGE": "usage: WM88X3 [/V] [library dir, default C:\\W8X]  (/V = NEC V20/V30: leave 80186 code native)"}
+            "USAGE": "usage: WM88X3 [/V|/8] [library dir, default C:\\W8X]  (NEC V20/V30 auto-detected and left native; /8 forces 8088 rewriting, /V forces native)"}
     for k, v in msgs.items(): a = a.replace(f"__MSG_{k}__", dbs(v))
     code, labels = assemble(a + "\n", org=0x100)
     # scratch labels: assemble() needs them defined; append zero-length via extra pass
