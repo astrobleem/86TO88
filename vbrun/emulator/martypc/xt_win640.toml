@@ -1,0 +1,41 @@
+[[machine]]
+name = "xt_win640"
+type = "Ibm5160"
+rom_set = "auto"
+speaker = true
+overlays = [
+    "ibm_nec_fdc",
+    "floppy_720k:0",
+    "floppy_720k:1",
+    "pcxt_2_serial_ports",   
+    "us_modelf_keyboard",
+    "microsoft_serial_mouse",
+]
+
+    [machine.memory]
+    conventional.size = 0xA0000 # diagnostic: 640k base so memory dumps are complete
+    conventional.wait_states = 0
+
+
+    # Hard disk controller
+    [machine.hdc]
+    bus_type = "ISA"
+    type = "XtIde"
+    
+        # Drives connected to controller. Maximum of 2.
+        # Drive #0 - (Typically C:)
+        [[machine.hdc.drive]]
+        format = "Mfm"
+        vhd = "cur.vhd"
+        
+        # Drive #1 - (Typically D:)
+        #[[machine.hdc.drive]]
+        #vhd = "games.vhd"
+    
+    # Video cards
+    [[machine.video]]
+    type = "CGA"
+    clock_mode = "Dynamic"    
+
+
+

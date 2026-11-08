@@ -1,0 +1,199 @@
+diff --git a/crates/lib/marty_core/src/cpu_vx0/cycle.rs b/crates/lib/marty_core/src/cpu_vx0/cycle.rs
+index 2b85359..c6d03b9 100644
+--- a/crates/lib/marty_core/src/cpu_vx0/cycle.rs
++++ b/crates/lib/marty_core/src/cpu_vx0/cycle.rs
+@@ -534,6 +534,8 @@ impl NecVx0 {
+             }
+             (BusStatus::MemWrite, TransferSize::Byte) => {
+                 self.i8288.mwtc = true;
++                if ww_check(self.address_latch, self.cs, self.instruction_ip, self.data_bus & 0xFF, 1, self.instruction_count) { self.ww_context(); }
++                self.wv_check(self.address_latch, (self.data_bus & 0xFF) as u8);
+                 _ = self
+                     .bus
+                     .write_u8(
+@@ -548,6 +550,8 @@ impl NecVx0 {
+             }
+             (BusStatus::MemWrite, TransferSize::Word) => {
+                 self.i8288.mwtc = true;
++                if ww_check(self.address_latch, self.cs, self.instruction_ip, self.data_bus, 2, self.instruction_count) { self.ww_context(); }
++                if self.data_bus == wv_val() && wv_val() != 0 { eprintln!("WV {:05X} {:04X}:{:04X} w i{}", self.address_latch, self.cs, self.instruction_ip, self.instruction_count); self.ww_context(); }
+                 _ = self
+                     .bus
+                     .write_u16(self.address_latch as usize, self.data_bus, self.instr_elapsed)
+@@ -624,3 +628,164 @@ impl NecVx0 {
+         &self.cycle_states
+     }
+ }
++
++// Debug write-watch: MARTY_WW="lo-hi" (hex flat addresses) logs every CPU memory write in range.
++static WW_RANGE: std::sync::OnceLock<Option<(u32, u32)>> = std::sync::OnceLock::new();
++static WW_EXCL: std::sync::OnceLock<Vec<u16>> = std::sync::OnceLock::new();
++#[inline]
++fn ww_check(addr: u32, cs: u16, ip: u16, val: u16, size: u8, icount: u64) -> bool {
++    let r = WW_RANGE.get_or_init(|| {
++        std::env::var("MARTY_WW").ok().and_then(|v| {
++            let mut it = v.split('-');
++            let lo = u32::from_str_radix(it.next()?.trim(), 16).ok()?;
++            let hi = u32::from_str_radix(it.next()?.trim(), 16).ok()?;
++            Some((lo, hi))
++        })
++    });
++    if let Some((lo, hi)) = r {
++        if addr + size as u32 > *lo && addr <= *hi {
++            let ex = WW_EXCL.get_or_init(|| std::env::var("MARTY_WW_EXCL").ok().map(|v| v.split(',').filter_map(|x| u16::from_str_radix(x.trim(), 16).ok()).collect()).unwrap_or_default());
++            if ex.contains(&cs) { return false; }
++            eprintln!("WW {:05X} {:04X}:{:04X} = {:04X} sz{} i{}", addr, cs, ip, val, size, icount);
++            return true;
++        }
++    }
++    false
++}
++
++static WV_VAL: std::sync::OnceLock<u16> = std::sync::OnceLock::new();
++fn wv_val() -> u16 { *WV_VAL.get_or_init(|| std::env::var("MARTY_WV").ok().and_then(|v| u16::from_str_radix(v.trim(), 16).ok()).unwrap_or(0)) }
++impl NecVx0 {
++    fn wv_check(&mut self, addr: u32, b: u8) {
++        let v = wv_val(); if v == 0 { return; }
++        if b == (v >> 8) as u8 && addr > 0 {
++            if self.bus.peek_u8(((addr - 1) & 0xFFFFF) as usize).unwrap_or(0) == (v & 0xFF) as u8 {
++                eprintln!("WV {:05X} {:04X}:{:04X} b i{}", addr - 1, self.cs, self.instruction_ip, self.instruction_count);
++                self.ww_context();
++            }
++        }
++    }
++}
++static WW_CTX_LAST: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(u64::MAX);
++impl NecVx0 {
++    fn ww_context(&mut self) {
++        if WW_CTX_LAST.swap(self.instruction_count, std::sync::atomic::Ordering::Relaxed) == self.instruction_count { return; }
++        let ss = self.ss as usize; let bp = self.bp as usize; let sp = self.sp as usize;
++        let mut st = String::new();
++        for k in 0..24usize {
++            let a = (ss << 4) + ((sp + 2 * k) & 0xFFFF);
++            let lo = self.bus.peek_u8(a & 0xFFFFF).unwrap_or(0) as u16; let hi = self.bus.peek_u8((a + 1) & 0xFFFFF).unwrap_or(0) as u16;
++            st.push_str(&format!("{:04X} ", lo | (hi << 8)));
++        }
++        eprintln!("WWCTX CS:{:04X} DS:{:04X} ES:{:04X} SS:{:04X} SP:{:04X} BP:{:04X} SI:{:04X} DI:{:04X} CX:{:04X} AX:{:04X} | {}",
++            self.cs, self.ds, self.es, self.ss, self.sp, self.bp, self.si, self.di, self.c.x(), self.a.x(), st);
++        let _ = bp;
++    }
++}
++
++// Debug exec-watch: MARTY_XW="name=SSSS:OOOO,..." logs entry (regs + stack) and the matching far return (AX/DX).
++static XW_SET: std::sync::OnceLock<Vec<(u32, String)>> = std::sync::OnceLock::new();
++static XW_PENDING: std::sync::Mutex<Vec<(u32, String, u16)>> = std::sync::Mutex::new(Vec::new());
++impl NecVx0 {
++    pub(crate) fn xw_check(&mut self, addr: u32) {
++        {
++            static PS: std::sync::OnceLock<(u64, u64, String)> = std::sync::OnceLock::new();
++            static PW: std::sync::OnceLock<(u64, u64)> = std::sync::OnceLock::new();
++            let pw = PW.get_or_init(|| (
++                std::env::var("MARTY_PC_FROM").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
++                std::env::var("MARTY_PC_TO").ok().and_then(|v| v.parse().ok()).unwrap_or(0)));
++            {
++                // MARTY_RING=N:LO[:HI]  keep the last N instructions; print them once when LO <= CS < HI
++                static RG: std::sync::OnceLock<(usize, u16, u16)> = std::sync::OnceLock::new();
++                static RB: std::sync::Mutex<(Vec<[u16; 13]>, Vec<u64>, usize, bool)> = std::sync::Mutex::new((Vec::new(), Vec::new(), 0, false));
++                let rg = RG.get_or_init(|| std::env::var("MARTY_RING").ok().and_then(|v| {
++                    let mut it = v.split(':'); let n = it.next()?.parse().ok()?; let t = u16::from_str_radix(it.next()?, 16).ok()?; let h = it.next().and_then(|x| u16::from_str_radix(x, 16).ok()).unwrap_or(0xFFFF); Some((n, t, h)) }).unwrap_or((0, 0, 0)));
++                if rg.0 != 0 {
++                    let mut rb = RB.lock().unwrap();
++                    if !rb.3 {
++                        let e = [self.cs, self.ip(), self.a.x(), self.b.x(), self.c.x(), self.d.x(), self.si, self.di, self.ds, self.es, self.ss, self.sp, self.bp];
++                        if rb.0.len() < rg.0 { rb.0.push(e); rb.1.push(self.instruction_count); } else { let k = rb.2; rb.0[k] = e; rb.1[k] = self.instruction_count; }
++                        rb.2 = (rb.2 + 1) % rg.0;
++                        if self.cs >= rg.1 && self.cs < rg.2 {
++                            rb.3 = true;
++                            let k = rb.2; let n = rb.0.len();
++                            for j in 0..n { let r = rb.0[(k + j) % n];
++                                eprintln!("R {:04X}:{:04X} AX:{:04X} BX:{:04X} CX:{:04X} DX:{:04X} SI:{:04X} DI:{:04X} DS:{:04X} ES:{:04X} SS:{:04X} SP:{:04X} BP:{:04X} i{}", r[0],r[1],r[2],r[3],r[4],r[5],r[6],r[7],r[8],r[9],r[10],r[11],r[12], rb.1[(k + j) % n]); }
++                            eprintln!("RING-TRIGGERED");
++                        }
++                    }
++                }
++            }
++            if pw.1 != 0 && self.instruction_count >= pw.0 && self.instruction_count < pw.1 {
++                eprintln!("T {:04X}:{:04X} AX:{:04X} BX:{:04X} CX:{:04X} DX:{:04X} SI:{:04X} DI:{:04X} DS:{:04X} ES:{:04X} SP:{:04X} BP:{:04X} i{}", self.cs, self.ip(), self.a.x(), self.b.x(), self.c.x(), self.d.x(), self.si, self.di, self.ds, self.es, self.sp, self.bp, self.instruction_count);
++            }
++            let ps = PS.get_or_init(|| (
++                std::env::var("MARTY_PCSAMPLE").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
++                std::env::var("MARTY_DUMP_AT").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
++                std::env::var("MARTY_DUMP_FILE").unwrap_or("/tmp/marty_dump.bin".into())));
++            if ps.0 != 0 && self.instruction_count % ps.0 == 0 {
++                eprintln!("PC {:04X}:{:04X} SS:{:04X} SP:{:04X} BP:{:04X} DS:{:04X} ES:{:04X} AX:{:04X} i{}", self.cs, self.ip(), self.ss, self.sp, self.bp, self.ds, self.es, self.a.x(), self.instruction_count);
++            }
++            if ps.1 != 0 && self.instruction_count == ps.1 {
++                let mut v = vec![0u8; 0x100000];
++                for (i, b) in v.iter_mut().enumerate() { *b = self.bus.peek_u8(i).unwrap_or(0); }
++                let _ = std::fs::write(&ps.2, &v);
++                eprintln!("DUMPED {} at i{} CS:IP {:04X}:{:04X} SS:SP {:04X}:{:04X} BP:{:04X}", ps.2, self.instruction_count, self.cs, self.ip(), self.ss, self.sp, self.bp);
++            }
++        }
++        let set = XW_SET.get_or_init(|| {
++            let mut v = Vec::new();
++            if let Ok(s) = std::env::var("MARTY_XW") {
++                for item in s.split(',') {
++                    let mut kv = item.splitn(2, '=');
++                    let name = kv.next().unwrap_or("").to_string();
++                    if let Some(a) = kv.next() {
++                        let mut so = a.split(':');
++                        if let (Some(sg), Some(of)) = (so.next(), so.next()) {
++                            if let (Ok(sg), Ok(of)) = (u32::from_str_radix(sg, 16), u32::from_str_radix(of, 16)) {
++                                v.push((((sg << 4) + of) & 0xFFFFF, name));
++                            }
++                        }
++                    }
++                }
++            }
++            v
++        });
++        if set.is_empty() { return; }
++        {
++            let mut p = XW_PENDING.lock().unwrap();
++            if let Some(i) = p.iter().position(|e| e.0 == addr && e.2 <= self.sp) {
++                let e = p.remove(i);
++                eprintln!("XR {} -> AX:{:04X} DX:{:04X} CX:{:04X} ES:{:04X} i{}", e.1, self.a.x(), self.d.x(), self.c.x(), self.es, self.instruction_count);
++            }
++        }
++        for (a, name) in set.iter() {
++            if *a == addr {
++                let ss = self.ss as usize; let sp = self.sp as usize;
++                let rd = |cpu: &Self, off: usize| -> u16 {
++                    let x = (ss << 4) + ((sp + off) & 0xFFFF);
++                    let lo = cpu.bus.peek_u8(x & 0xFFFFF).unwrap_or(0) as u16;
++                    let hi = cpu.bus.peek_u8((x + 1) & 0xFFFFF).unwrap_or(0) as u16;
++                    lo | (hi << 8)
++                };
++                let rip = rd(self, 0); let rcs = rd(self, 2);
++                let args: Vec<String> = (2..8).map(|k| format!("{:04X}", rd(self, 2 * k))).collect();
++                eprintln!("XW {} from {:04X}:{:04X} args(sp+4..) {} DS:{:04X} SS:{:04X} SP:{:04X} BP:{:04X} i{}",
++                    name, rcs, rip, args.join(" "), self.ds, self.ss, self.sp, self.bp, self.instruction_count);
++                XW_PENDING.lock().unwrap().push(((((rcs as u32) << 4) + rip as u32) & 0xFFFFF, name.clone(), self.sp));
++                {
++                    static DON: std::sync::OnceLock<(String, String)> = std::sync::OnceLock::new();
++                    static DONE: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
++                    let d = DON.get_or_init(|| (std::env::var("MARTY_DUMP_ON").unwrap_or_default(),
++                        std::env::var("MARTY_DUMP_FILE").unwrap_or("/tmp/marty_dump.bin".into())));
++                    if !d.0.is_empty() && *name == d.0 && DONE.fetch_add(1, std::sync::atomic::Ordering::SeqCst) == 0 {
++                        let mut v = vec![0u8; 0x100000];
++                        for (i, b) in v.iter_mut().enumerate() { *b = self.bus.peek_u8(i).unwrap_or(0); }
++                        let _ = std::fs::write(&d.1, &v);
++                        eprintln!("DUMPED {} on {} at i{} SS:SP {:04X}:{:04X} BP:{:04X}", d.1, name, self.instruction_count, self.ss, self.sp, self.bp);
++                    }
++                }
++            }
++        }
++    }
++}
+diff --git a/crates/lib/marty_core/src/cpu_vx0/step.rs b/crates/lib/marty_core/src/cpu_vx0/step.rs
+index 67c59c9..a044ac1 100644
+--- a/crates/lib/marty_core/src/cpu_vx0/step.rs
++++ b/crates/lib/marty_core/src/cpu_vx0/step.rs
+@@ -84,6 +84,7 @@ impl NecVx0 {
+             self.instruction_ip = self.ip();
+             self.instruction_address = NecVx0::calc_linear_address(self.cs, self.instruction_ip);
+             instruction_address = self.instruction_address;
++            self.xw_check(instruction_address);
+             //log::warn!("instruction address: {:05X}", instruction_address);
+ 
+             if self.end_addr == (instruction_address as usize) {
