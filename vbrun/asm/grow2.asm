@@ -1,7 +1,8 @@
 ; seg 105 grow2: same arguments as the grow routine at 0x8A (flags, size, seg; retf 6).
 ; Tries the in-place grow first; if that cannot reach the requested size, lets the
 ; kernel move the block (real mode) and returns the new segment in DX (old one on
-; failure or in-place success). Callers patched to store DX back into their context.
+; failure or in-place success). VB's heaps are GMEM_FIXED in this build, so a moved
+; block comes back as a new handle (= new segment) from GlobalReAlloc. Callers patched to store DX back into their context.
 bits 16
 cpu 8086
 org BASE
@@ -37,6 +38,8 @@ grow2:  mov ax,ss
 ..@gra: call 0:0xffff           ; GlobalReAlloc
         or ax,ax
         jz .fail
+        mov si,ax               ; use the returned handle: for a GMEM_FIXED block that the
+                                ; kernel moved it is the new segment, the old one is freed
         push si
 ..@gh2: call 0:0xffff           ; GlobalHandle -> DX = segment
         mov di,dx

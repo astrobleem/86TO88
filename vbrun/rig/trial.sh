@@ -21,18 +21,4 @@ while sleep 10; do
   if [ "$n" = "$last" ]; then stall=$((stall+1)); [ $stall -gt 30 ] && break; else stall=0; fi; last=$n
 done
 cp "$LOG" "$W/$T.log"; "$HERE/shot.sh" "$W/$T.png"; echo "reached i$n"
-python3 - "$W/$T.log" <<'P'
-import sys,collections
-L=open(sys.argv[1],'rb').read().decode('latin1').splitlines()
-fails=[];pend=None;churn=collections.Counter();sp=[]
-for l in L:
-    if l.startswith('XW'): pend=l
-    elif l.startswith('XR') and 'AX:0000' in l and pend and not pend.startswith(('XW LS','XW MB')): fails.append(pend[:70]+' '+l.split()[-1])
-    if l.startswith('XW GRA from 0FA7:50C8'): churn[int(l.split()[-1][1:])//10000000]+=1
-    if l.startswith('PC '): sp.append((l.split()[-1],[x for x in l.split() if x.startswith(('SS:','SP:'))]))
-print('alloc failures:',len(fails)); [print(' ',f) for f in fails[:12]]
-print('segment reloads per 10M:',dict(sorted(churn.items())))
-print('LocalShrink:',[l[:60] for l in L if l.startswith('XW LS')])
-print('MessageBox:',[l[:60] for l in L if l.startswith('XW MB')])
-print('stack at last samples:',' '.join(s[0]+'/'+''.join(s[1])[-7:] for s in sp[-8:]))
-P
+python3 "$HERE/xwlog.py" "$W/$T.log"

@@ -1,5 +1,5 @@
 diff --git a/crates/lib/marty_core/src/cpu_vx0/cycle.rs b/crates/lib/marty_core/src/cpu_vx0/cycle.rs
-index 2b85359..c6d03b9 100644
+index 2b85359..24dad3d 100644
 --- a/crates/lib/marty_core/src/cpu_vx0/cycle.rs
 +++ b/crates/lib/marty_core/src/cpu_vx0/cycle.rs
 @@ -534,6 +534,8 @@ impl NecVx0 {
@@ -20,7 +20,7 @@ index 2b85359..c6d03b9 100644
                  _ = self
                      .bus
                      .write_u16(self.address_latch as usize, self.data_bus, self.instr_elapsed)
-@@ -624,3 +628,164 @@ impl NecVx0 {
+@@ -624,3 +628,174 @@ impl NecVx0 {
          &self.cycle_states
      }
  }
@@ -81,7 +81,9 @@ index 2b85359..c6d03b9 100644
 +
 +// Debug exec-watch: MARTY_XW="name=SSSS:OOOO,..." logs entry (regs + stack) and the matching far return (AX/DX).
 +static XW_SET: std::sync::OnceLock<Vec<(u32, String)>> = std::sync::OnceLock::new();
-+static XW_PENDING: std::sync::Mutex<Vec<(u32, String, u16)>> = std::sync::Mutex::new(Vec::new());
++// pending watched calls: (return linear address, name, SS, SP at entry, sequence id)
++static XW_PENDING: std::sync::Mutex<Vec<(u32, String, u16, u16, u64)>> = std::sync::Mutex::new(Vec::new());
++static XW_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 +impl NecVx0 {
 +    pub(crate) fn xw_check(&mut self, addr: u32) {
 +        {
@@ -150,9 +152,15 @@ index 2b85359..c6d03b9 100644
 +        if set.is_empty() { return; }
 +        {
 +            let mut p = XW_PENDING.lock().unwrap();
-+            if let Some(i) = p.iter().position(|e| e.0 == addr && e.2 <= self.sp) {
++            // innermost pending call on this stack whose return address this is: same SS,
++            // entry SP at or below the current SP, and the closest such SP
++            let mut best: Option<usize> = None;
++            for (i, e) in p.iter().enumerate() {
++                if e.0 == addr && e.2 == self.ss && e.3 <= self.sp && best.map_or(true, |b| e.3 >= p[b].3) { best = Some(i); }
++            }
++            if let Some(i) = best {
 +                let e = p.remove(i);
-+                eprintln!("XR {} -> AX:{:04X} DX:{:04X} CX:{:04X} ES:{:04X} i{}", e.1, self.a.x(), self.d.x(), self.c.x(), self.es, self.instruction_count);
++                eprintln!("XR {} -> AX:{:04X} DX:{:04X} CX:{:04X} ES:{:04X} id:{} i{}", e.1, self.a.x(), self.d.x(), self.c.x(), self.es, e.4, self.instruction_count);
 +            }
 +        }
 +        for (a, name) in set.iter() {
@@ -166,9 +174,11 @@ index 2b85359..c6d03b9 100644
 +                };
 +                let rip = rd(self, 0); let rcs = rd(self, 2);
 +                let args: Vec<String> = (2..8).map(|k| format!("{:04X}", rd(self, 2 * k))).collect();
-+                eprintln!("XW {} from {:04X}:{:04X} args(sp+4..) {} DS:{:04X} SS:{:04X} SP:{:04X} BP:{:04X} i{}",
-+                    name, rcs, rip, args.join(" "), self.ds, self.ss, self.sp, self.bp, self.instruction_count);
-+                XW_PENDING.lock().unwrap().push(((((rcs as u32) << 4) + rip as u32) & 0xFFFFF, name.clone(), self.sp));
++                let id = XW_SEQ.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
++                eprintln!("XW {} from {:04X}:{:04X} args(sp+4..) {} DS:{:04X} SS:{:04X} SP:{:04X} BP:{:04X} R:{:04X},{:04X},{:04X},{:04X},{:04X},{:04X},{:04X} id:{} i{}",
++                    name, rcs, rip, args.join(" "), self.ds, self.ss, self.sp, self.bp,
++                    self.a.x(), self.b.x(), self.c.x(), self.d.x(), self.si, self.di, self.es, id, self.instruction_count);
++                XW_PENDING.lock().unwrap().push(((((rcs as u32) << 4) + rip as u32) & 0xFFFFF, name.clone(), self.ss, self.sp, id));
 +                {
 +                    static DON: std::sync::OnceLock<(String, String)> = std::sync::OnceLock::new();
 +                    static DONE: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);

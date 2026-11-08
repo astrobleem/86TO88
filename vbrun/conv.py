@@ -195,6 +195,10 @@ def conv(src, dst, report=True, vb=True):
                 # alloc entry: GMEM_FIXED instead of locked GMEM_MOVEABLE (packs low)
                 assert bytes(code[0x3b:0x3f])==bytes.fromhex('806606fb'), code[0x3b:0x3f].hex()
                 code[0x3e]=0xf9; stats['allocfixed']=1
+            if os.environ.get('VBSTRRES'):
+                # bit 0x08 of the flags marks the program's data/string segment (seg 5
+                # below); clear it before GlobalAlloc
+                code[0x3e]&=0xf7
             if os.environ.get('VBALLOCLOW'):
                 # alloc entry: also clear bit 0 (kernel GA_ALLOCHIGH in real mode)
                 assert bytes(code[0x3b:0x3f])==bytes.fromhex('806606fb'), code[0x3b:0x3f].hex()
@@ -204,6 +208,10 @@ def conv(src, dst, report=True, vb=True):
             if res:
                 assert bytes(code[0x30:0x33])==bytes.fromhex('8b4608'), code[0x30:0x33].hex()
                 stub5=len(code)
+                if os.environ.get('VBSTRRES'):
+                    # flagged allocation (seg 5 program data/string segment): at least VBSTRRES
+                    sr=int(os.environ['VBSTRRES'],0)
+                    code+=bytes.fromhex('f6460608740c8b4608')+b'\x3d'+struct.pack('<H',sr)+b'\x73\x03\xb8'+struct.pack('<H',sr)+b'\xc3'
                 if os.environ.get('VBHEAPGROW')=='2':
                     # 2*size (growth headroom), at least res
                     code+=bytes.fromhex('8b460803c07303b8e0ff')+b'\x3d'+struct.pack('<H',res)+b'\x73\x03'+b'\xb8'+struct.pack('<H',res)+b'\xc3'
@@ -217,6 +225,14 @@ def conv(src, dst, report=True, vb=True):
                     code+=bytes.fromhex('8b4608')+b'\x3d'+struct.pack('<H',res)+b'\x73\x03'+b'\xb8'+struct.pack('<H',res)+b'\xc3'
                 code[0x30]=0xe8; struct.pack_into('<h',code,0x31,stub5-0x33)
                 stats['heapres']=res
+        if VB and i==4 and os.environ.get('VBSTRRES'):
+            # seg 5 (EXE loader) allocates the program's data segment with the size stored
+            # in the EXE (JIGSAWED: 0xA8). The string manager (seg 106) later grows it in
+            # 0x200 steps through seg 105's in-place grow; it is GMEM_FIXED, held in
+            # [0x2e0a] and in callers' DS, so it cannot move. Mark the allocation so seg
+            # 105 gives it VBSTRRES bytes up front.
+            assert bytes(code[0x1ff:0x203])==bytes.fromhex('50506a02'), code[0x1ff:0x203].hex()
+            code[0x202]=0x0a; stats['strres']=1
         if VB and i==74 and os.environ.get('VBLHEAP'):
             # seg 75: VB's general local heap starts at 0x800 and is kept locked, so it
             # can only grow in place in real mode; give it headroom up front
@@ -276,6 +292,7 @@ def conv(src, dst, report=True, vb=True):
         blobs.append((code,newrecs)); newents.append([None,len(code),f,m])
     if WRAPJ and VB: wrap_pass(d,ne,blobs,ordn,ords,stats)
     if VB and os.environ.get('TABGROW'): tabgrow_pass(d,ne,blobs,stats)
+    if VB and os.environ.get('GROWKEEP'): growkeep_pass(d,ne,blobs,stats)
     if VB and os.environ.get('CTXGROW'): ctxgrow_pass(d,ne,blobs,ordn,stats)
     if VB and os.environ.get('FSHRINK'): fshrink_pass(d,ne,blobs,stats)
     if os.environ.get('FSW8087'): fsw_pass(blobs,stats)
@@ -409,6 +426,35 @@ def fsw_pass(blobs,stats):
             keep.append(r)
         rr[:]=keep
 
+def growkeep_pass(d,ne,blobs,stats):
+    # seg 105 grow: don't GlobalReAlloc a block that already has the requested size
+    # (keeps the headroom of GMEM_FIXED heaps); see asm/growkeep.asm
+    import subprocess,tempfile
+    nmods=struct.unpack_from('<H',d,ne+0x1e)[0]; mo=struct.unpack_from('<H',d,ne+0x28)[0]; io=struct.unpack_from('<H',d,ne+0x2a)[0]
+    def mname(k):
+        o=struct.unpack_from('<H',d,ne+mo+2*k)[0]; return bytes(d[ne+io+o+1:ne+io+o+1+d[ne+io+o]]).upper()
+    KIDX=[mname(k) for k in range(nmods)].index(b'KERNEL')+1
+    c,rr=blobs[104]
+    assert bytes(c[0xec:0xf1])==bytes.fromhex('9affff0000'), c[0xec:0xf1].hex()
+    j=[k for k,r in enumerate(rr) if struct.unpack('<BBHHH',r)[2]==0xed]
+    assert len(j)==1 and struct.unpack('<BBHHH',rr[j[0]])[3:]==(KIDX,16), [struct.unpack('<BBHHH',rr[k]) for k in j]
+    while len(c)&1: c.append(0x90)
+    base=len(c); here=os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as td:
+        subprocess.check_call(['nasm','-f','bin','-DBASE=%d'%base,'--before','[map symbols %s/m]'%td,os.environ.get('VBW_ASM',here+'/asm')+'/growkeep.asm','-o',td+'/b'])
+        code=open(td+'/b','rb').read(); sym={}
+        for l in open(td+'/m'):
+            pr=l.split()
+            if len(pr)==3:
+                try: sym[pr[2]]=int(pr[1],16)
+                except ValueError: pass
+    c+=code
+    del rr[j[0]]
+    rr.append(struct.pack('<BBHHH',3,1,sym['..@gra']+1,KIDX,16))
+    rr.append(struct.pack('<BBHHH',3,1,sym['..@gs']+1,KIDX,20))
+    c[0xec]=0xe8; struct.pack_into('<h',c,0xed,base-0xef); c[0xef]=0x90; c[0xf0]=0x90
+    stats['growkeep']=1
+
 def ctxgrow_pass(d,ne,blobs,ordn,stats):
     # VB module contexts (seg 4 grow paths) keep their data segment in [di+2]. Route
     # their grows through seg 105 'grow2', which falls back to a moving GlobalReAlloc
@@ -422,7 +468,7 @@ def ctxgrow_pass(d,ne,blobs,ordn,stats):
     while len(c)&1: c.append(0x90)
     base=len(c); here=os.path.dirname(os.path.abspath(__file__))
     with tempfile.TemporaryDirectory() as td:
-        subprocess.check_call(['nasm','-f','bin','-DBASE=%d'%base,'-DGROW=0x8a','--before','[map symbols %s/m]'%td,here+'/asm/grow2.asm','-o',td+'/b'])
+        subprocess.check_call(['nasm','-f','bin','-DBASE=%d'%base,'-DGROW=0x8a','--before','[map symbols %s/m]'%td,os.environ.get('VBW_ASM',here+'/asm')+'/grow2.asm','-o',td+'/b'])
         code=open(td+'/b','rb').read(); sym={}
         for l in open(td+'/m'):
             pr=l.split()
@@ -468,7 +514,7 @@ def fshrink_pass(d,ne,blobs,stats):
         while len(c)&1: c.append(0x90)
         base=len(c)
         with tempfile.TemporaryDirectory() as td:
-            subprocess.check_call(['nasm','-f','bin','-D'+var,'-DBASE=%d'%base,'-DMINHEAD=%s'%os.environ.get('FSHRINKMIN','0x800'),'--before','[map symbols %s/m]'%td,here+'/asm/fshrink.asm','-o',td+'/b'])
+            subprocess.check_call(['nasm','-f','bin','-D'+var,'-DBASE=%d'%base,'-DMINHEAD=%s'%os.environ.get('FSHRINKMIN','0x800'),'--before','[map symbols %s/m]'%td,os.environ.get('VBW_ASM',here+'/asm')+'/fshrink.asm','-o',td+'/b'])
             code=open(td+'/b','rb').read(); sym={}
             for l in open(td+'/m'):
                 pr=l.split()
@@ -558,7 +604,7 @@ def wrap_pass(d,ne,blobs,ordn,ords,stats):
     here=os.path.dirname(os.path.abspath(__file__))
     with tempfile.TemporaryDirectory() as td:
         subprocess.check_call(['nasm','-f','bin','-DBASE=%d'%base,'-DNSLOT=96','-DNSEG=%d'%NSEG]+(['-DSTATS'] if os.environ.get('WRAPSTATS') else [])+['--before','[map symbols %s/m]'%td,
-                               here+'/asm/wrapcore.asm','-o',td+'/b'])
+                               os.environ.get('VBW_ASM',here+'/asm')+'/wrapcore.asm','-o',td+'/b'])
         core=open(td+'/b','rb').read(); sym={}
         for l in open(td+'/m'):
             pr=l.split()

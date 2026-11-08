@@ -9,7 +9,8 @@
 ; FORM (seg 76 form load, after the controls exist, before Form_Load): called near
 ;   in place of 'cmp word [0x396c],2 / jne / mov word [0x371e],1'; [bp-0x12] = heap.
 ; SYS  (seg 75 system-object container, after it is registered): called near in
-;   place of 'mov ax,[bp-2]'; the new object's handle is [0x370c]:[0x370a].
+;   place of 'mov ax,[bp-2]', just before [0x370a] is restored to the previous
+;   object; the new container's handle is taken from [0x36f6]:[0x36f4].
 bits 16
 cpu 8086
 org BASE
@@ -30,8 +31,9 @@ entry:  cmp word [0x396c],2
 entry:  push ds
         push si
         push di
-        mov es,[0x370c]
-        mov bx,[0x370a]
+        mov es,[0x36f6]                 ; the container this routine just created
+        mov bx,[0x36f4]                 ; (copied there at 75:03A8; [0x370a] is
+                                        ; restored to the previous object right after)
         mov ax,es
         or ax,bx
         jz .x

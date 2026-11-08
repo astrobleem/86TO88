@@ -27,6 +27,7 @@ st_throw: dw 0          ; records abandoned by a non-local exit
 st_fallb: dw 0          ; returns matched by the newest-record fallback
 st_maxd: dw 0           ; deepest nesting of live records
 st_full: dw 0           ; calls not hooked because the record stack was full
+st_chain: dw 0          ; entries by jump from an already-wrapped call (no new record)
 %endif
 
 center:                 ; [d][IPx][CSx][args]
@@ -41,7 +42,16 @@ center:                 ; [d][IPx][CSx][args]
         push si
         push es
         mov bx,[bp+4]
-        mov si,[cs:wtop]
+        cmp word [bp+6],cexit   ; entered by a jump from a callee that is itself wrapped
+        jne .new                ; (e.g. a dispatcher doing jmp far [table] into a W stub):
+        mov ax,cs               ; the return address is already hooked and its record
+        cmp [bp+8],ax           ; describes the real caller, so just go on to the target
+        jne .new
+%ifdef STATS
+        inc word [cs:st_chain]
+%endif
+        jmp .go
+.new:   mov si,[cs:wtop]
 %ifdef STATS
         inc word [cs:st_call]
         cmp si,wend
@@ -141,29 +151,27 @@ cexit:                  ; callee returned here; its args are already popped (SP 
 %ifdef STATS
         inc word [cs:st_fallb]
 %endif
-.have:  mov si,[cs:wtop]
-.p2:    cmp si,wstk
-        jbe .p2d
+.have:                          ; bx = the record this return belongs to (kept by identity)
+        mov si,[cs:wtop]        ; drop records of frames this return has unwound: deeper
+.p2:    cmp si,wstk             ; ones, and older ones at the same SS:SP (left by a Throw
+        jbe .p2d                ; and then reused by a later call)
         sub si,RS
+        cmp si,bx
+        je .p2
         cmp [cs:si],dx
         jne .p2
         cmp [cs:si+2],cx
-        jae .p2
+        ja .p2
 %ifdef STATS
         inc word [cs:st_throw]
 %endif
         call release            ; abandoned by Throw
         call remove
+        cmp si,bx
+        jae .p2
+        sub bx,RS               ; the selected record moved down one slot
         jmp .p2
-.p2d:   mov si,wstk
-.p3:    cmp si,[cs:wtop]
-        jae .lost
-        cmp [cs:si],dx
-        jne .n3
-        cmp [cs:si+2],cx
-        je .found
-.n3:    add si,RS
-        jmp .p3
+.p2d:   mov si,bx
 .found: mov ax,[cs:si+4]
         mov [bp+2],ax
         mov ax,[cs:si+6]
