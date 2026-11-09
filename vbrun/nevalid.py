@@ -34,7 +34,7 @@ gs, gl = struct.unpack_from('<HH', d, ne + 0x38)
 if d[ne + 0x37] & 0x08 and gl:
     lo, hi = gs << al, (gs + gl) << al
     for i, (o, l, f, m) in enumerate(segs):
-        if o and (f & 0x40 or not f & 0x10) and not (lo <= (o << al) and (o << al) + l <= hi):
+        if o and (f & 0x40 or not f & 0x10) and not (lo <= (o << al) and (o << al) + (l or 0x10000) <= hi):   # length 0 = 64 KiB
             err.append('seg %d loaded with the module but outside the fast-load area' % (i + 1))
 if q - (ne + eto) + 1 != etl: err.append('entry table length field %d vs parsed %d' % (etl, q - (ne + eto) + 1))
 if struct.unpack_from('<H', d, ne + 0x30)[0] != nmov: err.append('movable count field %d vs %d' % (struct.unpack_from('<H', d, ne + 0x30)[0], nmov))

@@ -74,13 +74,17 @@ class Staging(unittest.TestCase):
         os.makedirs(os.path.join(self.mp, 'install', 'media', 'hdds')); os.makedirs(os.path.join(self.mp, 'target', 'release'))
         open(os.path.join(self.mp, 'install', 'martypc.toml'), 'w').write('filename = "default_xtide.vhd"\n')
         b = os.path.join(self.mp, 'target', 'release', 'martypc')
-        open(b, 'w').write('#!/bin/sh\necho "$@" > "%s/ran"\n' % self.td); os.chmod(b, 0o755)
+        open(b, 'w').write('#!/bin/sh\npwd > "%s/ran"\nexec sleep 30\n' % self.td); os.chmod(b, 0o755)
+        self.bin = b
         self.disk = os.path.join(self.td, 'sub', 'a.vhd'); os.makedirs(os.path.dirname(self.disk))
         open(self.disk, 'wb').write(b'NEWDISK' * 100)
         self.stage = os.path.join(self.mp, 'install', 'media', 'hdds', 'cur.vhd')
         open(self.stage, 'wb').write(b'STALE')
-    def run_sh(self, arg, cwd):
-        env = dict(os.environ, MARTYPC_DIR=self.mp, MARTY_LOG=os.path.join(self.td, 'log'), DISPLAY=':99')
+    def tearDown(self):
+        subprocess.run(['pkill', '-f', 'exec sleep 30|sleep 30'], capture_output=True)
+    def run_sh(self, arg, cwd, mp=None):
+        env = dict(os.environ, MARTYPC_DIR=mp or self.mp, MARTY_LOG=os.path.join(self.td, 'log'), DISPLAY=':99',
+                   MARTY_START_CHECK='0.5')
         return subprocess.run(['bash', os.path.join(RIG, 'run.sh'), arg], cwd=cwd, env=env,
                               capture_output=True, text=True, timeout=30)
     def test_relative_path_from_other_dir(self):
@@ -99,6 +103,25 @@ class Staging(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0); self.assertIn('staging', r.stderr)
         import time; time.sleep(0.5)
         self.assertFalse(os.path.exists(os.path.join(self.td, 'ran')))
+
+    def test_staged_disk_as_input_is_not_deleted(self):
+        r = self.run_sh(self.stage, self.td)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(open(self.stage, 'rb').read(), b'STALE')      # still there, unchanged
+    def test_staged_disk_via_symlink_is_not_deleted(self):
+        ln = os.path.join(self.td, 'link.vhd'); os.symlink(self.stage, ln)
+        r = self.run_sh(ln, self.td)
+        self.assertEqual(r.returncode, 0, r.stderr); self.assertTrue(os.path.exists(self.stage))
+    def test_relative_martypc_dir(self):
+        r = self.run_sh(self.disk, self.td, mp='marty')                 # relative to cwd
+        self.assertEqual(r.returncode, 0, r.stderr)
+        import time; time.sleep(0.3)
+        self.assertTrue(os.path.exists(os.path.join(self.td, 'ran')))  # binary actually started
+    def test_emulator_dying_at_startup_fails(self):
+        open(self.bin, 'w').write('#!/bin/sh\necho "no display" >&2\nexit 3\n')
+        r = self.run_sh(self.disk, self.td)
+        self.assertNotEqual(r.returncode, 0); self.assertIn('exited at startup', r.stderr)
+        self.assertNotIn('booting', r.stderr)
 
 def mini_ne(segs, gang=None):
     """Minimal NE image: segs = [(file_offset, length, flags)], sector shift 4,
@@ -132,6 +155,10 @@ class FastLoad(unittest.TestCase):
     def test_no_area_ok(self):
         out = self.run_valid(mini_ne([(0x100, 0x40, 0x50), (0x200, 0x40, 0x10), (0x300, 0x40, 0x00)]))
         self.assertTrue(out.strip().endswith('OK []'), out)
+    def test_zero_length_means_64k(self):
+        # a 64 KiB FIXED segment (length field 0) starting inside a short area overruns it
+        out = self.run_valid(mini_ne([(0x100, 0x40, 0x50), (0x140, 0, 0x00)], gang=(0x100, 0x80)))
+        self.assertIn('seg 2 loaded with the module but outside the fast-load area', out)
     def test_movable_outside_area_ok(self):
         out = self.run_valid(mini_ne([(0x100, 0x40, 0x50), (0x200, 0x40, 0x10)], gang=(0x100, 0x40)))
         self.assertTrue(out.strip().endswith('OK []'), out)

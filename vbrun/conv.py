@@ -293,6 +293,7 @@ def conv(src, dst, report=True, vb=True):
     if WRAPJ and VB: wrap_pass(d,ne,blobs,ordn,ords,stats)
     if VB and os.environ.get('TABGROW'): tabgrow_pass(d,ne,blobs,stats)
     if VB and os.environ.get('GROWKEEP'): growkeep_pass(d,ne,blobs,stats)
+    if VB and os.environ.get('STRTRACE'): strtrace_pass(d,ne,blobs,stats)
     if VB and os.environ.get('CTXGROW'): ctxgrow_pass(d,ne,blobs,ordn,stats)
     if VB and os.environ.get('FSHRINK'): fshrink_pass(d,ne,blobs,stats)
     if os.environ.get('FSW8087'): fsw_pass(blobs,stats)
@@ -434,6 +435,33 @@ def fsw_pass(blobs,stats):
                 continue
             keep.append(r)
         rr[:]=keep
+
+def strtrace_pass(d,ne,blobs,stats):
+    # DIAGNOSTIC ONLY: log both string-space grow attempts (106:06EE slack, 106:06F6 minimum)
+    # on port 0xE9; see asm/strtrace.asm
+    import subprocess,tempfile
+    nmods=struct.unpack_from('<H',d,ne+0x1e)[0]; mo=struct.unpack_from('<H',d,ne+0x28)[0]; io=struct.unpack_from('<H',d,ne+0x2a)[0]
+    def mname(k):
+        o=struct.unpack_from('<H',d,ne+mo+2*k)[0]; return bytes(d[ne+io+o+1:ne+io+o+1+d[ne+io+o]]).upper()
+    KIDX=[mname(k) for k in range(nmods)].index(b'KERNEL')+1
+    c,rr=blobs[105]
+    for site in (0x6ee,0x6f6):
+        assert c[site]==0xe8 and site+3+struct.unpack_from('<h',c,site+1)[0]==0x73d, (hex(site),c[site:site+3].hex())
+    while len(c)&1: c.append(0x90)
+    base=len(c); here=os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as td:
+        subprocess.check_call(['nasm','-f','bin','-DBASE=%d'%base,'-DSPIN=%d'%int(os.environ.get('STRTRACE_SPIN','0')),'--before','[map symbols %s/m]'%td,os.environ.get('VBW_ASM',here+'/asm')+'/strtrace.asm','-o',td+'/b'])
+        code=open(td+'/b','rb').read(); sym={}
+        for l in open(td+'/m'):
+            pr=l.split()
+            if len(pr)==3:
+                try: sym[pr[2]]=int(pr[1],16)
+                except ValueError: pass
+    c+=code
+    rr.append(struct.pack('<BBHHH',3,1,sym['..@gh']+1,KIDX,21))
+    rr.append(struct.pack('<BBHHH',3,1,sym['..@gs']+1,KIDX,20))
+    for site,t in ((0x6ee,'t1'),(0x6f6,'t2')): struct.pack_into('<h',c,site+1,sym[t]-(site+3))
+    stats['strtrace']=1
 
 def growkeep_pass(d,ne,blobs,stats):
     # seg 105 grow: don't GlobalReAlloc a block that already has the requested size
