@@ -293,6 +293,7 @@ def conv(src, dst, report=True, vb=True):
     if WRAPJ and VB: wrap_pass(d,ne,blobs,ordn,ords,stats)
     if VB and os.environ.get('TABGROW'): tabgrow_pass(d,ne,blobs,stats)
     if VB and os.environ.get('GROWKEEP'): growkeep_pass(d,ne,blobs,stats)
+    if VB and os.environ.get('APPDSLOCK','0')=='1': appdslock_pass(d,ne,blobs,stats)
     if VB and os.environ.get('STRTRACE'): strtrace_pass(d,ne,blobs,stats)
     if VB and os.environ.get('CTXGROW'): ctxgrow_pass(d,ne,blobs,ordn,stats)
     if VB and os.environ.get('FSHRINK'): fshrink_pass(d,ne,blobs,stats)
@@ -435,6 +436,32 @@ def fsw_pass(blobs,stats):
                 continue
             keep.append(r)
         rr[:]=keep
+
+def appdslock_pass(d,ne,blobs,stats):
+    # The VB program entry (ordinal 100, seg 1:0000) grows the application's DGROUP by
+    # 0x3A44 bytes for its own data and from then on keeps far pointers into it (e.g. the
+    # pointer at <model>:007E -> DGROUP:187C used by 83:0155 when a window message is
+    # dispatched).  In real mode the kernel moves a task's DGROUP while another task runs;
+    # the stale pointers then send calls to garbage (traced: JIGSAWED closed beside MS-DOS
+    # Executive, DGROUP 4087 -> 4081, call far through 4087:1882 = FFEF:FFF0).  Lock the
+    # DGROUP right after that GlobalReAlloc so it never moves; it is freed with the task.
+    nmods=struct.unpack_from('<H',d,ne+0x1e)[0]; mo=struct.unpack_from('<H',d,ne+0x28)[0]; io=struct.unpack_from('<H',d,ne+0x2a)[0]
+    def mname(k):
+        o=struct.unpack_from('<H',d,ne+mo+2*k)[0]; return bytes(d[ne+io+o+1:ne+io+o+1+d[ne+io+o]]).upper()
+    KIDX=[mname(k) for k in range(nmods)].index(b'KERNEL')+1
+    c,rr=blobs[0]
+    assert bytes(c[0x23:0x2c])==bytes.fromhex('9affff00000bc0744f'), c[0x23:0x2c].hex()
+    while len(c)&1: c.append(0x90)
+    st=len(c)
+    # stub: or ax,ax / jnz +5 / add sp,2 / jmp near 7B / push ss / call far LockSegment / ret
+    # (GlobalWire, which would first move the DGROUP low, moves the running task's DS/SS under
+    # this code; tried, and closing the app then crashed or hung - not used)
+    stub=bytearray(b'\x0b\xc0\x75\x06\x83\xc4\x02\xe9\x00\x00\x16\x9a\xff\xff\x00\x00\xc3')
+    struct.pack_into('<h',stub,8,0x7b-(st+10))
+    c+=stub
+    rr.append(struct.pack('<BBHHH',3,1,st+12,KIDX,23))
+    c[0x28]=0xe8; struct.pack_into('<h',c,0x29,st-0x2b); c[0x2b]=0x90
+    stats['appdslock']=1
 
 def strtrace_pass(d,ne,blobs,stats):
     # DIAGNOSTIC ONLY: log both string-space grow attempts (106:06EE slack, 106:06F6 minimum)

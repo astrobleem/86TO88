@@ -10,6 +10,8 @@ Covers:
   growkeep - grow requests that fit the block keep it (no GlobalReAlloc), others realloc
   fshrink  - FORM and SYS hooks shrink the heap of the object just built, for consecutive
              objects, and leave the previous container alone
+  appdslock- conv.appdslock_pass: the VB program entry locks the application's DGROUP (SS)
+             after growing it, and still takes the failure branch when the grow fails
 """
 import os, sys, struct, subprocess, tempfile, unittest
 from unicorn import Uc, UC_ARCH_X86, UC_MODE_16, UC_HOOK_CODE
@@ -349,6 +351,55 @@ class FShrink(unittest.TestCase):
         m.ww(0x1100, 0xF020 - 0x12, 0x7400); m.ww(DG, 0x396c, 0)
         m.run(0x2800, 0x10, 0x2800, 0x13)
         self.assertEqual(self.ls, [])
+
+# --------------------------------------------------------------------------- appdslock
+sys.path.insert(0, os.path.join(HERE, '..'))
+class AppDSLock(unittest.TestCase):
+    """VB program entry (VBRUN 1:0000): after GlobalReAlloc grows the app DGROUP, the
+    converted entry must LockSegment(SS) so the DGROUP never moves under VB's far pointers."""
+    CS, SS = 0x5000, 0x4087
+    def build(self, patched=True):
+        import conv
+        ne = 0x40
+        d = bytearray(0x100); d[ne:ne + 2] = b'NE'
+        struct.pack_into('<H', d, ne + 0x1e, 1)                 # one module reference
+        struct.pack_into('<HH', d, ne + 0x28, 0x60, 0x62)        # module table, import names
+        struct.pack_into('<H', d, ne + 0x60, 1); d[ne + 0x62 + 1:ne + 0x62 + 8] = b'\x06KERNEL'
+        c = bytearray(0x90)
+        c[0x23:0x2c] = bytes.fromhex('9affff00000bc0744f')       # call GlobalReAlloc / or ax,ax / je 7B
+        c[0x2c:0x32] = bytes.fromhex('075a595b58cb')              # pops / retf (success end)
+        c[0x7b] = 0xf4                                           # hlt: failure branch marker
+        blobs = [(c, [])]; stats = {}
+        if patched: conv.appdslock_pass(bytes(d), ne, blobs, stats)
+        return blobs[0][0], blobs[0][1]
+    def run_entry(self, gra_ok, patched=True):
+        c, rr = self.build(patched)
+        m = M(); m.w(self.CS, 0, c)
+        gra = m.fake('GlobalReAlloc', 4, lambda a: (0x1234 if gra_ok else 0, None))
+        lock = m.fake('LockSegment', 1, lambda a: (a[0], None))
+        m.w(self.CS, 0x24, struct.pack('<HH', gra, KSEG))
+        for r in rr:
+            t, fl, off, mod, ordn = struct.unpack('<BBHHH', r)
+            if (mod, ordn) == (1, 23): m.w(self.CS, off, struct.pack('<HH', lock, KSEG))
+        m.stack(self.SS, 0x7800)
+        for v in (0, 1, 2, 3, 4, 5, 6, 7, 8, 9): m.ww(self.SS, 0x7800 + 2 * v, 0)   # args + saved regs
+        m.ww(self.SS, 0x7800 - 2, 0)
+        # emulate the pushes that precede 1:0023 (ax bx cx dx es, GlobalReAlloc args)
+        m.reg(UC_X86_REG_SP, 0x7800 - 10 - 8)
+        try: m.run(self.CS, 0x23, self.CS, 0x31, count=500)
+        except Exception: pass
+        return m
+    def test_locks_app_dgroup_after_grow(self):
+        m = self.run_entry(True)
+        self.assertIn(('LockSegment', [self.SS]), m.calls)
+        self.assertEqual(m.reg(UC_X86_REG_IP), 0x31)              # reached the normal path end
+    def test_failed_grow_takes_failure_branch_without_lock(self):
+        m = self.run_entry(False)
+        self.assertNotIn('LockSegment', [n for n, a in m.calls])
+        self.assertIn(m.reg(UC_X86_REG_IP), (0x7b, 0x7c))         # stopped at the 7B hlt marker
+    def test_unpatched_entry_does_not_lock(self):           # the regression this guards
+        m = self.run_entry(True, patched=False)
+        self.assertNotIn('LockSegment', [n for n, a in m.calls])
 
 if __name__ == '__main__':
     unittest.main()
