@@ -163,5 +163,38 @@ class FastLoad(unittest.TestCase):
         out = self.run_valid(mini_ne([(0x100, 0x40, 0x50), (0x200, 0x40, 0x10)], gang=(0x100, 0x40)))
         self.assertTrue(out.strip().endswith('OK []'), out)
 
+def code_ne(code, rec, seg2_flags=0x0000):
+    """NE with seg 1 = movable code `code` (+ one relocation record rec=(type,flags,off,a,b))
+    and seg 2 = a FIXED code segment (the wrapper stand-in); one imported module."""
+    import struct
+    ne = 0x40; sto = 0x40; et = sto + 16
+    d = bytearray(0x200)
+    d[0:2] = b'MZ'; struct.pack_into('<I', d, 0x3c, ne); d[ne:ne + 2] = b'NE'
+    struct.pack_into('<HH', d, ne + 4, et, 1)
+    struct.pack_into('<H', d, ne + 0x1c, 2); struct.pack_into('<H', d, ne + 0x1e, 1)
+    struct.pack_into('<H', d, ne + 0x22, sto); struct.pack_into('<H', d, ne + 0x32, 4)
+    struct.pack_into('<HHHH', d, ne + sto, 0x200 >> 4, len(code), 0x0110 | 0x1000, len(code))
+    struct.pack_into('<HHHH', d, ne + sto + 8, 0x300 >> 4, 4, seg2_flags, 4)
+    d += bytes(0x200 - len(d)); d += code + struct.pack('<H', 1) + struct.pack('<BBHHH', *rec)
+    d += bytes(0x300 - len(d)) + b'\xcb\x90\x90\x90'
+    return bytes(d)
+
+class PushedReturn(FastLoad):
+    """nevalid.py: a hand-pushed far return address (push cs / push reg / jmp far) in a movable
+    segment must jump through a FIXED wrapper stub (the VBRUN 2:4953 stale-CS bug)."""
+    CODE = bytes.fromhex('0e51') + bytes.fromhex('3bdb7305') + bytes.fromhex('eaffff0000') + bytes.fromhex('cb')
+    def test_jump_to_movable_entry_flagged(self):
+        out = self.run_valid(code_ne(self.CODE, (3, 0, 7, 0xff, 1)))
+        self.assertIn('pushes a return address at 0 and jumps far at 6 to a movable target', out)
+    def test_jump_through_fixed_wrapper_ok(self):
+        out = self.run_valid(code_ne(self.CODE, (3, 0, 7, 2, 0)))
+        self.assertNotIn('pushes a return address', out)
+    def test_jump_to_import_ok(self):
+        out = self.run_valid(code_ne(self.CODE, (3, 1, 7, 1, 16)))
+        self.assertNotIn('pushes a return address', out)
+    def test_jump_to_movable_internal_segment_flagged(self):
+        out = self.run_valid(code_ne(self.CODE, (3, 0, 7, 2, 0), seg2_flags=0x0010))
+        self.assertIn('jumps far at 6 to a movable target', out)
+
 if __name__ == '__main__':
     unittest.main()

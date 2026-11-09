@@ -675,6 +675,22 @@ def wrap_pass(d,ne,blobs,ordn,ords,stats):
                     X=si+1
                 else: X=0                                 # far pointer (callback table): caller unknown
                 rr[j]=struct.pack('<BBHHH',3,0,off,F,W(byord[o],X)); stats['wrap_far' if X else 'wrap_ptr']+=1
+    # Interpreter pseudo-calls: VB's p-code dispatcher in seg 2 pushes CS and a return IP
+    # (push cs / push cx at 2:4953) and then jumps far to a runtime dispatcher.  The callee
+    # returns with RETF to that hand-pushed address, which the kernel never patches, so if
+    # seg 2 moves during the call (compaction while retrying a failed allocation) the
+    # return lands in the old, freed copy (traced: 87AB:4999 with seg 2 at 9B43, a fetch
+    # without the ES reload, a 38 KB bogus string request, "Out of string space").  Route
+    # the three jumps through W stubs with caller segment 2 like a far call.
+    for cs_,p in ((2,0x496a),(2,0x496f),(2,0x4979)) if os.environ.get('WRAPJMP','1')=='1' else ():
+        if cs_ in FIX: continue
+        c,rr=blobs[cs_-1]
+        assert c[p]==0xea, (cs_,hex(p),c[p:p+5].hex())
+        j=[k for k,r in enumerate(rr) if struct.unpack('<BBHHH',r)[2]==p+1]
+        assert len(j)==1, (cs_,hex(p))
+        t,fl,off,a,o=struct.unpack('<BBHHH',rr[j[0]])
+        assert t==3 and fl==0 and a==0xff and o in byord, struct.unpack('<BBHHH',rr[j[0]])
+        rr[j[0]]=struct.pack('<BBHHH',3,0,off,F,W(byord[o],cs_)); stats['wrap_jmp']=stats.get('wrap_jmp',0)+1
     for (sg,off),v in targets.items():
         for (cs_,p,kind) in v['sites']:
             if kind!='pushcs' or cs_ in FIX: continue
