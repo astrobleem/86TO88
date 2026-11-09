@@ -399,7 +399,16 @@ def conv(src, dst, report=True, vb=True):
     stats['entries']=len(ords)
     struct.pack_into('<H',out,ne+0x30,MOVCNT[0])
     nz=[e[0] for e in newents if e[0]]; g0=nz[0]-1; g1=nz[1] if len(nz)>1 else nz[0]+1
-    struct.pack_into('<HH',out,ne+0x38,g0,g1-g0)
+    if FIX and os.environ.get('KEEPFASTLOAD') != '1':
+        # No fast-load area.  The real-mode loader copies every segment it loads with the
+        # module (preload or FIXED) out of the fast-load buffer without checking that the
+        # segment lies inside it; a FIXED segment outside the area is copied from whatever
+        # memory follows the buffer (seen: VBRUN seg 4 got WIN87EM bytes when started from
+        # MS-DOS Executive, and LoadModule failed with "not enough memory").
+        # KEEPFASTLOAD=1 reproduces the b780e78/ec7b196 layout (JIGSAWED-as-shell milestone).
+        struct.pack_into('<HH',out,ne+0x38,0,0); out[ne+0x37]&=~0x08
+    else:
+        struct.pack_into('<HH',out,ne+0x38,g0,g1-g0)
     # 0x0008 = protected-mode-only: the real-mode loader refuses such modules
     struct.pack_into('<H',out,ne+0xc,struct.unpack_from('<H',out,ne+0xc)[0]&~0x0008)
     open(dst,'wb').write(out)

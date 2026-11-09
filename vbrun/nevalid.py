@@ -27,6 +27,15 @@ while d[q]:
                 pass  # fixed-type entry into a movable segment (original export); noted below
             ents[o] = (t, struct.unpack_from('<H', d, q + 1)[0]); q += 3
         o += 1
+# fast-load (gang-load) area: the real-mode loader copies every segment it loads with the
+# module (PRELOAD or FIXED) out of the fast-load buffer, without a bounds check, when the
+# area is present.  A load-time segment outside it gets whatever memory follows the buffer.
+gs, gl = struct.unpack_from('<HH', d, ne + 0x38)
+if d[ne + 0x37] & 0x08 and gl:
+    lo, hi = gs << al, (gs + gl) << al
+    for i, (o, l, f, m) in enumerate(segs):
+        if o and (f & 0x40 or not f & 0x10) and not (lo <= (o << al) and (o << al) + l <= hi):
+            err.append('seg %d loaded with the module but outside the fast-load area' % (i + 1))
 if q - (ne + eto) + 1 != etl: err.append('entry table length field %d vs parsed %d' % (etl, q - (ne + eto) + 1))
 if struct.unpack_from('<H', d, ne + 0x30)[0] != nmov: err.append('movable count field %d vs %d' % (struct.unpack_from('<H', d, ne + 0x30)[0], nmov))
 # relocations

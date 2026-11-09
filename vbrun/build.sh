@@ -12,3 +12,7 @@ VBALLOCFIXED=1 FSW8087=1 GROWKEEP=1 \
 # FIELD100 (custom control): data segment 4 fixed, because VB keeps a far pointer to the
 # control model that lives in it.
 env -u WRAP -u WRAPSTATS FIXSEGS=4 python3 "$HERE/conv.py" "$VBW_ORIG/FIELD100.DLL" "$OUT/FIELD100.DLL" novb
+# structural check of both outputs (segment table, relocations, entries, fast-load area)
+[ "${KEEPFASTLOAD:-}" = 1 ] || for f in VBRUN100.DLL FIELD100.DLL; do
+  r=$(python3 "$HERE/nevalid.py" "$OUT/$f" | tail -1); case "$r" in OK*) ;; *) echo "$f: $r" >&2; exit 1;; esac
+done

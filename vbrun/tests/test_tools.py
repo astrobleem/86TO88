@@ -100,5 +100,41 @@ class Staging(unittest.TestCase):
         import time; time.sleep(0.5)
         self.assertFalse(os.path.exists(os.path.join(self.td, 'ran')))
 
+def mini_ne(segs, gang=None):
+    """Minimal NE image: segs = [(file_offset, length, flags)], sector shift 4,
+    optional fast-load area gang=(start, length) in bytes."""
+    import struct
+    ne = 0x40; sto = 0x40; et = sto + 8 * len(segs)
+    d = bytearray(0x400)
+    d[0:2] = b'MZ'; struct.pack_into('<I', d, 0x3c, ne)
+    d[ne:ne + 2] = b'NE'
+    struct.pack_into('<HH', d, ne + 4, et, 1)            # entry table: one terminating 0
+    struct.pack_into('<H', d, ne + 0x1c, len(segs)); struct.pack_into('<H', d, ne + 0x22, sto)
+    struct.pack_into('<H', d, ne + 0x32, 4)
+    if gang:
+        d[ne + 0x37] = 0x08; struct.pack_into('<HH', d, ne + 0x38, gang[0] >> 4, gang[1] >> 4)
+    for i, (o, l, f) in enumerate(segs):
+        struct.pack_into('<HHHH', d, ne + sto + 8 * i, o >> 4, l, f, l)
+    return bytes(d)
+
+class FastLoad(unittest.TestCase):
+    """nevalid.py: segments loaded with the module must sit inside the fast-load area."""
+    def run_valid(self, img):
+        with tempfile.NamedTemporaryFile(suffix='.dll', delete=False) as f: f.write(img)
+        try:
+            return subprocess.run([sys.executable, os.path.join(HERE, '..', 'nevalid.py'), f.name],
+                                  capture_output=True, text=True).stdout
+        finally: os.unlink(f.name)
+    def test_fixed_segment_outside_area_flagged(self):
+        # seg1 preload inside the area, seg2 movable, seg3 FIXED far outside (the VBRUN seg 4 case)
+        out = self.run_valid(mini_ne([(0x100, 0x40, 0x50), (0x200, 0x40, 0x10), (0x300, 0x40, 0x00)], gang=(0x100, 0x40)))
+        self.assertIn('seg 3 loaded with the module but outside the fast-load area', out)
+    def test_no_area_ok(self):
+        out = self.run_valid(mini_ne([(0x100, 0x40, 0x50), (0x200, 0x40, 0x10), (0x300, 0x40, 0x00)]))
+        self.assertTrue(out.strip().endswith('OK []'), out)
+    def test_movable_outside_area_ok(self):
+        out = self.run_valid(mini_ne([(0x100, 0x40, 0x50), (0x200, 0x40, 0x10)], gang=(0x100, 0x40)))
+        self.assertTrue(out.strip().endswith('OK []'), out)
+
 if __name__ == '__main__':
     unittest.main()

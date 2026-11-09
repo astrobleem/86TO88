@@ -1,5 +1,5 @@
 diff --git a/crates/lib/marty_core/src/cpu_vx0/cycle.rs b/crates/lib/marty_core/src/cpu_vx0/cycle.rs
-index 2b85359..24dad3d 100644
+index 2b85359..87b5a2a 100644
 --- a/crates/lib/marty_core/src/cpu_vx0/cycle.rs
 +++ b/crates/lib/marty_core/src/cpu_vx0/cycle.rs
 @@ -534,6 +534,8 @@ impl NecVx0 {
@@ -20,7 +20,7 @@ index 2b85359..24dad3d 100644
                  _ = self
                      .bus
                      .write_u16(self.address_latch as usize, self.data_bus, self.instr_elapsed)
-@@ -624,3 +628,174 @@ impl NecVx0 {
+@@ -624,3 +628,185 @@ impl NecVx0 {
          &self.cycle_states
      }
  }
@@ -123,6 +123,17 @@ index 2b85359..24dad3d 100644
 +                std::env::var("MARTY_DUMP_FILE").unwrap_or("/tmp/marty_dump.bin".into())));
 +            if ps.0 != 0 && self.instruction_count % ps.0 == 0 {
 +                eprintln!("PC {:04X}:{:04X} SS:{:04X} SP:{:04X} BP:{:04X} DS:{:04X} ES:{:04X} AX:{:04X} i{}", self.cs, self.ip(), self.ss, self.sp, self.bp, self.ds, self.es, self.a.x(), self.instruction_count);
++                // on-demand dump: create the file named by MARTY_DUMP_NOW (checked at each sample)
++                static DN: std::sync::OnceLock<String> = std::sync::OnceLock::new();
++                let dn = DN.get_or_init(|| std::env::var("MARTY_DUMP_NOW").unwrap_or_default());
++                if !dn.is_empty() && std::path::Path::new(dn).exists() {
++                    let _ = std::fs::remove_file(dn);
++                    let mut v = vec![0u8; 0x100000];
++                    for (i, b) in v.iter_mut().enumerate() { *b = self.bus.peek_u8(i).unwrap_or(0); }
++                    let out = format!("{}.{}", ps.2, self.instruction_count);
++                    let _ = std::fs::write(&out, &v);
++                    eprintln!("DUMPED {} at i{} CS:IP {:04X}:{:04X} SS:SP {:04X}:{:04X} BP:{:04X}", out, self.instruction_count, self.cs, self.ip(), self.ss, self.sp, self.bp);
++                }
 +            }
 +            if ps.1 != 0 && self.instruction_count == ps.1 {
 +                let mut v = vec![0u8; 0x100000];
