@@ -142,10 +142,10 @@ def mini_ne(segs, gang=None):
 
 class FastLoad(unittest.TestCase):
     """nevalid.py: segments loaded with the module must sit inside the fast-load area."""
-    def run_valid(self, img):
+    def run_valid(self, img, *args):
         with tempfile.NamedTemporaryFile(suffix='.dll', delete=False) as f: f.write(img)
         try:
-            return subprocess.run([sys.executable, os.path.join(HERE, '..', 'nevalid.py'), f.name],
+            return subprocess.run([sys.executable, os.path.join(HERE, '..', 'nevalid.py'), f.name] + list(args),
                                   capture_output=True, text=True).stdout
         finally: os.unlink(f.name)
     def test_fixed_segment_outside_area_flagged(self):
@@ -220,13 +220,23 @@ class PushedReturnComplete(FastLoad):
         code, fx = self.site(b'\x74\x00' * 40 + b'\x90' * 30)
         out = self.run_valid(code_ne(code, (3, 0, fx, 2, 0), seg2_flags=0x0010))
         self.assertIn('to a movable target', out)
-    def test_indirect_near_jump_is_incomplete(self):
-        code, fx = self.site(b'\xff\xe0')                      # jmp ax: where it goes is unknown
-        out = self.run_valid(code_ne(code, (3, 0, fx, 2, 0)))
-        self.assertIn('check incomplete: indirect near jump', out)
-    def test_running_off_the_segment_is_incomplete(self):
-        out = self.run_valid(code_ne(bytes.fromhex('0e51') + b'\x90' * 8 + bytes.fromhex('b8ffff'), (3, 0, 11, 2, 0)))
-        self.assertIn('check incomplete: runs off the segment end', out)
+    def test_indirect_near_jump_is_reported_unfinished(self):
+        # jmp ax: where it goes is unknown.  Not an error by itself (the only far jump goes to
+        # the FIXED wrapper segment); with a movable target the jump gate rejects the module.
+        code, fx = self.site(b'\xff\xe0')
+        out = self.run_valid(code_ne(code, (3, 0, fx, 2, 0)), '--all')
+        self.assertIn('UNFINISHED 1', out); self.assertIn('indirect near jump at 2', out)
+        self.assertTrue(out.strip().endswith('OK []'), out)
+        out = self.run_valid(code_ne(code, (3, 0, fx, 2, 0), seg2_flags=0x0010))
+        self.assertIn('far jump at 4 to movable 2:0 is not on the reviewed list', out)
+    def test_running_off_the_segment_is_reported_unfinished(self):
+        out = self.run_valid(code_ne(bytes.fromhex('0e51') + b'\x90' * 8 + bytes.fromhex('b8ffff'), (3, 0, 11, 2, 0)), '--all')
+        self.assertIn('runs off the segment end', out); self.assertIn('UNFINISHED 1', out)
+    def test_budget_exhaustion_is_an_error(self):
+        # 5000 conditional branches to the next instruction: more than the per-pair budget
+        code = bytes.fromhex('0e51') + b'\x74\x00' * 5000 + bytes.fromhex('b8ffff')
+        out = self.run_valid(code_ne(code, (3, 0, len(code) - 2, 2, 0)))
+        self.assertIn('check incomplete: more than 4096 instructions', out)
     def test_return_without_far_jump_ok(self):
         out = self.run_valid(code_ne(bytes.fromhex('0e5190cb') + bytes.fromhex('ffff0000'), (3, 0, 4, 2, 0)))
         self.assertTrue(out.strip().endswith('OK []'), out)
@@ -266,10 +276,10 @@ class PushedReturnFlow(FastLoad):
         code = bytes.fromhex('0e51' 'e80100' 'cb' 'e80100' 'c3' '5858' 'eaffff0000')
         rc, out = self.run_rc(code_ne(code, (3, 0, 13, 2, 0), seg2_flags=0x0010))
         self.assertIn('jumps far at c to a movable target', out)
-    def test_indirect_near_call_is_incomplete(self):
+    def test_indirect_near_call_is_reported_unfinished(self):
         code = bytes.fromhex('0e51' 'ffd0' 'cb') + bytes.fromhex('b8ffff')     # call ax
-        rc, out = self.run_rc(code_ne(code, (3, 0, 6, 2, 0)))
-        self.assertIn('check incomplete: indirect near call at 2', out); self.assertNotEqual(rc, 0)
+        rc, out = self.run_rc(code_ne(code, (3, 0, 6, 2, 0)), '--all')
+        self.assertIn('indirect near call at 2', out); self.assertIn('UNFINISHED 1', out)
     def test_r13_2_pair_reached_only_by_computed_jump(self):
         # mov ax,9 / jmp ax / (mov word [1234],510Eh hides the pair at 9) / jmp far movable
         rc, out = self.run_rc(code_ne(self.IND, (3, 0, 12, 2, 0), seg2_flags=0x0010))
@@ -279,40 +289,82 @@ class PushedReturnFlow(FastLoad):
         rc, out = self.run_rc(code_ne(self.IND, (3, 0, 12, 2, 0)))
         self.assertTrue(out.strip().endswith('OK []'), out)
 
+class NearRet(PushedReturnFlow):
+    """Review R14 (1d2427b accepted the fixture): a near RET is an indirect jump."""
+    R14 = bytes.fromhex('b90c00' 'ba1200' '0e51' 'c3' '909090' '52' 'eaffff0000' 'cb')
+    def test_r14_ret_takes_pushed_ip_then_repush_and_far_jump(self):
+        rc, out = self.run_rc(code_ne(self.R14, (3, 0, 14, 2, 0), seg2_flags=0x0010), '--all')
+        self.assertIn('far jump at d to movable 2:0 is not on the reviewed list', out); self.assertNotEqual(rc, 0)
+        self.assertIn('pair at 6: near return at 8 takes the pushed IP', out)   # the walk does not claim it ended
+    def test_r14_same_shape_through_fixed_wrapper_ok(self):
+        rc, out = self.run_rc(code_ne(self.R14, (3, 0, 14, 2, 0)))
+        self.assertTrue(out.strip().endswith('OK []'), out); self.assertEqual(rc, 0)
+    def test_push_cs_not_adjacent_to_the_ip_push(self):
+        # push cs / mov ax,12h / push ax / jmp far movable: no "0E 5x" pair at all
+        code = bytes.fromhex('0e' 'b81200' '50' 'eaffff0000' 'cb')
+        rc, out = self.run_rc(code_ne(code, (3, 0, 6, 2, 0), seg2_flags=0x0010))
+        self.assertIn('far jump at 5 to movable 2:0 is not on the reviewed list', out); self.assertNotEqual(rc, 0)
+    def test_callee_pops_its_return_then_ret(self):
+        # push cs/push cx / call 6 / retf / 6: pop ax / ret  -> the RET takes the pushed IP
+        code = bytes.fromhex('0e51' 'e80100' 'cb' '58' 'c3') + bytes.fromhex('b8ffff')
+        rc, out = self.run_rc(code_ne(code, (3, 0, 9, 2, 0)), '--all')
+        self.assertIn('near return at 7 takes the pushed IP', out)
+    def test_ret_to_a_call_the_walk_made_is_followed(self):
+        # push cs/push cx / call 0a / pop ax(ip) / pop ax(cs) / jmp far movable ; 0a: ret
+        code = bytes.fromhex('0e51' 'e80500' '90' 'eaffff0000' 'c3')
+        rc, out = self.run_rc(code_ne(code, (3, 0, 7, 2, 0), seg2_flags=0x0010))
+        self.assertIn('pushes a return address at 0 and jumps far at 6 to a movable target', out)
+    def test_ret_after_far_call_is_unknown(self):
+        # the far callee may pop arguments: stack contents unknown at the RET
+        code = bytes.fromhex('0e51' '9affff0000' 'c3')
+        rc, out = self.run_rc(code_ne(code, (3, 0, 3, 2, 0)), '--all')
+        self.assertIn('near return at 7, stack contents unknown', out)
+
 class ReviewedList(PushedReturnFlow):
-    """--reviewed: the only way past an unfinished walk, tied to the bytes at the site."""
-    CODE = bytes.fromhex('0e51' 'ffe0') + bytes.fromhex('b8ffff')            # push cs/push cx/jmp ax
+    """--reviewed: every direct far JMP from a movable segment to a movable segment of the
+    module needs an entry bound to its target and bytes; nothing else gets it through."""
+    TAIL = bytes.fromhex('8bc3' 'eaffff0000' 'cb')                    # mov ax,bx / jmp far (a tail jump)
     def lst(self, entries, mod='T'):
         import json
-        f = tempfile.NamedTemporaryFile('w', suffix='.json', delete=False); json.dump({mod: entries}, f); f.close()
+        f = tempfile.NamedTemporaryFile('w', suffix='.json', delete=False); json.dump({mod: {'farjmp': entries}}, f); f.close()
         self.addCleanup(os.unlink, f.name); return f.name
-    def img(self, code=None, rec=(3, 0, 5, 2, 0), **kw):
-        d = bytearray(code_ne(code or self.CODE, rec, **kw))
-        ne = 0x40; struct_ = __import__('struct')
-        struct_.pack_into('<H', d, ne + 0x26, 0x70); d[ne + 0x70:ne + 0x72] = b'\x01T'   # module name "T"
+    def img(self, code=None, rec=(3, 0, 3, 2, 0), **kw):
+        import struct
+        kw.setdefault('seg2_flags', 0x0010)
+        d = bytearray(code_ne(code or self.TAIL, rec, **kw)); ne = 0x40
+        struct.pack_into('<H', d, ne + 0x26, 0x70); d[ne + 0x70:ne + 0x72] = b'\x01T'   # module name "T"
         return bytes(d)
-    def test_unfinished_site_fails_without_list(self):
+    def entry(self, code=None, off=2, **kw):
+        code = code or self.TAIL
+        return dict({'seg': 1, 'off': '%x' % off, 'to': '2:0', 'ctx': code[max(0, off - 3):off + 5].hex(), 'why': 'test'}, **kw)
+    def test_far_jump_to_movable_fails_without_list(self):
         rc, out = self.run_rc(self.img())
-        self.assertIn('check incomplete: indirect near jump at 2', out); self.assertNotEqual(rc, 0)
-    def test_reviewed_entry_accepts_it(self):
-        ctx = self.CODE[0:5].hex()
-        rc, out = self.run_rc(self.img(), '--reviewed', self.lst([{'seg': 1, 'off': '0', 'ctx': ctx, 'why': 'test'}]))
+        self.assertIn('seg 1: far jump at 2 to movable 2:0 is not on the reviewed list', out); self.assertNotEqual(rc, 0)
+    def test_far_jump_to_fixed_needs_no_entry(self):
+        rc, out = self.run_rc(self.img(seg2_flags=0))
         self.assertTrue(out.strip().endswith('OK []'), out); self.assertEqual(rc, 0)
-        self.assertIn('REVIEWED 1', out)
+    def test_reviewed_entry_accepts_it(self):
+        rc, out = self.run_rc(self.img(), '--reviewed', self.lst([self.entry()]))
+        self.assertTrue(out.strip().endswith('OK []'), out); self.assertEqual(rc, 0); self.assertIn('REVIEWED 1', out)
+    def test_provisional_entries_are_counted(self):
+        rc, out = self.run_rc(self.img(), '--reviewed', self.lst([self.entry(provisional=True)]))
+        self.assertIn('(1 provisional)', out)
     def test_entry_with_other_bytes_does_not_apply(self):
-        rc, out = self.run_rc(self.img(), '--reviewed', self.lst([{'seg': 1, 'off': '0', 'ctx': '0e52ffe0b8', 'why': 'x'}]))
-        self.assertIn('check incomplete', out); self.assertIn('matches no unfinished site', out); self.assertNotEqual(rc, 0)
+        rc, out = self.run_rc(self.img(), '--reviewed', self.lst([self.entry(ctx='8bc1eaffff0000')]))
+        self.assertIn('is not on the reviewed list', out); self.assertIn('matches no far jump', out); self.assertNotEqual(rc, 0)
+    def test_entry_with_other_target_does_not_apply(self):
+        rc, out = self.run_rc(self.img(), '--reviewed', self.lst([self.entry(to='2:2')]))
+        self.assertIn('is not on the reviewed list', out); self.assertNotEqual(rc, 0)
     def test_entry_for_another_module_does_not_apply(self):
-        ctx = self.CODE[0:5].hex()
-        rc, out = self.run_rc(self.img(), '--reviewed', self.lst([{'seg': 1, 'off': '0', 'ctx': ctx, 'why': 'x'}], mod='OTHER'))
-        self.assertIn('check incomplete', out)
-    def test_far_jump_to_movable_is_never_waived(self):
-        # jnz -> jmp far movable on one path, jmp ax on the other
-        code = bytes.fromhex('0e51' '7502' 'ffe0' 'eaffff0000')
-        ctx = code[0:5].hex()
-        rc, out = self.run_rc(self.img(code, (3, 0, 7, 2, 0), seg2_flags=0x0010), '--reviewed',
-                              self.lst([{'seg': 1, 'off': '0', 'ctx': ctx, 'why': 'x'}]))
-        self.assertIn('jumps far at 6 to a movable target', out); self.assertNotEqual(rc, 0)
+        rc, out = self.run_rc(self.img(), '--reviewed', self.lst([self.entry()], mod='OTHER'))
+        self.assertIn('is not on the reviewed list', out)
+    def test_stale_entry_is_an_error(self):
+        rc, out = self.run_rc(self.img(seg2_flags=0), '--reviewed', self.lst([self.entry()]))
+        self.assertIn('matches no far jump', out); self.assertNotEqual(rc, 0)
+    def test_listed_jump_reached_from_a_push_pair_is_still_an_error(self):
+        code = bytes.fromhex('0e51' 'eaffff0000' 'cb')
+        rc, out = self.run_rc(self.img(code), '--reviewed', self.lst([self.entry(code)]))
+        self.assertIn('pushes a return address at 0 and jumps far at 2 to a movable target', out); self.assertNotEqual(rc, 0)
 
 if __name__ == '__main__':
     unittest.main()
