@@ -4,7 +4,8 @@
 ; caller segment X nothing is locked: on return the segment is (re)loaded through
 ; GetCodeHandle on a thunk of X and the return goes to its current address. For an
 ; unknown caller (callback through a pointer table) its code segment is locked for
-; the duration of the call instead.
+; the duration of the call instead.  If the record stack is full the application is
+; terminated (FatalAppExit) rather than letting the call return unprotected.
 bits 16
 cpu 8086
 org BASE
@@ -57,13 +58,13 @@ center:                 ; [d][IPx][CSx][args]
         cmp si,wend
         jb .room
         inc word [cs:st_full]
-        jmp .go
+        jmp full
 .room:
         mov ax,[bp+8]
         mov [cs:si+8],ax
 %endif
         cmp si,wend
-        jae .go
+        jae full                ; no record: the return could not be re-derived (fail closed)
         mov ax,ss
         mov [cs:si],ax
         lea ax,[bp+6]
@@ -106,6 +107,19 @@ center:                 ; [d][IPx][CSx][args]
         popf
         pop bp
         retf
+
+; Record stack exhausted.  Going on without a record would leave the caller's raw return
+; address on the stack, and if the caller's segment moved during the call the return would
+; land in the old copy.  Terminate the application instead.  FatalAppExit does not return;
+; if it ever does, stop here rather than run the unprotected call.
+full:   xor ax,ax
+        push ax
+        push cs
+        mov ax,msg_full
+        push ax
+..@fatal: call 0:0xffff         ; KERNEL.FatalAppExit(0, msg_full)
+.hang:  jmp short .hang
+msg_full: db 'VBRUN real-mode call wrapper: too many nested calls',0
 
 cexit:                  ; callee returned here; its args are already popped (SP = S)
         sub sp,2

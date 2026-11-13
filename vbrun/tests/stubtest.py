@@ -146,9 +146,10 @@ class GrowKeep(unittest.TestCase):
 WSEG, WBASE = 0x2000, 0x100
 CSEG, CSEG2, ESEG, ESEG2 = 0x3000, 0x5000, 0x4000, 0x4800   # caller, caller moved, callees
 class Wrap(unittest.TestCase):
+    NSLOT = 8; EXTRA = {}
     def setUp(self):
         m = self.m = M()
-        code, self.sym = nasm(os.path.join(ASM, 'wrapcore.asm'), {'BASE': WBASE, 'NSLOT': 8, 'NSEG': 4})
+        code, self.sym = nasm(os.path.join(ASM, 'wrapcore.asm'), dict({'BASE': WBASE, 'NSLOT': self.NSLOT, 'NSEG': 4}, **self.EXTRA))
         m.w(WSEG, WBASE, code)
         self.where = {1: CSEG, 2: ESEG}                     # segment number -> current segment
         self.locks = {}
@@ -157,8 +158,12 @@ class Wrap(unittest.TestCase):
         def gh(a): return (a[0], self.where[a[0]])
         def lock(a): self.locks[a[0]] = self.locks.get(a[0], 0) + 1; return (a[0], None)
         def unl(a): self.locks[a[0]] = self.locks.get(a[0], 0) - 1; return (a[0], None)
-        for nm, n, f in (('gch', 2, gch), ('gh', 1, gh), ('lockcall', 1, lock), ('unl1', 1, unl), ('unl2', 1, unl)):
-            m.link(WSEG, self.sym, WBASE, nm, m.fake(nm, n, f))
+        def fatal(a):                                       # FatalAppExit: does not return
+            m.uc.emu_stop(); return (None, None)
+        for nm, n, f in (('gch', 2, gch), ('gh', 1, gh), ('lockcall', 1, lock), ('unl1', 1, unl), ('unl2', 1, unl),
+                         ('fatal', 3, fatal)):
+            if '..@' + nm in self.sym:                      # (older wrapcore: no FatalAppExit)
+                m.link(WSEG, self.sym, WBASE, nm, m.fake(nm, n, f))
         xt = self.sym['xthunk']
         for X in (1, 2): m.w(WSEG, xt + 4 * (X - 1), struct.pack('<HH', 0, X))
         self.stubs = {}; self.nxt = WBASE + len(code)
@@ -351,6 +356,50 @@ class FShrink(unittest.TestCase):
         m.ww(0x1100, 0xF020 - 0x12, 0x7400); m.ww(DG, 0x396c, 0)
         m.run(0x2800, 0x10, 0x2800, 0x13)
         self.assertEqual(self.ls, [])
+
+class WrapFull(Wrap):
+    """Record-stack exhaustion: N nested wrapped calls from movable segment 2 to itself; at the
+    deepest point segment 2 moves and its old copy is wiped.  Within capacity every return goes
+    to the new copy; past capacity the wrapper must not let a call run unprotected (before the
+    fix the unhooked return landed in the wiped old copy)."""
+    def nest(self, depth):
+        m = self.m
+        w_in = self.stub(ESEG, 0, 2); w_out = self.stub(ESEG, 0, 1)
+        body = (b'\x2e\xff\x0e\x00\x01' + b'\x74\x06' + b'\x9a' + struct.pack('<HH', w_in, WSEG) + b'\xcb'
+                + b'\x90\xcb')                              # dec [cs:100] / jz bottom / call W / retf
+        m.w(ESEG, 0, body); m.ww(ESEG, 0x100, depth)
+        self.caller(CSEG, self.callw(w_out) + b'\x90\x90')
+        bottom = len(body) - 2; self.reached_bottom = False
+        def move(uc, a, s_, u):
+            self.reached_bottom = True
+            m.w(ESEG2, 0, body); m.ww(ESEG2, 0x100, 0); m.w(ESEG, 0, b'\xf4' * 0x110); self.where[2] = ESEG2
+        m.uc.hook_add(UC_HOOK_CODE, move, begin=(ESEG << 4) + bottom, end=(ESEG << 4) + bottom)
+        m.stack(0x1000, 0xF000)
+        try: return m.run(CSEG, 0, CSEG, 7, count=200000)
+        except Exception: return (self.m.reg(UC_X86_REG_CS), self.m.reg(UC_X86_REG_IP))
+    def fatal_calls(self): return [a for n, a in self.m.calls if n == 'fatal']
+    def test_within_capacity_all_return_to_moved_copy(self):
+        self.assertEqual(self.nest(self.NSLOT - 1), (CSEG, 7))   # NSLOT-1 recursive + 1 outer = NSLOT records
+        self.assertTrue(self.reached_bottom); self.assertEqual(self.wtop(), 0); self.assertFalse(self.fatal_calls())
+    def test_over_capacity_fails_closed(self):
+        end = self.nest(self.NSLOT + 4)
+        self.assertEqual(len(self.fatal_calls()), 1)               # FatalAppExit(0, message)
+        self.assertNotEqual(end[0], ESEG)                          # never executed the stale copy
+        self.assertFalse(self.reached_bottom)                      # stopped at the call that had no record
+        off, seg, action = self.fatal_calls()[0]                   # pascal: lpMessage, wAction
+        self.assertEqual((seg, action), (WSEG, 0))
+        self.assertEqual(self.m.r(seg, off, 11), b'VBRUN real-')
+
+class WrapFullProduction(WrapFull):
+    """same, with the production record count (96) used by conv.py"""
+    NSLOT = 96
+
+class WrapFullStats(WrapFull):
+    """same, with the WRAPSTATS build (10-byte records, st_full counter)"""
+    EXTRA = {'STATS': None}
+    def test_over_capacity_fails_closed(self):
+        super().test_over_capacity_fails_closed()
+        self.assertEqual(self.m.rw(WSEG, self.sym['st_full']), 1)
 
 # --------------------------------------------------------------------------- appdslock
 sys.path.insert(0, os.path.join(HERE, '..'))

@@ -173,10 +173,11 @@ def code_ne(code, rec, seg2_flags=0x0000):
     struct.pack_into('<HH', d, ne + 4, et, 1)
     struct.pack_into('<H', d, ne + 0x1c, 2); struct.pack_into('<H', d, ne + 0x1e, 1)
     struct.pack_into('<H', d, ne + 0x22, sto); struct.pack_into('<H', d, ne + 0x32, 4)
+    seg2 = (0x200 + len(code) + 10 + 15) & ~15
     struct.pack_into('<HHHH', d, ne + sto, 0x200 >> 4, len(code), 0x0110 | 0x1000, len(code))
-    struct.pack_into('<HHHH', d, ne + sto + 8, 0x300 >> 4, 4, seg2_flags, 4)
-    d += bytes(0x200 - len(d)); d += code + struct.pack('<H', 1) + struct.pack('<BBHHH', *rec)
-    d += bytes(0x300 - len(d)) + b'\xcb\x90\x90\x90'
+    struct.pack_into('<HHHH', d, ne + sto + 8, seg2 >> 4, 4, seg2_flags, 4)
+    d += code + struct.pack('<H', 1) + struct.pack('<BBHHH', *rec)
+    d += bytes(seg2 - len(d)) + b'\xcb\x90\x90\x90'
     return bytes(d)
 
 class PushedReturn(FastLoad):
@@ -195,6 +196,46 @@ class PushedReturn(FastLoad):
     def test_jump_to_movable_internal_segment_flagged(self):
         out = self.run_valid(code_ne(self.CODE, (3, 0, 7, 2, 0), seg2_flags=0x0010))
         self.assertIn('jumps far at 6 to a movable target', out)
+
+class PushedReturnComplete(FastLoad):
+    """nevalid.py fails closed: every path from a push site is followed to a far jump or a
+    return; when it cannot be (indirect near jump, running off the segment, undecodable
+    bytes) the site is an error.  Before this, the scan silently gave up after 64
+    instructions and reported OK."""
+    @staticmethod
+    def site(gap, tail=bytes.fromhex('eaffff0000cb')):
+        code = bytes.fromhex('0e51') + gap
+        return code + tail, len(code) + 1
+    def test_far_jump_after_long_straight_run_flagged(self):
+        for n in (63, 64, 200, 1000):
+            code, fx = self.site(b'\x90' * n)
+            out = self.run_valid(code_ne(code, (3, 0, fx, 2, 0), seg2_flags=0x0010))
+            self.assertIn('jumps far at %x to a movable target' % (fx - 1), out, n)
+    def test_far_jump_after_long_run_through_wrapper_ok(self):
+        code, fx = self.site(b'\x90' * 200)
+        out = self.run_valid(code_ne(code, (3, 0, fx, 2, 0)))
+        self.assertTrue(out.strip().endswith('OK []'), out)
+    def test_far_jump_after_many_branches_flagged(self):
+        # 40 conditional branches, each to the next instruction: 80+ instructions over all paths
+        code, fx = self.site(b'\x74\x00' * 40 + b'\x90' * 30)
+        out = self.run_valid(code_ne(code, (3, 0, fx, 2, 0), seg2_flags=0x0010))
+        self.assertIn('to a movable target', out)
+    def test_indirect_near_jump_is_incomplete(self):
+        code, fx = self.site(b'\xff\xe0')                      # jmp ax: where it goes is unknown
+        out = self.run_valid(code_ne(code, (3, 0, fx, 2, 0)))
+        self.assertIn('check incomplete: indirect near jump', out)
+    def test_running_off_the_segment_is_incomplete(self):
+        out = self.run_valid(code_ne(bytes.fromhex('0e51') + b'\x90' * 8 + bytes.fromhex('b8ffff'), (3, 0, 11, 2, 0)))
+        self.assertIn('check incomplete: runs off the segment end', out)
+    def test_return_without_far_jump_ok(self):
+        out = self.run_valid(code_ne(bytes.fromhex('0e5190cb') + bytes.fromhex('ffff0000'), (3, 0, 4, 2, 0)))
+        self.assertTrue(out.strip().endswith('OK []'), out)
+    def test_pair_inside_another_instruction_is_not_a_site(self):
+        # lea cx,[bp+0Eh] / push cx: the bytes 0E 51 straddle two instructions
+        code = bytes.fromhex('8d4e0e51') + b'\x90\xcb' + bytes.fromhex('eaffff0000cb')
+        out = self.run_valid(code_ne(code, (3, 0, 7, 2, 0), seg2_flags=0x0010))
+        self.assertNotIn('pushes a return address', out)
+        self.assertIn('inside other instructions', out)
 
 if __name__ == '__main__':
     unittest.main()

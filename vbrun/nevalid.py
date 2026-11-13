@@ -71,26 +71,70 @@ for i, (o, l, f, m) in enumerate(segs):
 # frames, so the kernel never patches that return address; the jump must go through a
 # wrapper stub (internal reference into a FIXED segment).  A jump to a movable target of
 # this module leaves a stale CS if the segment moves during the call (seen: VBRUN 2:4953).
-# Indirect jumps can't be checked statically and are only reported as WARN.
+# Indirect far jumps can't be checked statically and are only reported as WARN.
+# The scan fails closed: if it cannot follow every path from the push to a far jump or a
+# return (instruction budget exhausted, undecodable bytes, an indirect near jump, running off
+# the segment), the site is reported as an error rather than passed.
 warn = []
+BUDGET = 4096                   # instructions per push site, over all paths
 try:
     import capstone
     md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_16); md.detail = True
 except ImportError:
     md = None
 for i, (o, l, f, m) in enumerate(segs):
-    if md is None or not o or f & 1 or not f & 0x10: continue
+    if not o or f & 1 or not f & 0x10: continue
+    if md is None:
+        err.append('pushed-return check not run (capstone missing)'); break
     ln = l or 0x10000; code = d[(o << al):(o << al) + ln]; rel = site.get(i, {})
+    # Instruction boundaries by recursive descent from every way into this segment: entry
+    # points, far pointers/calls from any segment, and code addresses pushed after PUSH CS;
+    # code reached only through tables is aligned by a linear sweep from the nearest decoded
+    # boundary.  "push cs / push" pairs on a boundary are push sites and must be followed to
+    # the end (fail closed); pairs inside other instructions are counted as WARN.
+    starts = {off for (sg, off) in ents.values() if sg == i + 1}
+    for sj, fx in site.items():
+        for (fl_, a_, b_) in fx.values():
+            if fl_ & 3 == 0:
+                if a_ == i + 1: starts.add(b_)
+                elif a_ == 0xff and b_ in ents and ents[b_][0] == i + 1: starts.add(ents[b_][1])
+    starts.add(0) if not starts else None
+    bound = set(); todo = [x for x in starts if x < ln]
+    while todo:
+        q = todo.pop()
+        while q < ln and q not in bound:
+            try: ins = next(md.disasm(code[q:q + 16], q, 1))
+            except StopIteration: break
+            bound.add(q); mn = ins.mnemonic; ops = ins.operands
+            if code[q] == 0x0e and q + 1 < ln and code[q + 1] in (0x68,):
+                todo.append(struct.unpack_from('<H', code, q + 2)[0])       # push cs / push imm16: return point
+            if (mn.startswith(('j', 'loop')) or mn == 'call') and ops and ops[0].type == capstone.x86.X86_OP_IMM:
+                todo.append(ops[0].imm & 0xffff)
+            if mn in ('ret', 'retf', 'iret', 'hlt', 'ljmp') or mn == 'jmp': break
+            q += ins.size
+    import bisect
+    sb = sorted(bound); unreached = 0
+    def aligned(p):
+        # not reached by descent (e.g. code entered through a jump table): sweep linearly from
+        # the nearest decoded boundary below; x86 resynchronises within a few instructions
+        k = bisect.bisect_left(sb, p); q = sb[k - 1] if k else 0
+        while q < p:
+            try: q += next(md.disasm(code[q:q + 16], q, 1)).size
+            except StopIteration: q += 1
+        return q == p
     for p in range(ln - 2):
         if code[p] != 0x0e or not (0x50 <= code[p + 1] <= 0x57 or code[p + 1] in (0x68, 0x6a)): continue
-        work = [p + 1]; done = set(); n_ins = 0
-        while work and n_ins < 64:
+        if p not in bound and not aligned(p): unreached += 1; continue
+        work = [p + 1]; done = set(); n_ins = 0; why = None
+        while work and why is None:
             q = work.pop()
-            while q not in done and q < ln and n_ins < 64:
+            while q not in done:
+                if q >= ln: why = 'runs off the segment end'; break
+                if n_ins >= BUDGET: why = 'more than %d instructions to follow' % BUDGET; break
                 done.add(q); n_ins += 1
                 try: ins = next(md.disasm(code[q:q + 16], q, 1))
-                except StopIteration: break
-                op = ins.bytes[0]
+                except StopIteration: why = 'undecodable bytes at %x' % q; break
+                op = ins.bytes[0]; b = ins.bytes
                 if op == 0xea:
                     fx = rel.get(q + 1)
                     # imports (KERNEL/USER/GDI...) are compiled for real mode and mark their frames,
@@ -98,16 +142,22 @@ for i, (o, l, f, m) in enumerate(segs):
                     if fx is None or not fx[0] & 3 and (fx[1] == 0xff or not (1 <= fx[1] <= n) or segs[fx[1] - 1][2] & 0x10):
                         err.append('seg %d pushes a return address at %x and jumps far at %x to a movable target' % (i + 1, p, q))
                     break
-                if op in (0x2e, 0x26, 0x36, 0x3e) and len(ins.bytes) > 1 and ins.bytes[1] == 0xff and (ins.bytes[2] >> 3) & 7 == 5 or \
-                   op == 0xff and (ins.bytes[1] >> 3) & 7 == 5:
-                    warn.append('seg %d pushes a return address at %x and jumps far indirectly at %x' % (i + 1, p, q)); break
-                if ins.mnemonic in ('ret', 'retf', 'iret', 'call', 'lcall', 'ljmp', 'int', 'hlt') or op == 0xff: break
+                k = 1 if op in (0x26, 0x2e, 0x36, 0x3e) else 0     # segment override prefix
+                if len(b) > k + 1 and b[k] == 0xff:
+                    reg = (b[k + 1] >> 3) & 7
+                    if reg == 5:
+                        warn.append('seg %d pushes a return address at %x and jumps far indirectly at %x' % (i + 1, p, q)); break
+                    if reg == 4: why = 'indirect near jump at %x' % q; break
+                if ins.mnemonic in ('ret', 'retf', 'iret', 'hlt'): break          # path ends without a far jump
                 if ins.mnemonic == 'jmp':
-                    if ins.operands[0].type == capstone.x86.X86_OP_IMM: q = ins.operands[0].imm & 0xffff; continue
-                    break
-                if ins.mnemonic.startswith('j') and ins.operands and ins.operands[0].type == capstone.x86.X86_OP_IMM:
+                    q = ins.operands[0].imm & 0xffff; continue                  # direct near/short jump
+                if ins.mnemonic.startswith(('j', 'loop')) and ins.operands and ins.operands[0].type == capstone.x86.X86_OP_IMM:
                     work.append(ins.operands[0].imm & 0xffff)
-                q += ins.size
-if warn: print('WARN', warn[:10])
+                q += ins.size                       # calls and ints are assumed to return here
+        if why:
+            err.append('seg %d pushes a return address at %x; check incomplete: %s' % (i + 1, p, why))
+    if unreached:
+        warn.append('seg %d: %d push-cs/push byte pairs inside other instructions' % (i + 1, unreached))
+if warn: print('WARN', warn)
 print('segments fixed %d movable %d; entries %d (movable %d); %s' % (len(fixed), len(movable), len(ents), nmov, stats))
 print('ERRORS' if err else 'OK', err[:20])

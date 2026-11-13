@@ -676,7 +676,7 @@ def wrap_pass(d,ne,blobs,ordn,ords,stats):
                 try: sym[pr[2]]=int(pr[1],16)
                 except ValueError: pass
     code+=core
-    for nm,o in (('..@lockcall',23),('..@unl1',24),('..@unl2',24),('..@gch',93),('..@gh',21)):
+    for nm,o in (('..@lockcall',23),('..@unl1',24),('..@unl2',24),('..@gch',93),('..@gh',21),('..@fatal',137)):
         recs.append(struct.pack('<BBHHH',3,1,sym[nm]+1,KIDX,o))
     xused=set(); wk={}
     def W(t,X):
