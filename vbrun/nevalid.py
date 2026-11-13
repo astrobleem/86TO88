@@ -71,12 +71,34 @@ for i, (o, l, f, m) in enumerate(segs):
 # frames, so the kernel never patches that return address; the jump must go through a
 # wrapper stub (internal reference into a FIXED segment).  A jump to a movable target of
 # this module leaves a stale CS if the segment moves during the call (seen: VBRUN 2:4953).
-# Indirect far jumps can't be checked statically and are only reported as WARN.
-# The scan fails closed: if it cannot follow every path from the push to a far jump or a
-# return (instruction budget exhausted, undecodable bytes, an indirect near jump, running off
-# the segment), the site is reported as an error rather than passed.
+#
+# The check fails closed.  EVERY "0E 5x / 0E 68 / 0E 6A" byte pair in a movable code segment
+# is treated as a possible push site, whether or not any disassembly reaches it: code is
+# entered through jump tables and computed jumps (2:4953 itself is), so "not reached" and
+# "looks like the middle of another instruction" prove nothing.  From each pair every path
+# is followed - both sides of conditional branches, direct jumps, and near calls INTO the
+# callee as well as past it (a callee can drop its own return address and jump far with the
+# hand-pushed one on top of the stack).  A site is an error when
+#   - a path reaches a direct far jump to a movable target of this module, or
+#   - the walk cannot be finished: instruction budget, undecodable bytes, an indirect near
+#     jump or call, or running off the segment.
+# The only way past an unfinished walk is a reviewed entry in the file given with
+# --reviewed (JSON: module -> [{"seg","off","ctx","why"}]); "ctx" is the 8 bytes around the
+# pair, so an entry stops applying if the code changes.  A far jump to a movable target, or
+# running out of the instruction budget, is never waived.  Indirect FAR jumps can't be resolved statically and are reported as WARN.
+# Assumed, not checked: far calls and INTs return to the next instruction; a near RET outside
+# any followed callee consumes the pushed IP and ends the hand-pushed far return.
 warn = []
 BUDGET = 4096                   # instructions per push site, over all paths
+reviewed = {}
+if '--reviewed' in sys.argv:
+    import json
+    rv = json.load(open(sys.argv[sys.argv.index('--reviewed') + 1]))
+    rnt = ne + struct.unpack_from('<H', d, ne + 0x26)[0]
+    modname = d[rnt + 1:rnt + 1 + d[rnt]].decode('latin1').upper()
+    for e in rv.get(modname, []):
+        reviewed[(int(e['seg']), int(str(e['off']), 16))] = bytes.fromhex(e['ctx'])
+used = set()
 try:
     import capstone
     md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_16); md.detail = True
@@ -87,77 +109,63 @@ for i, (o, l, f, m) in enumerate(segs):
     if md is None:
         err.append('pushed-return check not run (capstone missing)'); break
     ln = l or 0x10000; code = d[(o << al):(o << al) + ln]; rel = site.get(i, {})
-    # Instruction boundaries by recursive descent from every way into this segment: entry
-    # points, far pointers/calls from any segment, and code addresses pushed after PUSH CS;
-    # code reached only through tables is aligned by a linear sweep from the nearest decoded
-    # boundary.  "push cs / push" pairs on a boundary are push sites and must be followed to
-    # the end (fail closed); pairs inside other instructions are counted as WARN.
-    starts = {off for (sg, off) in ents.values() if sg == i + 1}
-    for sj, fx in site.items():
-        for (fl_, a_, b_) in fx.values():
-            if fl_ & 3 == 0:
-                if a_ == i + 1: starts.add(b_)
-                elif a_ == 0xff and b_ in ents and ents[b_][0] == i + 1: starts.add(ents[b_][1])
-    starts.add(0) if not starts else None
-    bound = set(); todo = [x for x in starts if x < ln]
-    while todo:
-        q = todo.pop()
-        while q < ln and q not in bound:
-            try: ins = next(md.disasm(code[q:q + 16], q, 1))
-            except StopIteration: break
-            bound.add(q); mn = ins.mnemonic; ops = ins.operands
-            if code[q] == 0x0e and q + 1 < ln and code[q + 1] in (0x68,):
-                todo.append(struct.unpack_from('<H', code, q + 2)[0])       # push cs / push imm16: return point
-            if (mn.startswith(('j', 'loop')) or mn == 'call') and ops and ops[0].type == capstone.x86.X86_OP_IMM:
-                todo.append(ops[0].imm & 0xffff)
-            if mn in ('ret', 'retf', 'iret', 'hlt', 'ljmp') or mn == 'jmp': break
-            q += ins.size
-    import bisect
-    sb = sorted(bound); unreached = 0
-    def aligned(p):
-        # not reached by descent (e.g. code entered through a jump table): sweep linearly from
-        # the nearest decoded boundary below; x86 resynchronises within a few instructions
-        k = bisect.bisect_left(sb, p); q = sb[k - 1] if k else 0
-        while q < p:
-            try: q += next(md.disasm(code[q:q + 16], q, 1)).size
-            except StopIteration: q += 1
-        return q == p
-    for p in range(ln - 2):
-        if code[p] != 0x0e or not (0x50 <= code[p + 1] <= 0x57 or code[p + 1] in (0x68, 0x6a)): continue
-        if p not in bound and not aligned(p): unreached += 1; continue
-        work = [p + 1]; done = set(); n_ins = 0; why = None
-        while work and why is None:
-            q = work.pop()
-            while q not in done:
-                if q >= ln: why = 'runs off the segment end'; break
-                if n_ins >= BUDGET: why = 'more than %d instructions to follow' % BUDGET; break
-                done.add(q); n_ins += 1
+    def follow(p):
+        """Walk every path from the push pair at p.  Returns ([direct far jumps to a movable
+        target], [indirect far jumps], first reason a path could not be finished or None,
+        whether a reviewed entry may accept that).  A path that cannot be continued is
+        dropped and the others are still walked, so an accepted site has had every reachable
+        far jump checked; running out of budget leaves paths unwalked and is never accepted."""
+        work = [(p + 2 if code[p + 1] != 0x68 else p + 4, 0)] if code[p + 1] != 0x6a else [(p + 3, 0)]
+        done = set(); n_ins = 0; bad = []; ind = []; why = None
+        while work:
+            q, depth = work.pop()                   # depth: near calls entered since the push
+            while (q, depth) not in done:
+                if q >= ln: why = why or 'runs off the segment end'; break
+                if n_ins >= BUDGET: return bad, ind, 'more than %d instructions to follow' % BUDGET, False
+                done.add((q, depth)); n_ins += 1
                 try: ins = next(md.disasm(code[q:q + 16], q, 1))
-                except StopIteration: why = 'undecodable bytes at %x' % q; break
-                op = ins.bytes[0]; b = ins.bytes
+                except StopIteration: why = why or 'undecodable bytes at %x' % q; break
+                b = ins.bytes; k = 0
+                while k < len(b) - 1 and b[k] in (0x26, 0x2e, 0x36, 0x3e, 0xf0, 0xf2, 0xf3): k += 1    # prefixes
+                op = b[k]; mn = ins.mnemonic
                 if op == 0xea:
-                    fx = rel.get(q + 1)
+                    fx = rel.get(q + k + 1)
                     # imports (KERNEL/USER/GDI...) are compiled for real mode and mark their frames,
                     # so the kernel patches the pushed address like any far-call return
                     if fx is None or not fx[0] & 3 and (fx[1] == 0xff or not (1 <= fx[1] <= n) or segs[fx[1] - 1][2] & 0x10):
-                        err.append('seg %d pushes a return address at %x and jumps far at %x to a movable target' % (i + 1, p, q))
+                        bad.append(q)
                     break
-                k = 1 if op in (0x26, 0x2e, 0x36, 0x3e) else 0     # segment override prefix
-                if len(b) > k + 1 and b[k] == 0xff:
+                if op == 0xff and len(b) > k + 1:
                     reg = (b[k + 1] >> 3) & 7
-                    if reg == 5:
-                        warn.append('seg %d pushes a return address at %x and jumps far indirectly at %x' % (i + 1, p, q)); break
-                    if reg == 4: why = 'indirect near jump at %x' % q; break
-                if ins.mnemonic in ('ret', 'retf', 'iret', 'hlt'): break          # path ends without a far jump
-                if ins.mnemonic == 'jmp':
+                    if reg == 5: ind.append(q); break
+                    if reg == 4: why = why or 'indirect near jump at %x' % q; break
+                    if reg == 2: why = why or 'indirect near call at %x' % q; break
+                if mn in ('retf', 'iret', 'hlt'): break       # the far return is consumed here: path ends
+                if mn == 'ret': break     # in a callee: back to a call site that is walked anyway; at
+                                          # depth 0 it consumes the pushed IP, so no far return is left
+                if op in (0xe9, 0xeb):
                     q = ins.operands[0].imm & 0xffff; continue                  # direct near/short jump
-                if ins.mnemonic.startswith(('j', 'loop')) and ins.operands and ins.operands[0].type == capstone.x86.X86_OP_IMM:
-                    work.append(ins.operands[0].imm & 0xffff)
-                q += ins.size                       # calls and ints are assumed to return here
+                if op == 0xe8:
+                    work.append((ins.operands[0].imm & 0xffff, min(depth + 1, 8)))   # into the near callee
+                elif mn.startswith(('j', 'loop')) and ins.operands and ins.operands[0].type == capstone.x86.X86_OP_IMM:
+                    work.append((ins.operands[0].imm & 0xffff, depth))
+                q += ins.size                       # far calls and ints are assumed to return here
+        return bad, ind, why, True
+    for p in range(ln - 2):
+        if code[p] != 0x0e or not (0x50 <= code[p + 1] <= 0x57 or code[p + 1] in (0x68, 0x6a)): continue
+        bad, ind, why, waivable = follow(p)
+        for q in bad:
+            err.append('seg %d pushes a return address at %x and jumps far at %x to a movable target' % (i + 1, p, q))
+        for q in ind:
+            warn.append('seg %d pushes a return address at %x and jumps far indirectly at %x' % (i + 1, p, q))
         if why:
-            err.append('seg %d pushes a return address at %x; check incomplete: %s' % (i + 1, p, why))
-    if unreached:
-        warn.append('seg %d: %d push-cs/push byte pairs inside other instructions' % (i + 1, unreached))
-if warn: print('WARN', warn)
+            ctx = bytes(code[max(0, p - 3):p + 5])
+            if waivable and reviewed.get((i + 1, p)) == ctx: used.add((i + 1, p))
+            else: err.append('seg %d pushes a return address at %x; check incomplete: %s' % (i + 1, p, why))
+for k in sorted(set(reviewed) - used):
+    err.append('reviewed entry seg %d off %x matches no unfinished site (stale or wrong ctx)' % k)
+if used: print('REVIEWED %d unfinished sites accepted from the reviewed list' % len(used))
+if warn: print('WARN', sorted(set(warn)))
 print('segments fixed %d movable %d; entries %d (movable %d); %s' % (len(fixed), len(movable), len(ents), nmov, stats))
-print('ERRORS' if err else 'OK', err[:20])
+print('ERRORS' if err else 'OK', err if '--all' in sys.argv else err[:20])
+sys.exit(1 if err else 0)

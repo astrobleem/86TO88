@@ -1,0 +1,147 @@
+{
+ "_about": "Sites where nevalid.py cannot finish the pushed-return walk and a person has checked that the 0E 5x byte pair is not a PUSH CS / PUSH instruction. An entry applies only while the 8 context bytes match. A far jump to a movable target is never accepted through this list.",
+ "VBRUN100": [
+  {
+   "seg": 2,
+   "off": "8b7",
+   "ctx": "0600740e525753e3",
+   "walk_stops": "indirect near jump at 941",
+   "why": "not a push: operand byte of \"je 0x8c6\" (74 0E) at 8b6, after \"cmp ax,6\" at 8b3; handler code reached through the p-code table, read by hand"
+  },
+  {
+   "seg": 2,
+   "off": "1476",
+   "ctx": "9b36d80e50259b36",
+   "walk_stops": "indirect near jump at 1481",
+   "why": "not a push: modrm byte of \"fmul dword ptr ss:[2550h]\" (36 D8 0E 50 25) at 1474; the FWAIT before it at 1473 carries an OSFIXUP relocation, which marks an FP instruction"
+  },
+  {
+   "seg": 2,
+   "off": "3aa6",
+   "ctx": "9b36d80e50259b36",
+   "walk_stops": "indirect near jump at 3aaf",
+   "why": "not a push: modrm byte of \"fmul dword ptr ss:[2550h]\" (36 D8 0E 50 25) at 3aa4; the FWAIT before it at 3aa3 carries an OSFIXUP relocation, which marks an FP instruction"
+  },
+  {
+   "seg": 2,
+   "off": "4142",
+   "ctx": "5b59e30e538bdc9b",
+   "walk_stops": "indirect near jump at 4151",
+   "why": "not a push: operand bytes of \"jcxz 0x4151\" at 4141, decoded by descent from the segment's entry points"
+  },
+  {
+   "seg": 9,
+   "off": "76a",
+   "ctx": "8a00880e52288b36",
+   "walk_stops": "undecodable bytes at 781",
+   "why": "not a push: operand bytes of \"mov byte ptr [0x2852], cl\" at 769, decoded by descent from the segment's entry points"
+  },
+  {
+   "seg": 9,
+   "off": "77a",
+   "ctx": "b8000a0e5228f706",
+   "walk_stops": "undecodable bytes at 781",
+   "why": "not a push: operand bytes of \"or cl, byte ptr [0x2852]\" at 779, decoded by descent from the segment's entry points"
+  },
+  {
+   "seg": 26,
+   "off": "4d8",
+   "ctx": "d883ec0e56a11e28",
+   "walk_stops": "indirect near jump at 339",
+   "why": "not a push: operand bytes of \"sub sp, 0xe\" at 4d6, decoded by descent from the segment's entry points"
+  },
+  {
+   "seg": 26,
+   "off": "518",
+   "ctx": "0cff760e56ff760a",
+   "walk_stops": "indirect near jump at 339",
+   "why": "not a push: operand bytes of \"push word ptr [bp + 0xe]\" at 516, decoded by descent from the segment's entry points"
+  },
+  {
+   "seg": 74,
+   "off": "2e6",
+   "ctx": "d883ec0e568b4e06",
+   "walk_stops": "indirect near jump at c3d",
+   "why": "not a push: operand bytes of \"sub sp, 0xe\" at 2e4, decoded by descent from the segment's entry points"
+  },
+  {
+   "seg": 74,
+   "off": "724",
+   "ctx": "0c8b460e5056ff76",
+   "walk_stops": "indirect near jump at 788",
+   "why": "not a push: operand bytes of \"mov ax, word ptr [bp + 0xe]\" at 722, decoded by descent from the segment's entry points"
+  },
+  {
+   "seg": 74,
+   "off": "8d4",
+   "ctx": "00ff760e57e827f7",
+   "walk_stops": "indirect near jump at 90a",
+   "why": "not a push: operand bytes of \"push word ptr [bp + 0xe]\" at 8d2, decoded by descent from the segment's entry points"
+  },
+  {
+   "seg": 74,
+   "off": "8df",
+   "ctx": "50ff760e576a316a",
+   "walk_stops": "indirect near jump at 90a",
+   "why": "not a push: operand bytes of \"push word ptr [bp + 0xe]\" at 8dd, decoded by descent from the segment's entry points"
+  },
+  {
+   "seg": 79,
+   "off": "e40",
+   "ctx": "10ff760e508d46de",
+   "walk_stops": "indirect near jump at 7bc",
+   "why": "not a push: operand bytes of \"push word ptr [bp + 0xe]\" at e3e, decoded by descent from the segment's entry points"
+  },
+  {
+   "seg": 83,
+   "off": "476",
+   "ctx": "50ff760e56ff7608",
+   "walk_stops": "indirect near jump at 906",
+   "why": "not a push: operand bytes of \"push word ptr [bp + 0xe]\" at 474, decoded by descent from the segment's entry points"
+  },
+  {
+   "seg": 83,
+   "off": "545",
+   "ctx": "56ff760e57ff760a",
+   "walk_stops": "indirect near jump at 906",
+   "why": "not a push: operand bytes of \"push word ptr [bp + 0xe]\" at 543, decoded by descent from the segment's entry points"
+  },
+  {
+   "seg": 83,
+   "off": "597",
+   "ctx": "fd8b7e0e576a009a",
+   "walk_stops": "indirect near jump at 906",
+   "why": "not a push: operand bytes of \"mov di, word ptr [bp + 0xe]\" at 595, decoded by descent from the segment's entry points"
+  },
+  {
+   "seg": 83,
+   "off": "783",
+   "ctx": "258b7e0e579affff",
+   "walk_stops": "indirect near jump at 906",
+   "why": "not a push: operand bytes of \"mov di, word ptr [bp + 0xe]\" at 781, decoded by descent from the segment's entry points"
+  },
+  {
+   "seg": 104,
+   "off": "d10",
+   "ctx": "f10d0b0e540e600e",
+   "walk_stops": "indirect near jump at ccc",
+   "why": "not a push: data: inside the 34-word jump table at cd1..d14 used by \"jmp cs:[bx+0cd1h]\" at ccc (index limited by \"cmp ax,21h / jbe\"); the bytes are the high byte of entry 0e0b and the low byte of entry 0e54"
+  },
+  {
+   "seg": 104,
+   "off": "1c2e",
+   "ctx": "108d4e0e51500ee8",
+   "walk_stops": "indirect near jump at 1f76",
+   "why": "not a push: displacement byte of \"lea cx,[bp+0eh]\" (8D 4E 0E) at 1c2c, followed by \"push cx\"; reached from \"jg 0x1c26\" at 1c21, read by hand"
+  }
+ ],
+ "FIELD100": [
+  {
+   "seg": 3,
+   "off": "c24",
+   "ctx": "74128d0e50031e51",
+   "walk_stops": "undecodable bytes at c2a",
+   "why": "not a push: operand bytes of \"lea cx, [0x350]\" at c23, decoded by descent from the segment's entry points"
+  }
+ ]
+}
