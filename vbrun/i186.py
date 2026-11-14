@@ -122,7 +122,7 @@ def switch_count(code, pc):
 
 INT3_IMM = False      # analysing converted output: CC is INT 3 + the PUSH imm8 byte
 
-def descend(code, roots, noreturn=()):
+def descend(code, roots, noreturn=(), blocked=frozenset()):
     """-> (insns: off -> ins, targets: set of direct branch/call targets, ft_only: offsets
     reached only by falling through a near or far call)"""
     insns = {}; targets = set(roots); todo = [(r, False) for r in roots]; tabs = set()
@@ -130,6 +130,7 @@ def descend(code, roots, noreturn=()):
     while todo:
         pc, after_call = todo.pop()
         while 0 <= pc < len(code):
+            if pc in blocked: break                 # would start inside known code: wrong path
             via[pc].add(after_call)
             if pc in insns: break
             ins = next(md.disasm(code[pc:pc + 16], pc, 1), None)
@@ -210,7 +211,9 @@ def heuristic_roots(segs):
     """code the descent cannot see: far procedures (MSC prologues) reached through tables the
     runtime builds itself, and p-code handlers, which are only reached from the program's
     p-code (threaded code: the handler offsets are in the EXE). A handler starts after an
-    unconditional jump with a descriptor word (high byte 0) in front of it."""
+    unconditional jump, usually with a descriptor word (high byte 0) in front of it, some
+    (2:3765) without one; so code right after any unconditional jump or return is a
+    candidate too."""
     out = collections.defaultdict(set)
     for s in segs:
         c = s['code']
@@ -224,8 +227,9 @@ def heuristic_roots(segs):
             else:
                 ok = prologue(c, o)
             if ok and plausible(c, o): out[s['n']].add(o)
-            if c[o + 1] == 0 and after_jump(o) and plausible(c, o + 2):
-                out[s['n']].add(o + 2)
+            if after_jump(o):
+                if c[o + 1] == 0 and plausible(c, o + 2): out[s['n']].add(o + 2)
+                elif plausible(c, o): out[s['n']].add(o)      # code right after a jump/return
     return out
 
 
@@ -236,23 +240,25 @@ def census(d, noreturn_by_seg=None, cur=None, heuristic=True):
     target the converter added beyond a segment's original end (its appended stubs)."""
     segs, ent, csip = load(d)
     roots = roots_of(segs, ent, csip)
+    blocked = {}
     if heuristic:
-        # keep a heuristic root only if its code agrees with the code the definite roots
-        # reach (no instruction starting inside another one)
+        # keep a heuristic root only if its straight-line code agrees with the code the definite
+        # roots reach; paths from it stop where they would start inside known code
         for k, cand in heuristic_roots(segs).items():
+            if not roots[k]: continue               # no known code at all: a data segment
             c = segs[k - 1]['code']; nr = (noreturn_by_seg or {}).get(k, set())
             ins, _, _ = descend(c, roots[k], nr)
             starts = set(ins); cover = set()
             for o, i in ins.items(): cover.update(range(o + 1, o + i.size))
             for t in sorted(cand):
-                if t in starts: continue
-                if t in cover: continue
-                hi, _, _ = descend(c, {t}, nr)
-                ok = all(o not in cover for o in hi) and all(
-                    not (set(range(o + 1, o + i.size)) & starts) for o, i in hi.items())
-                if ok:
-                    roots[k].add(t); starts |= set(hi)
-                    for o, i in hi.items(): cover.update(range(o + 1, o + i.size))
+                if t in starts or t in cover: continue
+                hi, _, _ = descend(c, {t}, nr, cover)
+                if any(kind(i) in ('other186', 'imul') or i.mnemonic in BAD or
+                       (o not in starts and set(range(o + 1, o + i.size)) & starts) for o, i in hi.items()):
+                    continue                        # disagrees with code already accepted
+                roots[k].add(t); starts |= set(hi)
+                for o, i in hi.items(): cover.update(range(o + 1, o + i.size))
+            blocked[k] = cover - starts
     if cur is not None:
         r2 = roots_of(cur, ent, csip)
         for s in segs:
@@ -262,7 +268,7 @@ def census(d, noreturn_by_seg=None, cur=None, heuristic=True):
     for s in segs:
         if s['flags'] & 1 or not s['code']: continue
         nr = (noreturn_by_seg or {}).get(s['n'], set())
-        insns, targets, ft = descend(s['code'], roots[s['n']], nr)
+        insns, targets, ft = descend(s['code'], roots[s['n']], nr, blocked.get(s['n'], frozenset()))
         for off, ins in sorted(insns.items()):
             k = kind(ins)
             if not k: continue
