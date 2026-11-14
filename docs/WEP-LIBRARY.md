@@ -2,6 +2,16 @@
 
 Technical notes. The README links here; nothing in it depends on this file.
 
+**Historical test record, not a current all-pack pass claim.** This report describes
+the earlier `WM88X3` module-library tests. Since then, the separate `vbrun/`
+converter brought the Pack 2 JIGSAWED, RATTLER, RODENT and PIPE executables
+through gameplay on emulated V20 and 8088 cores. The older failures for those
+VB games below apply to the earlier `WM88X3`-only setup, not the converted VB
+runtime. **[See the November 2026 five-edition, 44-entry coverage audit](WEP-COVERAGE.md)**
+for all game titles, which versions were tried, launch-only results, Pack 4
+gaps and remaining historical failures. The latest media audit did not run
+new games or produce new emulator screenshots.
+
 The WM88 bridge started as one hard-coded patch table for `WINMINE.EXE`. This work
 generalises it: an offline analyzer finds every 80186 instruction in a Windows 3.x NE file,
 writes a small per-file **module**, and a second, much smaller TSR (`WM88X3.COM`) loads
@@ -96,8 +106,7 @@ These are real-mode limits, not bridge faults. Each was checked on a V20 with no
 * **Blackjack** is flagged protected-mode-only and contains no 80186 code at all. With the flag and the
   `GetWinFlags` gate patched it exits quietly; with the module loaded it corrupts memory, so it is not shipped.
 * **Chips** ("Insufficient memory to run this application").
-* **Rodent, Rattler, Jigsawed** use VBRUN100.DLL, which is flagged protected-mode-only. With the flag cleared Rodent hangs
-  on an 8088 and on a V20. Rattler and Jigsawed also hang on the hourglass.
+* **Rodent, Rattler, Jigsawed (older WM88X3-only attempt):** these use VBRUN100.DLL and did not run in the original module-library setup. **Superseded:** Pack 2 editions subsequently ran with the separately converted VBRUN100/FIELD100 runtime on MartyPC V20 and 8088 cores; see [vbrun/REPORT.md](../vbrun/REPORT.md). That newer result does not validate the Best of RODENT binary or every other build.
 * **Stones**: its style DLLs (`STONE00`..`STONEE03`) carry the protected-mode flag and the game reports that they
   are corrupted or missing; clearing the flag does not change that.
 
