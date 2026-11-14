@@ -202,7 +202,18 @@ Beside MS-DOS Executive with the in-place-grown blocks at a 1 KB minimum, VB rep
 101:0241, then back through 21:03B0 -> 71:0394): 71:0FE4 looks the control class up, 54:010E
 returns the far pointer 4085:187C (the model pointer into the app DGROUP that APPDSLOCK was
 written for) and 54:004E finds nothing there; the DGROUP had moved (4087 -> 4085) after VB
-stored it. With APPDSLOCK=1 that case starts and the full scenario passes.
+stored it. A write-watch on both the new and the old location (MARTY_WW) shows only KERNEL's
+block copy of the whole DGROUP at the move (1093:20B7, i16.6M) and no later write through
+a stale pointer, so the record at 187C is intact: what fails is VB's check against the
+DGROUP segment it stored inside its own records. Any DGROUP move after the records exist
+breaks them; keeping the DGROUP in place is the fix, hence APPDSLOCK=1 by default. With it
+that case starts and the full scenario passes.
+
+Cost (JIGSAWED as shell, same build with and without the lock, slow-paced puzzle run):
+KERNEL 60% of PC samples after start with APPDSLOCK, 24% without; both complete the
+puzzle. The locked 35 KB DGROUP sits in the middle of the movable area (7A33 as shell)
+and every compaction has to work around it. Placing it low first (GlobalWire) was tried
+in an earlier session and crashed on close; not retried.
 
 ## Open items / limits
 
