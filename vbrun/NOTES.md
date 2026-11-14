@@ -162,6 +162,28 @@ grow (each measured grow exceeded it) and cost ~20 KB. `VBHEAPSKIP4` drops it fo
 whose CS is seg 4's. Margins remain thin: one KERNEL segment load still fails once during
 Fast Solve and succeeds after compaction.
 
+## WEPUTIL conversion faults (found on the as-shell runs)
+
+* WEP routed into fixed data segment 3 (where the INT 3 handler lives): when VB loads
+  WEPUTIL for a `Declare` (JIGSAWED at Game>Open) and the load fails for memory, KERNEL calls
+  WEP through GetProcAddress (KERNEL seg 2, `push "WEP"` at 094C) before seg 3 exists; traced
+  jump to 182D:01DA (zeros) and a runaway. WEP now enters a stub in movable code seg 1
+  (`I186WEPSEG`, default 1), loaded on demand through the entry thunk like the original WEP;
+  it restores the INT 3 vector only if it still points at the handler in seg 3.
+* Fast-load area: without FIXSEGS the converter kept an area ending at the start of the last
+  data-bearing segment, leaving preloaded fixed seg 3 outside it. PIPE as shell: KERNEL read
+  the header and the area, closed all files, Windows quit to DOS. No converted module keeps
+  a fast-load area now.
+
+## App DGROUP pointers at startup (APPDSLOCK)
+
+Beside MS-DOS Executive with the in-place-grown blocks at a 1 KB minimum, VB reported
+"Custom control '' not found" at start. Traced (ring trigger on the loader's error call
+101:0241, then back through 21:03B0 -> 71:0394): 71:0FE4 looks the control class up, 54:010E
+returns the far pointer 4085:187C (the model pointer into the app DGROUP that APPDSLOCK was
+written for) and 54:004E finds nothing there; the DGROUP had moved (4087 -> 4085) after VB
+stored it. With APPDSLOCK=1 that case starts and the full scenario passes.
+
 ## Open items / limits
 
 (updated as work proceeds)
