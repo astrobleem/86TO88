@@ -125,6 +125,43 @@ only if the reset lands at or below it, inside the raising code's own frames —
 break the runtime the same way in protected mode. Residual (observed, not proven): that
 the reset target always encloses the raising code.
 
+## Calls into the FIXSEGS segments (exit hang)
+
+`wrap_pass` rewrote only ordinal references, i.e. far calls into movable segments. Calls
+into the segments the converter makes FIXED (4, 5, 16) stay type-2 segment fixups and were
+never wrapped, although 16 audited callees in seg 4 have 34 call sites in movable code.
+Traced on exit after play beside MS-DOS Executive (MARTY_RING with an exact CS:IP
+trigger): 2:11E1 `lcall 4:1232` (VB's terminate path) frees memory, seg 2 moves, and the
+RETF at 4:124F returns to seg 2's old address — by then KERNEL seg 2, where 7705:11E6 is
+`jbe $` in the middle of an instruction; the task spins (3 of 4 runs) or VB reports
+"Subscript out of range" (1 run). APPDSLOCK made no difference. These 33 CALL FAR sites now
+go through W stubs (`wrap_fixcallee`; `WRAPFIX=0` restores the old output). After the
+change: exit after play clean in 2 of 2 runs, and in the full scenario below.
+
+## Memory beside MS-DOS Executive
+
+Scenario (`WIN /R C:\GAME\JIGSAWED.EXE` from MS-DOS Executive, V20, 640K, CGA): About,
+Open, Scramble, Hint, Fast Solve, Rescramble, Alt+F4, close the shell, End Session.
+
+| build | result | free during play |
+| --- | --- | --- |
+| allocfixed, headroom on all seg-105 allocations (old default) | VB quits at start: "Not enough memory to run; quitting" | — |
+| same, I186=0 | same | — |
+| allocfixed off | plays to Hint; KERNEL cannot load a 6 KB USER segment in Fast Solve, task terminated | 17 KB, largest 6.5 KB |
+| allocfixed off, no headroom at all | VB quits at start (string-space block cannot grow) | — |
+| allocfixed off + VBHEAPSKIP4 + WRAPFIX (new default) | whole scenario passes, back to DOS | 13-20 KB; 297 KB after exit |
+
+Why: VB grows a few heap blocks in place through 105:008A; real mode cannot move them
+(callers keep the segment). With `allocfixed` the string-space block (allocated through
+seg 35, grown by 106:0749) landed in a 368-byte hole whose upper neighbour is a fixed font
+block; it worked before the 8088 build only because the blocks then landed above the
+smaller fixed VBRUN segment. Traced callers (MARTY_XW_DEPTH=48): ~100 of JIGSAWED's ~106
+seg-105 allocations come from fixed seg 4:274B; their grows go through CTXGROW's grow2
+(105:0214), which may move the block, so the 1.25x / 0x100 headroom on them never served a
+grow (each measured grow exceeded it) and cost ~20 KB. `VBHEAPSKIP4` drops it for callers
+whose CS is seg 4's. Margins remain thin: one KERNEL segment load still fails once during
+Fast Solve and succeeds after compaction.
+
 ## Open items / limits
 
 (updated as work proceeds)
