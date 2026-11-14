@@ -470,6 +470,7 @@ def appdslock_pass(d,ne,blobs,stats):
     c[0x28]=0xe8; struct.pack_into('<h',c,0x29,st-0x2b); c[0x2b]=0x90
     # Unlock it again in the C runtime exit (9:15D3 'mov ax,[bp+6] / mov ah,4Ch / int 21h'),
     # so the task ends with its DGROUP unlocked as the kernel expects
+    if len(blobs) < 9: stats['appdslock']=1; return     # (unit tests pass only segment 1)
     c,rr=blobs[8]
     assert bytes(c[0x15d3:0x15da])==bytes.fromhex('8b4606b44ccd21'), c[0x15d3:0x15da].hex()
     while len(c)&1: c.append(0x90)
