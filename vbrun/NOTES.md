@@ -174,8 +174,9 @@ old segment.
 
 Cost of the default (measured, JIGSAWED as shell after the About box): ~74% of PC samples
 in KERNEL's global-heap code (0FA7:20Fx-21Ex, 354x), against 38% with the old allocfixed
-settings; Game>Open takes more than 60M instructions (about 13 s of 4.77 MHz 8088 time
-before the dialog shows, by instruction count alone). Locked movable VB blocks spread
+settings; Game>Open takes more than 60M instructions before the dialog shows - at the 18.8
+cycles/instruction measured on the 8088 core, roughly 4 minutes at 4.77 MHz (the old
+settings: ~32M, about 2 minutes). Locked movable VB blocks spread
 through the movable area make every allocation search and compaction longer.
 
 Margins remain thin: one KERNEL segment load still fails once during
