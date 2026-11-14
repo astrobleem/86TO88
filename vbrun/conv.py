@@ -427,7 +427,10 @@ def conv(src, dst, report=True, vb=True):
     stats['entries']=len(ords)
     struct.pack_into('<H',out,ne+0x30,MOVCNT[0])
     nz=[e[0] for e in newents if e[0]]; g0=nz[0]-1; g1=nz[1] if len(nz)>1 else nz[0]+1
-    if FIX and os.environ.get('KEEPFASTLOAD') != '1':
+    # (also without FIXSEGS: the area used to end at the start of the second segment, which
+    # left WEPUTIL's preloaded fixed data segment 3 outside it - PIPE as shell: Windows quit
+    # right after reading the area)
+    if os.environ.get('KEEPFASTLOAD') != '1':
         # No fast-load area.  The real-mode loader copies every segment it loads with the
         # module (preload or FIXED) out of the fast-load buffer without checking that the
         # segment lies inside it; a FIXED segment outside the area is copied from whatever
