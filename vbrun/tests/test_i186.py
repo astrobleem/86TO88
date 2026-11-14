@@ -135,6 +135,19 @@ class Forms(unittest.TestCase):
         self.assertTrue(probs)
 
 
+class MergeChains(unittest.TestCase):
+    def test_same_target_records_share_one_chain(self):
+        code = bytearray(b'\x9a\xff\xff\x00\x00' * 4 + b'\x68\xff\xff')
+        recs = [struct.pack('<BBHHH', 3, 0, 5 * k + 1, 0xff, 7) for k in range(4)]      # far ptr, same target
+        recs += [struct.pack('<BBHHH', 5, 0, 21, 3, 0x40)]                               # offset, other target
+        recs += [struct.pack('<BBHHH', 3, 4, 1, 0xff, 7)]                                # additive: kept apart
+        out = [struct.unpack('<BBHHH', r) for r in i186.merge_chains(code, recs)]
+        self.assertEqual(len(out), 3)
+        far = [r for r in out if r[0] == 3 and not r[1] & 4][0]
+        self.assertEqual(sorted(i186.chain(code, far[2], False)), [1, 6, 11, 16])
+        self.assertEqual(struct.unpack_from('<H', code, 16)[0], 0xffff)
+
+
 class Int3(unittest.TestCase):
     def test_foreign_int3_goes_to_previous_handler(self):
         """CD 03 (no CC before the return address) is not a rewritten site: chain"""

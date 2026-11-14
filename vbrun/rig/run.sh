@@ -15,7 +15,9 @@ INST=$MD/install; BIN=$MD/target/release/martypc
 LOGF=$(readlink -m -- "${MARTY_LOG:-/tmp/marty.log}")
 export DISPLAY=${DISPLAY:-:99}
 pgrep Xvfb >/dev/null || { (Xvfb :99 -screen 0 1280x1024x24 >/dev/null 2>&1 &); sleep 2; }
-pkill -x martypc; sleep 1
+# stop a previous instance of this emulator binary only (not other martypc processes, e.g. one
+# started from another checkout or a test's fake binary)
+pkill -f -- "^$BIN( |\$)" && sleep 1
 STAGE=$INST/media/hdds/cur.vhd
 rm -f -- "$INST/cur.toml"
 if [ -e "$STAGE" ] && [ "$VHD" -ef "$STAGE" ]; then
