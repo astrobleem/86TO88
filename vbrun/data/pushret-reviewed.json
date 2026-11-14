@@ -15,8 +15,8 @@
     "off": "49fd",
     "to": "7:292",
     "ctx": "4d8bd9eaffff0000",
-    "provisional": false,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that."
+    "provisional": true,
+    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 7,
@@ -31,104 +31,104 @@
     "off": "682",
     "to": "9:1870",
     "ctx": "2c07c3eaffff0000",
-    "provisional": true,
-    "why": "reached only through the near table at 7:0000 used by \"jmp cs:[bx-2]\" at 7:008E (exported ordinal 110). Ordinal 110 is entered by the far jumps of the p-code dispatcher in segment 2 (2:496A...), which since 49358e0 go through wrapper stubs, so the far return on the stack here is the wrapper's (FIXED segment), not a CS of segment 7. PROVISIONAL: other far callers of ordinal 110 were not enumerated."
+    "provisional": false,
+    "why": "Accepted (review R15-2) for this converted DLL: 7:008E (ordinal 110, a converter-created export; the original had a near call) is reached only by two relocations, both wrapper stubs in FIXED segment 24: 24:0B42 (caller segment 2, used by 2:496B) and 24:0BB7 (caller segment 7, used by 7:1966, the trampoline for \"push cs / call\" at 7:00C9). No near call, jump, branch or 0x008E immediate in segment 7 reaches it, and the table at 7:0000 is read only by \"jmp cs:[bx-2]\" at 7:008E. So the far return on the stack at this jump is always a wrapper return in a fixed segment. LIMITATION: a module other than this one importing ordinal 110 is not covered."
    },
    {
     "seg": 7,
     "off": "687",
     "to": "9:190a",
     "ctx": "ff0000eaffff0000",
-    "provisional": true,
-    "why": "reached only through the near table at 7:0000 used by \"jmp cs:[bx-2]\" at 7:008E (exported ordinal 110). Ordinal 110 is entered by the far jumps of the p-code dispatcher in segment 2 (2:496A...), which since 49358e0 go through wrapper stubs, so the far return on the stack here is the wrapper's (FIXED segment), not a CS of segment 7. PROVISIONAL: other far callers of ordinal 110 were not enumerated."
+    "provisional": false,
+    "why": "Accepted (review R15-2) for this converted DLL: 7:008E (ordinal 110, a converter-created export; the original had a near call) is reached only by two relocations, both wrapper stubs in FIXED segment 24: 24:0B42 (caller segment 2, used by 2:496B) and 24:0BB7 (caller segment 7, used by 7:1966, the trampoline for \"push cs / call\" at 7:00C9). No near call, jump, branch or 0x008E immediate in segment 7 reaches it, and the table at 7:0000 is read only by \"jmp cs:[bx-2]\" at 7:008E. So the far return on the stack at this jump is always a wrapper return in a fixed segment. LIMITATION: a module other than this one importing ordinal 110 is not covered."
    },
    {
     "seg": 9,
     "off": "1cc",
     "to": "7:279",
     "ctx": "ab5fcbeaffff0000",
-    "provisional": false,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that."
+    "provisional": true,
+    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 9,
     "off": "468",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": false,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that."
+    "provisional": true,
+    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 9,
     "off": "4bb",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": false,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that."
+    "provisional": true,
+    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 9,
     "off": "51c",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": false,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that."
+    "provisional": true,
+    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 9,
     "off": "59c",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": false,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that."
+    "provisional": true,
+    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 9,
     "off": "5e4",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": false,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that."
+    "provisional": true,
+    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 9,
     "off": "664",
     "to": "7:292",
     "ctx": "bb0600eaffff0000",
-    "provisional": false,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that."
+    "provisional": true,
+    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 9,
     "off": "69f",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": false,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that."
+    "provisional": true,
+    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 9,
     "off": "72a",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": false,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that."
+    "provisional": true,
+    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 9,
     "off": "faf",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": false,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that."
+    "provisional": true,
+    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 9,
     "off": "1012",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": false,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that."
+    "provisional": true,
+    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 10,
@@ -136,7 +136,7 @@
     "to": "2:4a6c",
     "ctx": "c0740ceaffff0000",
     "provisional": true,
-    "why": "tail jump to the interpreter's error entry 2:4A6C (BX = error number; it reloads DS and goes on to raise the error). PROVISIONAL: how 10:00A9 is entered and the non-return of 2:4A6C were read from the first instructions only."
+    "why": "tail jump to the interpreter's error entry 2:4A6C (BX = error number; it reloads DS and goes on to raise the error). PROVISIONAL: how 10:00A9 is entered and the non-return of 2:4A6C were read from the first instructions only. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 10,
@@ -144,23 +144,23 @@
     "to": "2:4a6a",
     "ctx": "bdb006eaffff0000",
     "provisional": true,
-    "why": "\"mov al,6 / jmp far 2:4A6A\": overflow error raised through the interpreter's error entry, reached from the JO at 10:004B/0062 via 10:0078. PROVISIONAL: non-return of 2:4A6A read from its first instructions only."
+    "why": "\"mov al,6 / jmp far 2:4A6A\": overflow error raised through the interpreter's error entry, reached from the JO at 10:004B/0062 via 10:0078. PROVISIONAL: non-return of 2:4A6A read from its first instructions only. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 10,
     "off": "fce",
     "to": "7:292",
     "ctx": "740093eaffff0000",
-    "provisional": false,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. (The \"push cs / call near 1041\" just before it is a far call to a local far function, which pops both words with its RETF.)"
+    "provisional": true,
+    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. (The \"push cs / call near 1041\" just before it is a far call to a local far function, which pops both words with its RETF.) UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 10,
     "off": "1854",
     "to": "7:288",
     "ctx": "00ebddeaffff0000",
-    "provisional": false,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that."
+    "provisional": true,
+    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
    },
    {
     "seg": 82,
