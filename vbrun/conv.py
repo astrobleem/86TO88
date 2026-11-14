@@ -295,9 +295,11 @@ def conv(src, dst, report=True, vb=True):
     if VB and os.environ.get('GROWKEEP'): growkeep_pass(d,ne,blobs,stats)
     if VB and os.environ.get('APPDSLOCK','0')=='1': appdslock_pass(d,ne,blobs,stats)
     if VB and os.environ.get('STRTRACE'): strtrace_pass(d,ne,blobs,stats)
+    if VB and os.environ.get('RAISECHK'): raisechk_pass(blobs,stats)
     if VB and os.environ.get('CTXGROW'): ctxgrow_pass(d,ne,blobs,ordn,stats)
     if VB and os.environ.get('FSHRINK'): fshrink_pass(d,ne,blobs,stats)
     if os.environ.get('FSW8087'): fsw_pass(blobs,stats)
+    i186_info=i186_pass(d,ne,blobs,ordn,stats) if os.environ.get('I186','0')=='1' else {}
     # header: old up to entry table, new entry table, then align
     eto,etl=struct.unpack_from('<HH',d,ne+4)
     oldet=bytes(d[ne+eto:ne+eto+etl])
@@ -315,6 +317,7 @@ def conv(src, dst, report=True, vb=True):
     for (seg,off),o in sorted(ords.items(), key=lambda kv: kv[1]):
         assert o==len(L)+1; L.append(('M',seg,1,off))
     L=[('F',e[1],e[2],e[3]) if e and e[0]=='M' and e[1] in FIX else e for e in L]
+    if i186_info.get('wep'): L[0]=('F',WRAPSEG,L[0][2],i186_info['wep'])
     if LOCK:
         nmods=struct.unpack_from('<H',d,ne+0x1e)[0]; mo=struct.unpack_from('<H',d,ne+0x28)[0]; io=struct.unpack_from('<H',d,ne+0x2a)[0]
         mods=[bytes(d[ne+io+struct.unpack_from('<H',d,ne+mo+2*k)[0]+1:ne+io+struct.unpack_from('<H',d,ne+mo+2*k)[0]+1+d[ne+io+struct.unpack_from('<H',d,ne+mo+2*k)[0]]]).upper() for k in range(nmods)]
@@ -371,6 +374,7 @@ def conv(src, dst, report=True, vb=True):
     MOVCNT[0]=sum(1 for e in L if e and e[0]=='M')
     nrs=struct.unpack_from('<I',d,ne+0x2c)[0]; nrsz=struct.unpack_from('<H',d,ne+0x20)[0]
     head=bytearray(d[:ne+eto])+et
+    if i186_info.get('entry'): struct.pack_into('<HH',head,ne+0x14,i186_info['entry'],WRAPSEG)
     struct.pack_into('<H',head,ne+6,len(et))
     struct.pack_into('<I',head,ne+0x2c,len(head))
     head+=d[nrs:nrs+nrsz]+b'\0'*16
@@ -489,6 +493,56 @@ def strtrace_pass(d,ne,blobs,stats):
     rr.append(struct.pack('<BBHHH',3,1,sym['..@gs']+1,KIDX,20))
     for site,t in ((0x6ee,'t1'),(0x6f6,'t2')): struct.pack_into('<h',c,site+1,sym[t]-(site+3))
     stats['strtrace']=1
+
+def i186_pass(d,ne,blobs,ordn,stats):
+    # rewrite every 80186 instruction for the 8088 (see i186.py); for VBRUN also install
+    # the INT 3 handler for the PUSH imm8 sites through the DLL entry point and WEP
+    import i186,subprocess,tempfile
+    orig=bytes(d)
+    segs0,_,_=i186.load(orig)
+    cur=[dict(n=k+1,flags=segs0[k]['flags'],code=bytes(b[0]) if b else b'',
+              recs=[struct.unpack('<BBHHH',r) for r in b[1]] if b else []) for k,b in enumerate(blobs)]
+    sites,_=i186.census(orig,i186.VB_NORETURN if VB else None,cur)
+    bad=[s for s in sites if s['kind']=='other186']
+    assert not bad, ['%d:%04x %s'%(s['seg'],s['off'],s['ins'].mnemonic) for s in bad]
+    probs=i186.rewrite(None,blobs,sites,stats)
+    assert not probs, probs
+    info={}
+    if not VB: return info
+    segs,ent,csip=i186.load(orig)
+    F=WRAPSEG; code,rr=blobs[F-1]
+    while len(code)&1: code.append(0x90)
+    base=len(code); here=os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as td:
+        subprocess.check_call(['nasm','-f','bin','-DBASE=%d'%base,'--before','[map symbols %s/m]'%td,os.environ.get('VBW_ASM',here+'/asm')+'/i186.asm','-o',td+'/b'])
+        code+=open(td+'/b','rb').read(); sym={}
+        for l in open(td+'/m'):
+            pr=l.split()
+            if len(pr)==3:
+                try: sym[pr[2]]=int(pr[1],16)
+                except ValueError: pass
+    def far(site,seg,off):
+        if seg in FIX: rr.append(struct.pack('<BBHHH',3,0,site,seg,off))
+        else: rr.append(struct.pack('<BBHHH',3,0,site,0xff,ordn(seg,off)))
+    far(sym['..@entry']+1,*csip)
+    far(sym['..@wep']+1,*ent[1])
+    info['entry']=sym['init']; info['wep']=sym['wep']
+    stats['i186_int3h']=1
+    return info
+
+def raisechk_pass(blobs,stats):
+    # DIAGNOSTIC ONLY: log every error-dispatcher stack reset (4:17AA) on port 0xE9;
+    # see asm/raisechk.asm
+    import subprocess,tempfile
+    c,rr=blobs[3]
+    assert bytes(c[0x17aa:0x17b1])==bytes.fromhex('8be0c6062c2e00'), c[0x17aa:0x17b1].hex()
+    while len(c)&1: c.append(0x90)
+    base=len(c); here=os.path.dirname(os.path.abspath(__file__))
+    with tempfile.TemporaryDirectory() as td:
+        subprocess.check_call(['nasm','-f','bin','-DBASE=%d'%base,os.environ.get('VBW_ASM',here+'/asm')+'/raisechk.asm','-o',td+'/b'])
+        c+=open(td+'/b','rb').read()
+    c[0x17aa]=0xe8; struct.pack_into('<h',c,0x17ab,base-0x17ad); c[0x17ad:0x17b1]=b'\x90'*4
+    stats['raisechk']=1
 
 def growkeep_pass(d,ne,blobs,stats):
     # seg 105 grow: don't GlobalReAlloc a block that already has the requested size

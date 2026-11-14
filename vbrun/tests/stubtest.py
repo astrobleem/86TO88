@@ -173,6 +173,9 @@ class Wrap(unittest.TestCase):
         self.nxt += 9; return a
     def caller(self, seg, code): self.m.w(seg, 0, code)
     def wtop(self): return self.m.rw(WSEG, self.sym['wtop']) - self.sym['wstk']
+    def live(self):
+        rs = 10 if 'st_call' in self.sym else 8
+        return sum(1 for a in range(self.sym['wstk'], self.sym['wend'], rs) if self.m.rw(WSEG, a))
     @staticmethod
     def callw(off, arg=None):
         return (b'\x68' + struct.pack('<H', arg) if arg is not None else b'') + b'\x9a' + struct.pack('<HH', off, WSEG)
@@ -259,6 +262,58 @@ class Wrap(unittest.TestCase):
         self.assertEqual(self.wtop(), 0, 'abandoned records must be dropped')
     def test_throw_then_same_sp_call(self): self.throw_then_reuse(False)
     def test_throw_from_nested_then_same_sp_call(self): self.throw_then_reuse(True)
+
+    def test_throw_then_call_whose_args_cover_old_slot(self):
+        """call A (no args) is abandoned by a Throw back to the caller's frame; the caller then
+        pushes two args and calls B, so A's old return slot lies inside B's argument area. B's
+        RETF 4 must still return to B's return address (A's dead record must not be chosen)."""
+        m = self.m
+        wa = self.stub(ESEG, 0, 1); wb = self.stub(ESEG, 0x10, 1)
+        m.w(ESEG, 0x10, b'\xca\x04\x00')                                     # B: retf 4
+        code = bytearray(b'\x90' * 0x30)
+        a = self.callw(wa); code[0:len(a)] = a; code[5] = 0xf4                 # hlt = wrong return
+        b = b'\x68\x11\x11\x68\x22\x22' + self.callw(wb); code[0x10:0x10 + len(b)] = b
+        self.caller(CSEG, bytes(code))
+        m.stack(0x1000, 0xF000)
+        m.run(CSEG, 0, ESEG, 0)                             # enter A
+        self.assertEqual(self.wtop() // 8, 1)
+        m.stack(0x1000, 0xF000)                             # Throw: back to the caller's frame
+        cs, ip = m.run(CSEG, 0x10, CSEG, 0x10 + len(b))
+        self.assertEqual((cs, ip), (CSEG, 0x10 + len(b)), "B's return went to %04x:%04x" % (cs, ip))
+        self.assertEqual(m.reg(UC_X86_REG_SP), 0xF000)
+        self.assertLessEqual(self.live(), 1, "B's record must be gone")   # A's waits for an outer return
+
+    def test_return_without_record_fails_closed(self):
+        """a return through a trampoline whose record is gone must stop the application,
+        never guess a return address"""
+        m = self.m
+        if '..@fatal' not in self.sym: self.skipTest('no FatalAppExit')
+        w = self.stub(ESEG, 0, 1)
+        m.w(ESEG, 0, b'\xca\x02\x00')
+        self.caller(CSEG, self.callw(w, 1) + b'\xf4\xf4')
+        def wipe(uc, a, s_, u):
+            for x in range(self.sym['wstk'], self.sym['wend']): m.w(WSEG, x, b'\0')
+        m.uc.hook_add(UC_HOOK_CODE, wipe, begin=ESEG << 4, end=ESEG << 4)
+        m.stack(0x1000, 0xF000)
+        try: m.run(CSEG, 0, CSEG, 8)
+        except Exception: pass
+        f = [a for n, a in m.calls if n == 'fatal']
+        self.assertEqual(len(f), 1)
+        self.assertEqual(m.r(f[0][1], f[0][0], 20), b'VBRUN real-mode call')
+
+    def test_callee_moves_its_return_address(self):
+        """the callee pops its far return and pushes it back two words lower before RETF (as
+        some runtime helpers do); the trampoline still finds the record"""
+        m = self.m
+        w = self.stub(ESEG, 0, 1)
+        m.w(ESEG, 0, b'\x58\x5a\x53\x53\x52\x50\xcb')     # pop ax/pop dx/push bx/push bx/push dx/push ax/retf
+        code = self.callw(w) + b'\x90\x90'
+        self.caller(CSEG, code); self.caller(CSEG2, code)
+        def mv(uc, a, s_, u): self.where[1] = CSEG2
+        m.uc.hook_add(UC_HOOK_CODE, mv, begin=ESEG << 4, end=ESEG << 4)
+        m.stack(0x1000, 0xF000)
+        self.assertEqual(m.run(CSEG, 0, CSEG2, 5), (CSEG2, 5))
+        self.assertEqual(m.reg(UC_X86_REG_SP), 0xF000 - 4); self.assertEqual(self.live(), 0)
 
     def test_jump_chain_into_second_wrapper(self):
         """callee A (wrapped) tail-jumps through a pointer table into another W stub (unknown

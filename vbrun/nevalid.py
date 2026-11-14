@@ -1,5 +1,5 @@
 """Validate an NE file: segment table, relocation chains, record targets, entry table."""
-import struct, sys
+import re, struct, sys
 d = open(sys.argv[1], 'rb').read()
 ne = struct.unpack_from('<I', d, 0x3c)[0]
 sto, = struct.unpack_from('<H', d, ne + 0x22); al, = struct.unpack_from('<H', d, ne + 0x32)
@@ -137,6 +137,15 @@ for i, (o, l, f, m) in enumerate(segs):
         else: err.append('seg %d: far jump at %x to movable %d:%x is not on the reviewed list' % (i + 1, p, tg[0], tg[1]))
     if md is None:
         err.append('push walk not run (capstone missing)'); continue
+    T16 = re.compile(rb'\x50\x55\x8b\xec\x8b\x46\x04\xc7\x46\x04..\x87\x46\x02\x5d\xc3', re.S)
+    def pseudo(q):
+        """length of a PUSH imm that i186.py rewrote at q (CALL to a push trampoline, or
+        INT 3 + imm8), else 0"""
+        if code[q] == 0xcc: return 2
+        if code[q] == 0xe8 and q + 3 <= ln:
+            t = (q + 3 + struct.unpack_from('<h', code, q + 1)[0]) & 0xffff
+            if T16.match(code, t): return 3
+        return 0
     def follow(p):
         """Walk every path from the push pair at p.  Returns ([direct far jumps to a movable
         target], [indirect far jumps], first reason a path could not be followed or None,
@@ -151,7 +160,7 @@ for i, (o, l, f, m) in enumerate(segs):
         model was lost (SP changed some other way, a far call or INT that may pop arguments,
         too many words), the destination is unknown and the path is unfinished."""
         D = -1
-        work = [(p + 2 if code[p + 1] != 0x68 else p + 4, ())] if code[p + 1] != 0x6a else [(p + 3, ())]
+        work = [(p + 1 + (pseudo(p + 1) or {0x68: 3, 0x6a: 2}.get(code[p + 1], 1)), ())]
         done = set(); n_ins = 0; bad = []; ind = []; why = None
         def push(st, v=D, cnt=1):
             if st is None: return None
@@ -166,6 +175,8 @@ for i, (o, l, f, m) in enumerate(segs):
                 if q >= ln: why = why or 'runs off the segment end'; break
                 if n_ins >= BUDGET: return bad, ind, 'more than %d instructions to follow' % BUDGET, False
                 done.add((q, st)); n_ins += 1
+                ps = pseudo(q)
+                if ps: st = push(st); q += ps; continue
                 try: ins = next(md.disasm(code[q:q + 16], q, 1))
                 except StopIteration: why = why or 'undecodable bytes at %x' % q; break
                 b = ins.bytes; k = 0
@@ -215,7 +226,7 @@ for i, (o, l, f, m) in enumerate(segs):
                 q = nq
         return bad, ind, why, True
     for p in range(ln - 2):
-        if code[p] != 0x0e or not (0x50 <= code[p + 1] <= 0x57 or code[p + 1] in (0x68, 0x6a)): continue
+        if code[p] != 0x0e or not (0x50 <= code[p + 1] <= 0x57 or code[p + 1] in (0x68, 0x6a) or pseudo(p + 1)): continue
         bad, ind, why, in_budget = follow(p)
         for q in bad:
             err.append('seg %d pushes a return address at %x and jumps far at %x to a movable target' % (i + 1, p, q))
