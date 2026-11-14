@@ -243,6 +243,23 @@ class Relocs:
         return out
 
 
+def merge_chains(code, recs):
+    """One record per (type, flags, target) for chained (non-additive) selector, offset and
+    far-pointer fixups: the converter leaves many single-site records with the same target,
+    and the real-mode loader reads every record of a segment into a buffer at load time."""
+    rel = Relocs(code, recs)
+    groups = {}; out = []
+    for it in rel.items:
+        t, fl, sites, a, b = it
+        if fl & 4 or t & 15 not in (2, 3, 5) or not sites:
+            out.append(it); continue
+        k = (t, fl, a, b)
+        if k in groups: groups[k][2].extend(sites)
+        else: groups[k] = [t, fl, list(sites), a, b]; out.append(groups[k])
+    rel.items = out
+    return rel.records(code)
+
+
 def t_push16(imm):
     # push ax / push bp / mov bp,sp / mov ax,[bp+4] / mov word [bp+4],imm / xchg ax,[bp+2] / pop bp / ret
     c = b'\x50\x55\x8b\xec\x8b\x46\x04\xc7\x46\x04' + struct.pack('<H', imm) + b'\x87\x46\x02\x5d\xc3'
@@ -367,6 +384,12 @@ def check(orig, conv, noreturn=None):
     """80186 sites still reachable in the converted file (should be none)"""
     global INT3_IMM
     cur, _, _ = load(conv)
+    # W stubs (call center / dd target / dw X): center never returns to the bytes after the call
+    noreturn = {k: set(v) for k, v in (noreturn or {}).items()}
+    for s in cur:
+        for pat in (b'\x55\x55\x89\xe5\x9c\x50\x53\x51\x52\x56\x06', b'\x55\x55\x8b\xec\x9c\x50\x53\x51\x52\x56\x06'):
+            i = s['code'].find(pat)
+            if i >= 0: noreturn.setdefault(s['n'], set()).add(i)
     INT3_IMM = True
     try: sites, _ = census(orig, noreturn, cur)
     finally: INT3_IMM = False

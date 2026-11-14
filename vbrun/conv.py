@@ -354,6 +354,9 @@ def conv(src, dst, report=True, vb=True):
     for k,b in enumerate(blobs):
         if b is None: continue
         code,recs=b
+        if recs and os.environ.get('MERGERELOC','1')=='1':
+            import i186
+            n0=len(recs); recs=i186.merge_chains(code,recs); stats['reloc_merged']+=n0-len(recs)
         e=newents[k]; f=e[2]; m=e[3]
         blob=bytes(code)
         if recs: blob+=struct.pack('<H',len(recs))+b''.join(recs); f|=0x100

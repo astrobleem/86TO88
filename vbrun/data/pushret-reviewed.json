@@ -1,5 +1,5 @@
 {
- "_about": "Direct far JMPs from a movable code segment to a movable segment of the same module. nevalid.py rejects every such jump unless it is listed here with matching target and context bytes. Each entry says why the far return on the stack at that jump is not a CS:IP pushed by hand in the jumping segment. A jump that a push walk proves is reached from a \"push cs / push\" pair is rejected even if listed. Entries marked provisional have not been fully established and need an independent check.",
+ "_about": "Direct far JMPs from a movable code segment to a movable segment of the same module. nevalid.py rejects every such jump unless it is listed here with matching target and context bytes. Each entry says why the far return on the stack at that jump is not a CS:IP pushed by hand in the jumping segment. A jump that a push walk proves is reached from a \"push cs / push\" pair is rejected even if listed. Entries marked provisional have not been fully established and need an independent check; a RESIDUAL note names what was observed rather than proven.",
  "VBRUN100": {
   "farjmp": [
    {
@@ -15,8 +15,8 @@
     "off": "49fd",
     "to": "7:292",
     "ctx": "4d8bd9eaffff0000",
-    "provisional": true,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "jump into the runtime error raiser (entries 7:0279..0292 fall through to the raiser body at 7:0294; error number in BL/BX). The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 7,
@@ -47,120 +47,120 @@
     "off": "1cc",
     "to": "7:279",
     "ctx": "ab5fcbeaffff0000",
-    "provisional": true,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "jump into the runtime error raiser (entries 7:0279..0292 fall through to the raiser body at 7:0294; error number in BL/BX). The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 9,
     "off": "468",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": true,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "jump into the runtime error raiser (entries 7:0279..0292 fall through to the raiser body at 7:0294; error number in BL/BX). The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 9,
     "off": "4bb",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": true,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "jump into the runtime error raiser (entries 7:0279..0292 fall through to the raiser body at 7:0294; error number in BL/BX). The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 9,
     "off": "51c",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": true,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "jump into the runtime error raiser (entries 7:0279..0292 fall through to the raiser body at 7:0294; error number in BL/BX). The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 9,
     "off": "59c",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": true,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "jump into the runtime error raiser (entries 7:0279..0292 fall through to the raiser body at 7:0294; error number in BL/BX). The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 9,
     "off": "5e4",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": true,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "jump into the runtime error raiser (entries 7:0279..0292 fall through to the raiser body at 7:0294; error number in BL/BX). The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 9,
     "off": "664",
     "to": "7:292",
     "ctx": "bb0600eaffff0000",
-    "provisional": true,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "jump into the runtime error raiser (entries 7:0279..0292 fall through to the raiser body at 7:0294; error number in BL/BX). The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 9,
     "off": "69f",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": true,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "jump into the runtime error raiser (entries 7:0279..0292 fall through to the raiser body at 7:0294; error number in BL/BX). The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 9,
     "off": "72a",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": true,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "jump into the runtime error raiser (entries 7:0279..0292 fall through to the raiser body at 7:0294; error number in BL/BX). The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 9,
     "off": "faf",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": true,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "jump into the runtime error raiser (entries 7:0279..0292 fall through to the raiser body at 7:0294; error number in BL/BX). The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 9,
     "off": "1012",
     "to": "7:292",
     "ctx": "bb0500eaffff0000",
-    "provisional": true,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "jump into the runtime error raiser (entries 7:0279..0292 fall through to the raiser body at 7:0294; error number in BL/BX). The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 10,
     "off": "be",
     "to": "2:4a6c",
     "ctx": "c0740ceaffff0000",
-    "provisional": true,
-    "why": "tail jump to the interpreter's error entry 2:4A6C (BX = error number; it reloads DS and goes on to raise the error). PROVISIONAL: how 10:00A9 is entered and the non-return of 2:4A6C were read from the first instructions only. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "tail jump to the interpreter's error entry 2:4A6C ('xor ah,ah' at 4A6A / 'xchg bx,ax / push ss / pop ds / call far 7:0294'); the bytes after that call (2:4A74) are not the target of any jump, call or fixup. 7:0294 does not return: The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 10,
     "off": "1c4",
     "to": "2:4a6a",
     "ctx": "bdb006eaffff0000",
-    "provisional": true,
-    "why": "\"mov al,6 / jmp far 2:4A6A\": overflow error raised through the interpreter's error entry, reached from the JO at 10:004B/0062 via 10:0078. PROVISIONAL: non-return of 2:4A6A read from its first instructions only. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "tail jump from 10:00A9 (entered from the JO path at 10:004B/0062 via 10:0078 for 1C4) to the interpreter's error entry 2:4A6A ('xor ah,ah' at 4A6A / 'xchg bx,ax / push ss / pop ds / call far 7:0294'); the bytes after that call (2:4A74) are not the target of any jump, call or fixup. 7:0294 does not return: The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 10,
     "off": "fce",
     "to": "7:292",
     "ctx": "740093eaffff0000",
-    "provisional": true,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. (The \"push cs / call near 1041\" just before it is a far call to a local far function, which pops both words with its RETF.) UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "jump into the runtime error raiser (entries 7:0279..0292 fall through to the raiser body at 7:0294; error number in BL/BX). The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code. (The \"push cs / call near 1041\" just before it is a far call to a local far function, which pops both words with its RETF.)"
    },
    {
     "seg": 10,
     "off": "1854",
     "to": "7:288",
     "ctx": "00ebddeaffff0000",
-    "provisional": true,
-    "why": "jump to the runtime error raiser (7:0279..0292, error number in BL/BX). The raiser walks the BP chain to the active error-handler frame and resumes there; it does not RETF to the address on the stack at this jump. Read as far as 7:02E2; the non-return is not proven beyond that. UNAPPROVED: depends on the shared error-raiser claim (7:0294 -> 7:0204 -> 4:173A -> 4:17AA \"mov sp,ax\" -> 2:0FCA), still open."
+    "provisional": false,
+    "why": "jump into the runtime error raiser (entries 7:0279..0292 fall through to the raiser body at 7:0294; error number in BL/BX). The far return on the stack at this jump is never consumed by a RETF: the raiser body 7:0294..030B branches only within itself and leaves only through 'call 0204 / ret' at 7:0308; 7:0204 is 'mov ax,[2518] / call far 4:173A'; 4:173A..17ED has only forward branches and ends in 'call far 2:0FCA' (4:17F2 is a separate procedure entry); 2:0FCA begins 'pop bx / pop bx', discarding its own return address, restores the interpreter state from the frame at SP and leaves by a near RET in segment 2. So 4:173A, 7:0204 and the raiser never return, and 7:030B is never executed after the call. SP was set at 4:17AA ('mov sp,ax', AX from 2:42E7: the active VB error context's frame) or, when [008A] is set, at 7:0093 ('mov sp,[008A]'). The slot at this jump is used again only if that reset lands at or below it, i.e. inside the raising code's own frames, which would make 2:0FCA restore the raiser's frames as the error context and break the runtime the same way in protected mode. RESIDUAL (observed, not proven): that the reset target always encloses the raising code."
    },
    {
     "seg": 82,

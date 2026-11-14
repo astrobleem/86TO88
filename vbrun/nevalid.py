@@ -133,7 +133,8 @@ for i, (o, l, f, m) in enumerate(segs):
         if tg is None: continue                         # import: real-mode code that marks its frames
         if 1 <= tg[0] <= n and not segs[tg[0] - 1][2] & 0x10: continue      # FIXED target (wrapper stub)
         p = off - 1; ctx = bytes(code[max(0, p - 3):p + 5])
-        if reviewed.get((i + 1, p)) == (ctx, tg[0], tg[1]): used.add((i + 1, p))
+        rv = reviewed.get((i + 1, p))      # the 4 operand bytes belong to the fixup (chain links)
+        if rv and rv[0][:4] == ctx[:4] and rv[1:] == (tg[0], tg[1]): used.add((i + 1, p))
         else: err.append('seg %d: far jump at %x to movable %d:%x is not on the reviewed list' % (i + 1, p, tg[0], tg[1]))
     if md is None:
         err.append('push walk not run (capstone missing)'); continue
