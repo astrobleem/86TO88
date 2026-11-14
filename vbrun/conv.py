@@ -218,6 +218,10 @@ def conv(src, dst, report=True, vb=True):
                     rem[(2,0,4,0)].append(len(code)); code+=b'\xff\xff'
                     code+=bytes.fromhex('7501c3')
                     stats['heapskip4']=1
+                    # the few other allocations (string space through seg 35, program data
+                    # through seg 5, seg 7) are the ones grown in place: VBHEAPRES2 sets
+                    # their minimum (they cannot move, so the room must be there up front)
+                    res=int(os.environ.get('VBHEAPRES2',hex(res)),0)
                 if os.environ.get('VBSTRRES'):
                     # flagged allocation (seg 5 program data/string segment): at least VBSTRRES
                     sr=int(os.environ['VBSTRRES'],0)
