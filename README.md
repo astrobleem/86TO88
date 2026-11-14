@@ -233,26 +233,47 @@ A stock Windows 3.0 install crashes on a real 8088 because its own EGA display d
 80186 instructions, not because of the bridge. Details and evidence are in
 [docs/STOCK-8088.md](docs/STOCK-8088.md).
 
-### More games: the Entertainment Pack
+### More games: the Entertainment Packs — complete inventory
 
-The earlier `WM88X3` module-library extension brought **19 distinct
-Entertainment Pack games to a game window** under MartyPC on an emulated stock
-8088, using per-game patches for 80186 instructions. Some results were only
-splash screens or startup, **not full gameplay tests**. Tetris was demonstrated
-with a separate 640x480 16-colour display driver
+**We do not yet have a successful launch for every game.** An audit of the
+uploaded Pack 1–4 floppy images and *Best of Microsoft Entertainment Pack*
+archive identified **29 distinct titles (28 games plus the IdleWild screen
+saver)** across **44 pack-specific entries**. The earlier `WM88X3` library
+demonstrated 19 distinct titles reaching a startup screen, dialog, or window;
+the new VB runtime adds JIGSAWED, RATTLER, and RODENT, bringing that to
+**22 distinct titles with some historical successful execution evidence**.
+Only four pack-specific editions have the newly documented VB/WEPUTIL gameplay
+tests; most other results are startup-only.
+
+**[See the complete title-by-title, pack-by-pack coverage matrix](docs/WEP-COVERAGE.md).**
+It records exactly which executable edition ran, what was seen, previous
+failures, and what remains untested. The related older
+[WM88X3 technical report](docs/WEP-LIBRARY.md) and new
+[Visual Basic runtime report](vbrun/REPORT.md) describe different test setups.
+
+| Uploaded edition | Entries | Some successful launch / gameplay evidence | Prior failures | No pack-specific execution test |
+| --- | ---: | ---: | ---: | ---: |
+| Pack 1 (1990) | 8 | 6 | 0 | 2 |
+| Pack 2 (1991) | 8 | 6 | 1 | 1 |
+| Pack 3 (1991) | 8 | 7 | 0 | 1 |
+| Pack 4 (1992) | 7 | **0** | 0 | **7** |
+| Best of (1994) | 13 | 9 | 3 | 1 |
+| **Total edition-specific entries** | **44** | **28** | **4** | **12** |
+
+A successful *launch* includes splash-only and dialog-only results, **not
+necessarily playable or completed games**. **Pack 4's seven titles have not
+been verified on this build.** Earlier tests failed on Pack 2 Stones and Best
+of Blackjack, Chips and RODENT. The Pack 2 RODENT subsequently ran with the
+converted VB runtime, but that does not establish the *Best of* edition works.
+
+The current media audit was able to inspect all five archives but did **not**
+run new game sessions or capture new screenshots: MartyPC/DOSBox was not
+available in this execution environment. Screenshots below are genuine
+**earlier** emulator captures. The VB converter has not been tested on real
+Tandy hardware/TGA, and the `WM88X3` and VB runtime configurations have
+not been validated as one all-games installation. Tetris's historical
+screenshot uses the separate 16-colour VGA driver
 ([windows-3-vga-8088](https://github.com/astrobleem/windows-3-vga-8088)).
-Details and the per-pack results are in
-[docs/WEP-LIBRARY.md](docs/WEP-LIBRARY.md).
-
-That older report records Blackjack, Chips, Stones and the Visual Basic
-games as nonworking in the `WM88X3`-only setup. **The VB result has changed:**
-JIGSAWED, RATTLER and RODENT now run using the separately converted
-`VBRUN100.DLL` / `FIELD100.DLL` runtime described below. PIPE also runs
-with converted `WEPUTIL.DLL`. **Blackjack, Chips and Stones have not been
-demonstrated working**, and all Entertainment Pack games have not been
-play-tested. The two conversion approaches have not been validated together
-as one all-games installation. The Entertainment Pack results are emulator-only;
-the original Minesweeper/V20 Tandy hardware result above is separate evidence.
 
 | Tetris (VGA driver) | Golf |
 | --- | --- |
@@ -300,12 +321,13 @@ necessary for correctness but makes memory management and picture loading
 slow. No 80186-only opcode was observed executing in the tested scenarios;
 untested paths and other applications are not thereby proved compatible.
 
-**Do all Entertainment Pack games work? Not established.** Blackjack, Chips
-and Stones failed in the earlier module-library tests and have no new
-successful result. Most other games have only their earlier, sometimes
-startup-only, `WM88X3` evidence. The new converter is experimental, not an
-all-games compatibility guarantee; mixing runtime/TSR configurations also
-needs testing (including INT 3 handler unload order).
+**Do all Entertainment Pack games work? Not established.** See the
+[44-entry coverage matrix](docs/WEP-COVERAGE.md). Pack 4 remains completely
+untested here; Pack 2 Stones and Best of Blackjack and Chips previously failed,
+and the Best of RODENT edition has not been retested with the new runtime.
+Most other games have only earlier startup-level `WM88X3` evidence. The
+converter is experimental, not an all-games guarantee, and mixed runtime/TSR
+configurations also need testing (including INT 3 handler unload order).
 
 Build converted DLLs from files you own:
 
