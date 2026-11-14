@@ -785,6 +785,35 @@ def wrap_pass(d,ne,blobs,ordn,ords,stats):
                     X=si+1
                 else: X=0                                 # far pointer (callback table): caller unknown
                 rr[j]=struct.pack('<BBHHH',3,0,off,F,W(byord[o],X)); stats['wrap_far' if X else 'wrap_ptr']+=1
+    # Far calls from movable code into callees in the segments the converter made FIXED
+    # (FIXSEGS) are not ordinal references but plain segment fixups (type 2, offset in the
+    # code), so the loop above never saw them.  The callee cannot move, but the caller can
+    # while it runs: traced on exit after play beside MS-DOS Executive, 2:11E1 lcall 4:1232
+    # (VB's terminate path) frees memory, seg 2 moves, and the RETF lands at its old address
+    # (by then KERNEL seg 2: 7705:11E6, a 2-byte loop).  Wrap them like the others.
+    if os.environ.get('WRAPFIX','1')=='1':
+        for si,b in enumerate(blobs):
+            if b is None or si+1==F or si+1 in FIX: continue
+            c,rr=b; out=[]
+            for r in rr:
+                t,fl,off,a,o=struct.unpack('<BBHHH',r)
+                if not (t==2 and fl==0 and a in FIX): out.append(r); continue
+                sites=[]; p=off
+                while True:
+                    nxt=struct.unpack_from('<H',c,p)[0]; sites.append(p)
+                    if nxt==0xffff: break
+                    p=nxt
+                keep=[]
+                for p in sites:
+                    tgt=(a,struct.unpack_from('<H',c,p-2)[0])
+                    if p>=3 and c[p-3]==0x9a and tgt in targets:
+                        struct.pack_into('<HH',c,p-2,0xffff,0)
+                        out.append(struct.pack('<BBHHH',3,0,p-2,F,W(tgt,si+1))); stats['wrap_fixcallee']+=1
+                    else: keep.append(p)
+                for j,p in enumerate(keep):
+                    struct.pack_into('<H',c,p,keep[j+1] if j+1<len(keep) else 0xffff)
+                if keep: out.append(struct.pack('<BBHHH',t,fl,keep[0],a,o))
+            rr[:]=out
     # Interpreter pseudo-calls: VB's p-code dispatcher in seg 2 pushes CS and a return IP
     # (push cs / push cx at 2:4953) and then jumps far to a runtime dispatcher.  The callee
     # returns with RETF to that hand-pushed address, which the kernel never patches, so if
