@@ -238,45 +238,47 @@ def census(d, noreturn_by_seg=None, cur=None, heuristic=True):
     segment list (same numbering, code possibly patched and extended by the converter),
     descend the current code instead: from the original roots plus every relocation
     target the converter added beyond a segment's original end (its appended stubs)."""
-    segs, ent, csip = load(d)
-    roots = roots_of(segs, ent, csip)
-    blocked = {}
-    if heuristic:
-        # keep a heuristic root only if its straight-line code agrees with the code the definite
-        # roots reach; paths from it stop where they would start inside known code
-        for k, cand in heuristic_roots(segs).items():
-            if not roots[k]: continue               # no known code at all: a data segment
-            c = segs[k - 1]['code']; nr = (noreturn_by_seg or {}).get(k, set())
-            ins, _, _ = descend(c, roots[k], nr)
-            starts = set(ins); cover = set()
-            for o, i in ins.items(): cover.update(range(o + 1, o + i.size))
-            for t in sorted(cand):
-                if t in starts or t in cover: continue
-                hi, _, _ = descend(c, {t}, nr, cover)
-                if any(kind(i) in ('other186', 'imul') or i.mnemonic in BAD or
-                       (o not in starts and set(range(o + 1, o + i.size)) & starts) for o, i in hi.items()):
-                    continue                        # disagrees with code already accepted
-                roots[k].add(t); starts |= set(hi)
-                for o, i in hi.items(): cover.update(range(o + 1, o + i.size))
-            blocked[k] = cover - starts
+    segs0, ent, csip = load(d)
+    roots = roots_of(segs0, ent, csip)
+    segs = segs0
     if cur is not None:
         r2 = roots_of(cur, ent, csip)
-        for s in segs:
+        for s in segs0:
             roots[s['n']] |= {t for t in r2[s['n']] if t >= len(s['code'])}
         segs = cur
+    cand_by_seg = heuristic_roots(segs0) if heuristic else {}
     out = []
     for s in segs:
         if s['flags'] & 1 or not s['code']: continue
-        nr = (noreturn_by_seg or {}).get(s['n'], set())
-        insns, targets, ft = descend(s['code'], roots[s['n']], nr, blocked.get(s['n'], frozenset()))
+        k = s['n']; c = s['code']; nr = (noreturn_by_seg or {}).get(k, set())
+        insns, targets, ft = descend(c, roots[k], nr)          # definite code
+        if roots[k] and cand_by_seg.get(k):
+            # heuristic roots, accepted one at a time if their code agrees with the code
+            # already accepted (definite first); their paths stop where they would start
+            # inside a known instruction
+            starts = set(insns); cover = set()
+            for o, i in insns.items(): cover.update(range(o + 1, o + i.size))
+            hroots = set()
+            for t in sorted(cand_by_seg[k]):
+                if t in starts or t in cover or t >= len(segs0[k - 1]['code']): continue
+                hi, _, _ = descend(c, {t}, nr, cover)
+                if any(kind(i) in ('other186', 'imul') or i.mnemonic in BAD or
+                       (o not in starts and set(range(o + 1, o + i.size)) & starts) for o, i in hi.items()):
+                    continue
+                hroots.add(t); starts |= set(hi)
+                for o, i in hi.items(): cover.update(range(o + 1, o + i.size))
+            if hroots:
+                hi, ht, hft = descend(c, hroots, nr, cover - set(insns))
+                for o, i in hi.items(): insns.setdefault(o, i)
+                targets = targets | ht
         for off, ins in sorted(insns.items()):
-            k = kind(ins)
-            if not k: continue
+            kd = kind(ins)
+            if not kd: continue
             # the instruction just before (moved together with LEAVE + RET/RETF when needed)
             prev = next((p for p in range(off - 1, max(off - 7, -1), -1) if p in insns and p + insns[p].size == off), None)
             simple = prev is not None and insns[prev].mnemonic in SIMPLE and not any(
                 o in targets for o in range(prev + 1, off + 2))
-            out.append(dict(seg=s['n'], off=off, kind=k, ins=ins, targets=targets, ft=off in ft,
+            out.append(dict(seg=k, off=off, kind=kd, ins=ins, targets=targets, ft=off in ft,
                             prev=prev if simple else None))
     return out, segs
 
