@@ -1,4 +1,4 @@
-# 86TO88 — run the original Windows 3.1 Minesweeper on Windows 3.0 / 8088-class hardware
+# 86TO88 — Windows 3.x games on Windows 3.0 real mode / 8088-class hardware
 
 **86TO88** (the **WM88 bridge**) makes the *original, unmodified* Windows 3.1
 `WINMINE.EXE` run and play under Windows 3.0 in real mode — the environment of
@@ -11,8 +11,17 @@ from the emulator tests documented below.
 
 **Video (under 3 minutes):** <https://youtu.be/L1UxVt3oN9A>
 
-Submission for the Meta Global AI Developer Hackathon. The bridge was built by
-Meta's **Muse Wonder** model; see [How this was built](#how-this-was-built).
+Submission for the Meta Global AI Developer Hackathon. The original Minesweeper
+bridge was built by Meta's **Muse Wonder** model; see
+[How this was built](#how-this-was-built).
+
+**New: Visual Basic 1.0 real-mode compatibility (merged November 2026).**
+The experimental `vbrun/` converter brings the original JIGSAWED, RATTLER and
+RODENT games to Windows 3.0 real mode on an **emulated 8088**. PIPE (Pipe Dream)
+also runs with its converted `WEPUTIL.DLL`. This is separate from the original
+Minesweeper TSR and the earlier `WM88X3` Entertainment Pack library. **Not all
+Entertainment Pack games have been verified.** See
+[the VB test results](#visual-basic-10-real-mode-conversion-experimental).
 
 ## Try it
 
@@ -226,16 +235,24 @@ A stock Windows 3.0 install crashes on a real 8088 because its own EGA display d
 
 ### More games: the Entertainment Pack
 
-The same idea now covers other Windows Entertainment Pack games on an emulated stock 8088
-(MartyPC). An offline analyzer finds the 80186 instructions in each game and its helper DLLs;
-a small second TSR loads the per-file patch module only when Windows opens that file. From the
-three 1991 Entertainment Packs and the 1994 *Best of*, 19 distinct games come up this way (Golf, Cruel, Pegged,
-FreeCell, Tut's Tomb, TetraVex, Klotski, Ski, WinMine, Fuji Golf and others; counted when the game window appears), and Tetris runs with a
-640x480 16-colour driver instead (see [windows-3-vga-8088](https://github.com/astrobleem/windows-3-vga-8088)).
-Blackjack, Chips, Stones and the Visual Basic games (Rodent, Rattler, Jigsawed) do not run: they need protected mode. This is emulator-only; none of it has been
-tried on real hardware. You supply the games (for example the
-[Best of Microsoft Entertainment Pack](https://archive.org/details/wep_best-of) disk image).
-Details, results and the full list: [docs/WEP-LIBRARY.md](docs/WEP-LIBRARY.md).
+The earlier `WM88X3` module-library extension brought **19 distinct
+Entertainment Pack games to a game window** under MartyPC on an emulated stock
+8088, using per-game patches for 80186 instructions. Some results were only
+splash screens or startup, **not full gameplay tests**. Tetris was demonstrated
+with a separate 640x480 16-colour display driver
+([windows-3-vga-8088](https://github.com/astrobleem/windows-3-vga-8088)).
+Details and the per-pack results are in
+[docs/WEP-LIBRARY.md](docs/WEP-LIBRARY.md).
+
+That older report records Blackjack, Chips, Stones and the Visual Basic
+games as nonworking in the `WM88X3`-only setup. **The VB result has changed:**
+JIGSAWED, RATTLER and RODENT now run using the separately converted
+`VBRUN100.DLL` / `FIELD100.DLL` runtime described below. PIPE also runs
+with converted `WEPUTIL.DLL`. **Blackjack, Chips and Stones have not been
+demonstrated working**, and all Entertainment Pack games have not been
+play-tested. The two conversion approaches have not been validated together
+as one all-games installation. The Entertainment Pack results are emulator-only;
+the original Minesweeper/V20 Tandy hardware result above is separate evidence.
 
 | Tetris (VGA driver) | Golf |
 | --- | --- |
@@ -257,7 +274,50 @@ richer 3.1 About box you get a plain `MessageBox` with the app's name and
 Performance (DOSBox-X, 10,000 fixed cycles): DOS boot → playable window in
 about 2.3 s. This is a historical emulator measurement, not a Tandy benchmark;
 physical hardware performance has not been measured in the available report.
-The TSR is 12,316 bytes on disk, ≈11 KB resident.
+The original Minesweeper TSR is 12,316 bytes on disk, ≈11 KB resident.
+
+### Visual Basic 1.0 real-mode conversion (experimental)
+
+The `vbrun/` converter was merged into `main` in
+[PR #3](https://github.com/astrobleem/86TO88/pull/3) on November 14, 2026.
+It converts **user-supplied copies** of the original `VBRUN100.DLL`,
+`FIELD100.DLL` and (when present) `WEPUTIL.DLL` for Windows 3.0 real mode,
+including 80186-to-8088 instruction rewriting and movable-segment return
+wrappers. The original game EXEs are not modified.
+
+| Game | Result with the converted runtime / helper |
+| --- | --- |
+| **JIGSAWED** (Visual Basic 1.0) | Complete puzzle workflow (Open, Scramble, Hint, Fast Solve, Rescramble) on V20 and 8088 cores. Also launched beside MS-DOS Executive, played a puzzle, exited to the shell, and ended Windows cleanly. |
+| **RATTLER** (Visual Basic 1.0) | Launched and played in the emulator on both CPU cores; no complete-game claim. |
+| **RODENT** (Visual Basic 1.0) | Launched and played in the emulator on both CPU cores; no complete-game claim. |
+| **PIPE / Pipe Dream** (non-VB) | Launched and played with converted `WEPUTIL.DLL` on both CPU cores; no complete-game claim. |
+
+**Test environment:** MartyPC, 640 KB RAM, IBM CGA, V20 and 8088 cores.
+These are **emulator results only**; the VB converter has not been tested on
+physical Tandy hardware or TGA video. JIGSAWED had roughly 13–20 KB free
+while running alongside MS-DOS Executive; locking its data segment is
+necessary for correctness but makes memory management and picture loading
+slow. No 80186-only opcode was observed executing in the tested scenarios;
+untested paths and other applications are not thereby proved compatible.
+
+**Do all Entertainment Pack games work? Not established.** Blackjack, Chips
+and Stones failed in the earlier module-library tests and have no new
+successful result. Most other games have only their earlier, sometimes
+startup-only, `WM88X3` evidence. The new converter is experimental, not an
+all-games compatibility guarantee; mixing runtime/TSR configurations also
+needs testing (including INT 3 handler unload order).
+
+Build converted DLLs from files you own:
+
+```sh
+VBW_ORIG=/path/to/original-files ./vbrun/build.sh /path/to/output
+python3 -m pytest vbrun/tests
+```
+
+The source and MartyPC test rig are in [`vbrun/`](vbrun/). See the
+[engineering report](vbrun/REPORT.md) and
+[known limitations / evidence](vbrun/NOTES.md) for what was actually tested.
+No Microsoft binaries or game images are distributed by this repository.
 
 ## How this was built
 
@@ -270,6 +330,9 @@ The TSR is 12,316 bytes on disk, ≈11 KB resident.
   not write the bridge logic.
 - **Claude (Anthropic)** also built the Entertainment Pack extension: the analyzer, the module
   library and the `WM88X3.COM` loader TSR.
+- **Claude (Anthropic)** built the separate experimental Visual Basic 1.0
+  real-mode converter, 8088 instruction rewrites, movable-segment wrappers,
+  and MartyPC test rig now integrated under `vbrun/`.
 - The hardware run used a hardened derivative of the published TSR; see
   [Status](#status--real-hardware-and-emulator-evidence) for what each run does and does not prove.
 
@@ -285,6 +348,7 @@ The TSR is 12,316 bytes on disk, ≈11 KB resident.
 * `tests/` — prebuilt DOS verification suites
 * `tools/` — host-side test tooling (serial-mouse server, board reader)
 * `tools/wep/` — the Entertainment Pack analyzer, module-library tool and tests (see [docs/WEP-LIBRARY.md](docs/WEP-LIBRARY.md))
+* `vbrun/` — experimental Visual Basic 1.0 real-mode / 8088 converter, runtime wrappers, regression tests, MartyPC scenarios, and [engineering report](vbrun/REPORT.md)
 * `emulator/` — the scripted-test DOSBox-X configuration (serial mouse)
 * `evidence/` — curated screenshots and test outputs from the runs described above
 
