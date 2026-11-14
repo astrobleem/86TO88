@@ -8,7 +8,7 @@ evidence are in `NOTES.md`.
 
 | target | status | evidence (emulator) |
 | --- | --- | --- |
-| 1. JIGSAWED launches, plays a complete puzzle, exits cleanly | met in both layouts tested | as shell: About, Open, Scramble, Hint, Fast Solve, Rescramble on V20 and 8088 cores; beside MS-DOS Executive: same plus Alt+F4 back to the shell, End Session, back to DOS |
+| 1. JIGSAWED launches, plays a complete puzzle, exits cleanly | met beside MS-DOS Executive; as shell, play only (exit not tested there: closing the shell ends Windows, a UAE in stock protected mode too) | as shell: About, Open, Scramble, Hint, Fast Solve, Rescramble on V20 and 8088 cores; beside MS-DOS Executive: same plus Alt+F4 back to the shell, End Session, back to DOS |
 | 2. JIGSAWED beside MS-DOS Executive without exhausting memory | met, thin margin | 13-20 KB free during play, 297 KB after JIGSAWED exits; one KERNEL segment load retries once during Fast Solve |
 | 3. RATTLER and the other test apps keep working | met for RATTLER, RODENT, PIPE | each started as shell and played on V20 and 8088 cores; PIPE is a non-VB EP game using the converted WEPUTIL.DLL |
 | 4. Relocation, compaction, callbacks, errors, termination | fixed what the runs exposed | see "Faults found and fixed"; error-raiser paths remain reviewed statically (no run raised a VB error) |
