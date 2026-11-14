@@ -219,4 +219,20 @@ in an earlier session and crashed on close; not retried.
 
 ## Open items / limits
 
-(updated as work proceeds)
+* No real hardware tested. All results are MartyPC (V20 and 8088 cores, 640K, IBM CGA).
+  Tandy 1000 video was not exercised.
+* Speed: with APPDSLOCK, JIGSAWED as shell spends ~60% of its time in KERNEL's heap code;
+  Game>Open is minutes on a 4.77 MHz 8088 by instruction count. Beside MS-DOS Executive the
+  KERNEL share is ~45% (36% without the lock).
+* Memory margins are thin beside MS-DOS Executive (13-20 KB free during play); one 6 KB
+  KERNEL segment load fails during Fast Solve and succeeds after compaction.
+* Layout sensitivity: several faults found here (string-space hole, stale DGROUP record,
+  exit stale return, WEP into an unallocated segment) appeared only in some memory layouts.
+  The fixed ones are understood; other latent ones may show with other apps or setups.
+* The 16 error-raiser far jumps (pushret-reviewed.json) stay reviewed by static flow plus
+  the observed reset; the corrupt-bitmap test did not raise a VB error (JIGSAWED reports
+  "Out of memory" itself and recovers), so it adds no run-time evidence for them.
+* INT 3 handler chaining between VBRUN and WEPUTIL on out-of-order unload (see above).
+* JIGSAWED as the Windows shell: exit is a UAE in stock protected mode too (not pursued).
+* Not taken: allocfixed with no seg-4 headroom (grow2 moves fixed blocks; a holder of the
+  old segment made JIGSAWED spin at start).
