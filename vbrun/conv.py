@@ -208,35 +208,39 @@ def conv(src, dst, report=True, vb=True):
             if res:
                 assert bytes(code[0x30:0x33])==bytes.fromhex('8b4608'), code[0x30:0x33].hex()
                 stub5=len(code)
-                if os.environ.get('VBHEAPSKIP4'):
-                    # no headroom for allocations made by seg 4 (4:274B, module contexts and
-                    # objects; ~100 blocks for JIGSAWED): their grows go through 'grow2'
-                    # (CTXGROW), which may move the block, so headroom only costs memory
-                    # (measured: none of those grows fit in it). Seg 4 is FIXED, so its
-                    # segment is a load-time constant: cmp [bp+4] (caller CS),seg4 / jne / ret
-                    code+=bytes.fromhex('8b4608817e04')
-                    rem[(2,0,4,0)].append(len(code)); code+=b'\xff\xff'
-                    code+=bytes.fromhex('7501c3')
-                    stats['heapskip4']=1
-                    # the few other allocations (string space through seg 35, program data
-                    # through seg 5, seg 7) are the ones grown in place: VBHEAPRES2 sets
-                    # their minimum (they cannot move, so the room must be there up front)
-                    res=int(os.environ.get('VBHEAPRES2',hex(res)),0)
+                def tail(r):
+                    # size in AX (with growth headroom per VBHEAPGROW), at least r
+                    if os.environ.get('VBHEAPGROW')=='2':
+                        t=bytes.fromhex('8b460803c07303b8e0ff')
+                    elif os.environ.get('VBHEAPGROW')=='8':
+                        t=bytes.fromhex('8b46088bd0d1ead1ead1ea03c27303b8e0ff')
+                    elif os.environ.get('VBHEAPGROW'):
+                        t=bytes.fromhex('8b46088bd0d1ead1ea03c27303b8e0ff')
+                    else:
+                        t=bytes.fromhex('8b4608')
+                    return t+b'\x3d'+struct.pack('<H',r)+b'\x73\x03'+b'\xb8'+struct.pack('<H',r)+b'\xc3'
                 if os.environ.get('VBSTRRES'):
                     # flagged allocation (seg 5 program data/string segment): at least VBSTRRES
                     sr=int(os.environ['VBSTRRES'],0)
                     code+=bytes.fromhex('f6460608740c8b4608')+b'\x3d'+struct.pack('<H',sr)+b'\x73\x03\xb8'+struct.pack('<H',sr)+b'\xc3'
-                if os.environ.get('VBHEAPGROW')=='2':
-                    # 2*size (growth headroom), at least res
-                    code+=bytes.fromhex('8b460803c07303b8e0ff')+b'\x3d'+struct.pack('<H',res)+b'\x73\x03'+b'\xb8'+struct.pack('<H',res)+b'\xc3'
-                elif os.environ.get('VBHEAPGROW')=='8':
-                    # size + size/8 (growth headroom), at least res
-                    code+=bytes.fromhex('8b46088bd0d1ead1ead1ea03c27303b8e0ff')+b'\x3d'+struct.pack('<H',res)+b'\x73\x03'+b'\xb8'+struct.pack('<H',res)+b'\xc3'
-                elif os.environ.get('VBHEAPGROW'):
-                    # size + size/4 (growth headroom), at least res
-                    code+=bytes.fromhex('8b46088bd0d1ead1ea03c27303b8e0ff')+b'\x3d'+struct.pack('<H',res)+b'\x73\x03'+b'\xb8'+struct.pack('<H',res)+b'\xc3'
+                skip4=os.environ.get('VBHEAPSKIP4'); res2=os.environ.get('VBHEAPRES2')
+                if skip4 or res2:
+                    # Allocations made by seg 4 (4:274B: module contexts and objects, ~100
+                    # blocks for JIGSAWED) grow through 'grow2' (CTXGROW), which may move the
+                    # block; VBHEAPSKIP4 gives them no headroom (measured: none of their grows
+                    # fit in it). The few others (string space through seg 35, program data
+                    # through seg 5, seg 7) are grown in place only: VBHEAPRES2 sets their
+                    # minimum. Seg 4 is FIXED, so its segment is a load-time constant:
+                    # mov ax,[bp+8] / cmp [bp+4] (caller CS),seg4 / jne other / <seg 4> / other:
+                    t4=b'\xc3' if skip4 else tail(res)
+                    code+=bytes.fromhex('8b4608817e04')
+                    rem[(2,0,4,0)].append(len(code)); code+=b'\xff\xff'
+                    code+=b'\x75'+bytes([len(t4)])+t4
+                    code+=tail(int(res2,0) if res2 else res)
+                    if skip4: stats['heapskip4']=1
+                    if res2: stats['heapres2']=int(res2,0)
                 else:
-                    code+=bytes.fromhex('8b4608')+b'\x3d'+struct.pack('<H',res)+b'\x73\x03'+b'\xb8'+struct.pack('<H',res)+b'\xc3'
+                    code+=tail(res)
                 code[0x30]=0xe8; struct.pack_into('<h',code,0x31,stub5-0x33)
                 stats['heapres']=res
         if VB and i==4 and os.environ.get('VBSTRRES'):
