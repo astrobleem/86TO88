@@ -19,7 +19,7 @@ done
 # WEPUTIL.DLL (Entertainment Pack helper imported by JIGSAWED, also used by non-VB games):
 # only the 80186 rewrite, with its own INT 3 handler in its fixed data segment 3
 if [ "${I186:-1}" != 0 ] && [ -f "$VBW_ORIG/WEPUTIL.DLL" ]; then
-  env -u WRAP -u WRAPSTATS FIXSEGS= I186=1 I186HOME=3 python3 "$HERE/conv.py" "$VBW_ORIG/WEPUTIL.DLL" "$OUT/WEPUTIL.DLL" novb
+  env -u WRAP -u WRAPSTATS FIXSEGS= I186=1 I186HOME=3 I186WEPSEG=${I186WEPSEG-1} python3 "$HERE/conv.py" "$VBW_ORIG/WEPUTIL.DLL" "$OUT/WEPUTIL.DLL" novb
 fi
 # 8088: no 80186 instruction left in reachable code (I186=0 builds a V20/80186-only pair)
 [ "${I186:-1}" = 0 ] || for f in VBRUN100.DLL FIELD100.DLL $([ -f "$OUT/WEPUTIL.DLL" ] && echo WEPUTIL.DLL); do

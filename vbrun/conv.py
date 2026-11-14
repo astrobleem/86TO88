@@ -335,7 +335,8 @@ def conv(src, dst, report=True, vb=True):
     for (seg,off),o in sorted(ords.items(), key=lambda kv: kv[1]):
         assert o==len(L)+1; L.append(('M',seg,1,off))
     L=[('F',e[1],e[2],e[3]) if e and e[0]=='M' and e[1] in FIX else e for e in L]
-    if i186_info.get('wep'): L[0]=('F',i186_info['seg'],L[0][2],i186_info['wep'])
+    if i186_info.get('wepseg'): L[0]=('M',i186_info['wepseg'],L[0][2],i186_info['wep'])
+    elif i186_info.get('wep'): L[0]=('F',i186_info['seg'],L[0][2],i186_info['wep'])
     if LOCK:
         nmods=struct.unpack_from('<H',d,ne+0x1e)[0]; mo=struct.unpack_from('<H',d,ne+0x28)[0]; io=struct.unpack_from('<H',d,ne+0x2a)[0]
         mods=[bytes(d[ne+io+struct.unpack_from('<H',d,ne+mo+2*k)[0]+1:ne+io+struct.unpack_from('<H',d,ne+mo+2*k)[0]+1+d[ne+io+struct.unpack_from('<H',d,ne+mo+2*k)[0]]]).upper() for k in range(nmods)]
@@ -564,6 +565,30 @@ def i186_pass(d,ne,blobs,ordn,stats):
     far(sym['..@entry']+1,*csip)
     far(sym['..@wep']+1,*ent[1])
     info['entry']=sym['init']; info['wep']=sym['wep']; info['seg']=F
+    WS=int(os.environ.get('I186WEPSEG','0'))
+    if not VB and WS:
+        # WEP through a stub in a MOVABLE code segment (reached through the entry thunk, so
+        # the kernel loads it on demand). With WEP in the fixed data segment F the kernel
+        # jumped to garbage when a LoadLibrary failed before F was allocated (traced: VB
+        # loading WEPUTIL for a Declare at Game>Open, an 8 KB allocation fails, KERNEL
+        # calls WEP at seg-3 address 182D:01DA, all zeros). The stub restores the INT 3
+        # vector only if it still points at this module's handler in F.
+        assert segs[WS-1]['flags']&0x10 and not segs[WS-1]['flags']&1, 'I186WEPSEG must be a movable code segment'
+        c2,r2=blobs[WS-1]
+        while len(c2)&1: c2.append(0x90)
+        st=len(c2)
+        b=bytearray(b'\x50\x53\x52\x1e\x06\xb8\x03\x35\xcd\x21')
+        b+=b'\x81\xfb'+struct.pack('<H',sym['int3h'])+b'\x75\x00'; j1=len(b)-1
+        b+=b'\x8c\xc0\x3d'; fs=len(b); b+=b'\xff\xff'
+        b+=b'\x75\x00'; j2=len(b)-1
+        b+=b'\x8e\xd8\xc5\x16'+struct.pack('<H',sym['old3'])+b'\xb8\x03\x25\xcd\x21'
+        x=len(b); b[j1]=x-(j1+1); b[j2]=x-(j2+1)
+        b+=b'\x07\x1f\x5a\x5b\x58\xea'; js=len(b); b+=b'\xff\xff\x00\x00'
+        c2+=b
+        r2.append(struct.pack('<BBHHH',2,0,st+fs,F,0))
+        if ent[1][0] in FIX or not segs[ent[1][0]-1]['flags']&0x10: r2.append(struct.pack('<BBHHH',3,0,st+js,*ent[1]))
+        else: r2.append(struct.pack('<BBHHH',3,0,st+js,0xff,ordn(*ent[1])))
+        info['wep']=st; info['wepseg']=WS; stats['i186_wepstub']=1
     stats['i186_int3h']=1
     return info
 
