@@ -57,7 +57,7 @@ index 6f9b9be..66e80d6 100644
 +    }
 +}
 diff --git a/crates/lib/marty_core/src/cpu_vx0/cycle.rs b/crates/lib/marty_core/src/cpu_vx0/cycle.rs
-index 2b85359..10a5a6b 100644
+index 2b85359..159c704 100644
 --- a/crates/lib/marty_core/src/cpu_vx0/cycle.rs
 +++ b/crates/lib/marty_core/src/cpu_vx0/cycle.rs
 @@ -534,6 +534,8 @@ impl NecVx0 {
@@ -280,7 +280,7 @@ index 2b85359..10a5a6b 100644
 +                    lo | (hi << 8)
 +                };
 +                let rip = rd(self, 0); let rcs = rd(self, 2);
-+                let args: Vec<String> = (2..8).map(|k| format!("{:04X}", rd(self, 2 * k))).collect();
++                let args: Vec<String> = (2..std::env::var("MARTY_XW_DEPTH").ok().and_then(|v| v.parse().ok()).unwrap_or(8usize)).map(|k| format!("{:04X}", rd(self, 2 * k))).collect();
 +                let id = XW_SEQ.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 +                eprintln!("XW {} from {:04X}:{:04X} args(sp+4..) {} DS:{:04X} SS:{:04X} SP:{:04X} BP:{:04X} R:{:04X},{:04X},{:04X},{:04X},{:04X},{:04X},{:04X} id:{} i{}",
 +                    name, rcs, rip, args.join(" "), self.ds, self.ss, self.sp, self.bp,

@@ -208,6 +208,16 @@ def conv(src, dst, report=True, vb=True):
             if res:
                 assert bytes(code[0x30:0x33])==bytes.fromhex('8b4608'), code[0x30:0x33].hex()
                 stub5=len(code)
+                if os.environ.get('VBHEAPSKIP4'):
+                    # no headroom for allocations made by seg 4 (4:274B, module contexts and
+                    # objects; ~100 blocks for JIGSAWED): their grows go through 'grow2'
+                    # (CTXGROW), which may move the block, so headroom only costs memory
+                    # (measured: none of those grows fit in it). Seg 4 is FIXED, so its
+                    # segment is a load-time constant: cmp [bp+4] (caller CS),seg4 / jne / ret
+                    code+=bytes.fromhex('8b4608817e04')
+                    rem[(2,0,4,0)].append(len(code)); code+=b'\xff\xff'
+                    code+=bytes.fromhex('7501c3')
+                    stats['heapskip4']=1
                 if os.environ.get('VBSTRRES'):
                     # flagged allocation (seg 5 program data/string segment): at least VBSTRRES
                     sr=int(os.environ['VBSTRRES'],0)
