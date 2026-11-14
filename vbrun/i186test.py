@@ -90,6 +90,7 @@ def main():
     fails = 0; n = 0; skipped = 0
     for s in sites:
         sg, off, k = s['seg'], s['off'], s['kind']
+        if off >= len(s0[sg - 1]['code']): continue       # converter stubs: covered by i186.py --check
         ocode, ccode = so[sg - 1]['code'], sc[sg - 1]['code']
         oins = s['ins']; size = oins.size
         cins = next(i186.md.disasm(bytes(ccode[off:off + 16]), off, 1), None)
@@ -102,10 +103,8 @@ def main():
         else:
             steps = 1; far_ret = False
         start = off
-        if k == 'leave' and ocode[off + 1] in (0xcb, 0xc3) and bytes(ccode[off - 2:off - 1]) == b'\xe9':
-            start = off - 2; steps = 4
-        if bytes(ccode[off - 2:off - 1]) == b'\xe9' and k == 'leave' and start == off:
-            pass
+        if k == 'leave' and ccode[off] != 0xe9 and s.get('prev') is not None and ccode[s['prev']] == 0xe9:
+            start = s['prev']; steps = 3            # moved together with the instruction before it
         mo = Machine(ocode); mc = Machine(ccode, hcode, hsym)
         for r in range(rounds):
             st = rand_state(rng, 0x8000)

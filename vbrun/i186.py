@@ -149,7 +149,11 @@ def descend(code, roots, noreturn=()):
                     tab = op.mem.disp & 0xffff; tabs.add(tab); p = tab; lim = len(code)
                     if not nxt <= tab <= nxt + 2: break
                     cnt = switch_count(code, pc)
-                    if cnt: lim = min(lim, tab + 2 * cnt)
+                    if cnt:                  # bounded by the compare: exactly cnt entries
+                        for k in range(cnt):
+                            t = u16(code, tab + 2 * k)
+                            if t < len(code): targets.add(t); todo.append((t, False))
+                        break
                     while p + 2 <= lim and (p - tab) < 1024:
                         t = u16(code, p)
                         if not p + 2 <= t < len(code): break
@@ -184,13 +188,71 @@ def kind(ins):
     return None
 
 
-def census(d, noreturn_by_seg=None, cur=None):
+SIMPLE = {'mov', 'pop', 'push', 'xor', 'sub', 'add', 'or', 'and', 'inc', 'dec', 'cwd', 'cbw', 'xchg', 'lea'}
+BAD = {'in', 'out', 'insb', 'insw', 'outsb', 'outsw', 'hlt', 'arpl', 'bound', 'into', 'iret', 'lock', 'int1', 'salc'}
+
+def plausible(code, t, limit=300):
+    """straight-line decode from t reaches an unconditional transfer without undecodable
+    bytes, 80186-only forms other than the ones the runtime uses, or I/O and other
+    instructions that do not occur in this code"""
+    pc = t
+    for _ in range(limit):
+        ins = next(md.disasm(code[pc:pc + 16], pc, 1), None)
+        if ins is None or ins.mnemonic in BAD or kind(ins) == 'other186': return False
+        b = ins.bytes[0]
+        if b in (0xc2, 0xc3, 0xca, 0xcb, 0xe9, 0xeb, 0xea) or ins.mnemonic == 'jmp': return True
+        pc += ins.size
+        if pc >= len(code): return False
+    return False
+
+
+def heuristic_roots(segs):
+    """code the descent cannot see: far procedures (MSC prologues) reached through tables the
+    runtime builds itself, and p-code handlers, which are only reached from the program's
+    p-code (threaded code: the handler offsets are in the EXE). A handler starts after an
+    unconditional jump with a descriptor word (high byte 0) in front of it."""
+    out = collections.defaultdict(set)
+    for s in segs:
+        c = s['code']
+        if s['flags'] & 1 or not c: continue
+        def after_jump(o):
+            return (c[o - 2:o] == b'\xff\xe0' or (o >= 2 and c[o - 2] == 0xeb) or (o >= 3 and c[o - 3] == 0xe9)
+                    or c[o - 1] in (0xc3, 0xcb) or (o >= 3 and c[o - 3] in (0xc2, 0xca)))
+        for o in range(4, len(c) - 4):
+            if c[o] == 0xc8:                       # ENTER n,0 right after a return/jump
+                ok = c[o + 3] == 0 and after_jump(o)
+            else:
+                ok = prologue(c, o)
+            if ok and plausible(c, o): out[s['n']].add(o)
+            if c[o + 1] == 0 and after_jump(o) and plausible(c, o + 2):
+                out[s['n']].add(o + 2)
+    return out
+
+
+def census(d, noreturn_by_seg=None, cur=None, heuristic=True):
     """80186 sites reachable in the module d (the original file).  With cur = the current
     segment list (same numbering, code possibly patched and extended by the converter),
     descend the current code instead: from the original roots plus every relocation
     target the converter added beyond a segment's original end (its appended stubs)."""
     segs, ent, csip = load(d)
     roots = roots_of(segs, ent, csip)
+    if heuristic:
+        # keep a heuristic root only if its code agrees with the code the definite roots
+        # reach (no instruction starting inside another one)
+        for k, cand in heuristic_roots(segs).items():
+            c = segs[k - 1]['code']; nr = (noreturn_by_seg or {}).get(k, set())
+            ins, _, _ = descend(c, roots[k], nr)
+            starts = set(ins); cover = set()
+            for o, i in ins.items(): cover.update(range(o + 1, o + i.size))
+            for t in sorted(cand):
+                if t in starts: continue
+                if t in cover: continue
+                hi, _, _ = descend(c, {t}, nr)
+                ok = all(o not in cover for o in hi) and all(
+                    not (set(range(o + 1, o + i.size)) & starts) for o, i in hi.items())
+                if ok:
+                    roots[k].add(t); starts |= set(hi)
+                    for o, i in hi.items(): cover.update(range(o + 1, o + i.size))
     if cur is not None:
         r2 = roots_of(cur, ent, csip)
         for s in segs:
@@ -204,8 +266,12 @@ def census(d, noreturn_by_seg=None, cur=None):
         for off, ins in sorted(insns.items()):
             k = kind(ins)
             if not k: continue
-            pre2 = all(o in insns and insns[o].size == 1 and 0x58 <= s['code'][o] <= 0x5f for o in (off - 2, off - 1))
-            out.append(dict(seg=s['n'], off=off, kind=k, ins=ins, targets=targets, ft=off in ft, pre2=pre2))
+            # the instruction just before (moved together with LEAVE + RET/RETF when needed)
+            prev = next((p for p in range(off - 1, max(off - 7, -1), -1) if p in insns and p + insns[p].size == off), None)
+            simple = prev is not None and insns[prev].mnemonic in SIMPLE and not any(
+                o in targets for o in range(prev + 1, off + 2))
+            out.append(dict(seg=s['n'], off=off, kind=k, ins=ins, targets=targets, ft=off in ft,
+                            prev=prev if simple else None))
     return out, segs
 
 
@@ -354,7 +420,7 @@ def rewrite(segs_orig, blobs, sites, stats, int3=True):
                 code[off] = 0xcc; stats['i186_push8'] += 1
             elif k == 'shift' and n == 3 and b[1] >> 6 == 3 and not (b[0] == 0xc1 and b[1] & 7 == 4):
                 call_at(off, tramp(('s', b), t_shift(b))); stats['i186_shift'] += 1
-            elif k == 'enter' and n == 4:
+            elif k == 'enter' and n == 4 and b[3] == 0:
                 t = len(code); code.extend(t_enter(b, off + 4, t))
                 code[off:off + 4] = jmp(off, t) + b'\x90'; stats['i186_enter'] += 1
             elif k == 'leave' and n == 1:
@@ -362,11 +428,14 @@ def rewrite(segs_orig, blobs, sites, stats, int3=True):
                 if nx[0] == 0xca and off + 1 not in s['targets']:
                     t = len(code); code.extend(t_leave_retf(code[off:off + 4]))
                     code[off:off + 4] = jmp(off, t) + b'\x90'; stats['i186_leave'] += 1
-                elif nx[0] in (0xcb, 0xc3) and s.get('pre2') and not ({off - 1, off, off + 1} & s['targets']):
-                    # pop/pop before LEAVE: move the two 1-byte instructions with it
-                    st = off - 2; t = len(code)
+                elif nx[0] in (0xcb, 0xc3) and s.get('prev') is not None:
+                    # LEAVE + RET/RETF is 2 bytes: move the instruction before it along
+                    st = s['prev']
+                    if any(rel.find(p) is not None for p in range(st, off)):
+                        problems.append((sg, off, 'relocation in the instruction before LEAVE')); continue
+                    t = len(code)
                     code.extend(bytes(code[st:off]) + b'\x8b\xe5\x5d' + bytes([nx[0]]))
-                    code[st:st + 4] = jmp(st, t) + b'\x90'; stats['i186_leave'] += 1
+                    code[st:off + 2] = jmp(st, t) + b'\x90' * (off + 2 - st - 3); stats['i186_leave'] += 1
                 else:
                     problems.append((sg, off, 'LEAVE not followed by RETF n')); continue
             elif k == 'imul' and n >= 3:
@@ -378,7 +447,9 @@ def rewrite(segs_orig, blobs, sites, stats, int3=True):
     return problems
 
 
-VB_NORETURN = {2: {0x4a65, 0x4a6a, 0x4a6c}}       # near calls into the error entries (never return)
+# near calls that do not return to the next byte: the error entries, and the p-code
+# escape dispatchers that pop their return address and read operand bytes from it
+VB_NORETURN = {2: {0x4a65, 0x4a6a, 0x4a6c, 0x48f9, 0x48fe, 0x4903, 0x4908, 0x490d, 0x4910, 0x4921, 0x4935, 0x4938}}
 
 def check(orig, conv, noreturn=None):
     """80186 sites still reachable in the converted file (should be none)"""

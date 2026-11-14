@@ -468,6 +468,15 @@ def appdslock_pass(d,ne,blobs,stats):
     c+=stub
     rr.append(struct.pack('<BBHHH',3,1,st+12,KIDX,23))
     c[0x28]=0xe8; struct.pack_into('<h',c,0x29,st-0x2b); c[0x2b]=0x90
+    # Unlock it again in the C runtime exit (9:15D3 'mov ax,[bp+6] / mov ah,4Ch / int 21h'),
+    # so the task ends with its DGROUP unlocked as the kernel expects
+    c,rr=blobs[8]
+    assert bytes(c[0x15d3:0x15da])==bytes.fromhex('8b4606b44ccd21'), c[0x15d3:0x15da].hex()
+    while len(c)&1: c.append(0x90)
+    st=len(c)
+    c+=b'\x16\x9a\xff\xff\x00\x00\x8b\x46\x06\xc3'   # push ss / call far UnlockSegment / mov ax,[bp+6] / ret
+    rr.append(struct.pack('<BBHHH',3,1,st+2,KIDX,24))
+    c[0x15d3]=0xe8; struct.pack_into('<h',c,0x15d4,st-0x15d6)
     stats['appdslock']=1
 
 def strtrace_pass(d,ne,blobs,stats):

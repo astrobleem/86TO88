@@ -13,8 +13,11 @@ HCODE, HSYM = handler()
 
 def site(code, off, targets=()):
     ins = next(i186.md.disasm(bytes(code[off:off + 16]), off, 1))
-    pre2 = off >= 2 and all(0x58 <= code[o] <= 0x5f for o in (off - 2, off - 1))
-    return dict(seg=1, off=off, kind=i186.kind(ins), ins=ins, targets=set(targets), ft=False, pre2=pre2)
+    prev = None
+    for p in range(max(off - 6, 0), off):
+        i = next(i186.md.disasm(bytes(code[p:off]), p, 1), None)
+        if i is not None and p + i.size == off and i.mnemonic in i186.SIMPLE: prev = p; break
+    return dict(seg=1, off=off, kind=i186.kind(ins), ins=ins, targets=set(targets), ft=False, prev=prev)
 
 
 def convert(code, offs, recs=()):
@@ -106,12 +109,27 @@ class Forms(unittest.TestCase):
             struct.pack_into('<HHH', stk, bp, rng.randrange(0x10000), 0x0100, 0x0F00); st['stack'] = bytes(stk)
         code = b'\x5e\x5f\xc9\xcb'
         conv, recs, probs, stats = convert(code, [2]); self.assertEqual(probs, [])
-        self.assertEqual(conv[0], 0xe9)
+        self.assertEqual(conv[1], 0xe9)
         rng = random.Random(3); mo, mc = Machine(code), Machine(conv, HCODE, HSYM)
         for r in range(20):
             st = rand_state(rng, 0x8000); frame(st, rng)
             a = (mo.state(st), mo.run(0, (0x0F00 << 4) + 0x100, 4))[1]
             b = (mc.state(st), mc.run(0, (0x0F00 << 4) + 0x100, 40))[1]
+            self.assertEqual((a['regs'], a['sp'], a['cs'], a['ip']), (b['regs'], b['sp'], b['cs'], b['ip']))
+
+    def test_mov_leave_retf(self):
+        """mov ax,imm / leave / retf (7:15A8): the MOV moves into the detour"""
+        def frame(st, rng):
+            stk = bytearray(st['stack']); bp = st['regs'][6]
+            struct.pack_into('<HHH', stk, bp, rng.randrange(0x10000), 0x0100, 0x0F00); st['stack'] = bytes(stk)
+        code = b'\x90\xb8\x2c\x2d\xc9\xcb'
+        conv, recs, probs, stats = convert(code, [4]); self.assertEqual(probs, [])
+        self.assertEqual(conv[1], 0xe9)
+        rng = random.Random(4); mo, mc = Machine(code), Machine(conv, HCODE, HSYM)
+        for r in range(20):
+            st = rand_state(rng, 0x8000); frame(st, rng)
+            a = (mo.state(st), mo.run(1, (0x0F00 << 4) + 0x100, 3))[1]
+            b = (mc.state(st), mc.run(1, (0x0F00 << 4) + 0x100, 40))[1]
             self.assertEqual((a['regs'], a['sp'], a['cs'], a['ip']), (b['regs'], b['sp'], b['cs'], b['ip']))
 
     def test_leave_retf_target_inside_is_refused(self):
