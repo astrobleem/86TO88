@@ -78,9 +78,11 @@ Coverage evidence (observed, not proven): the V20 core with `MARTY_W186=1` repor
 80186-only opcode executed outside the ROM BIOS. On the final build the full JIGSAWED
 workflow (launch, open bitmap, scramble, hint, solve, rescramble) reported none. Earlier
 runs of the same check found the misses fixed in 914c30a, 2af748d and e1758a0 (a switch
-case, class registration in 75:019C, p-code handler 2:41E6, and WEPUTIL). A path not
-exercised by a run can still hold a missed site; the static census is the only guard
-there.
+case, class registration in 75:019C, p-code handler 2:41E6, and WEPUTIL). The same
+workflow on the 8088 core (where an 80186 opcode would alias, not trap) also completed with
+no 80186 opcode executed: 188M instructions, 22684 INT 3 traps (121 per 1M instructions,
+about 0.2% of cycles at ~380 cycles per trap). A path not exercised by a run can still hold
+a missed site; the static census is the only guard there.
 
 WEPUTIL.DLL (Entertainment Pack helper, imported by JIGSAWED and the non-VB EP games) is
 converted with only the 80186 rewrite (no wrapper, no segment changes). Its INT 3 handler
