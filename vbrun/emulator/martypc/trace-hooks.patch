@@ -57,7 +57,7 @@ index 6f9b9be..66e80d6 100644
 +    }
 +}
 diff --git a/crates/lib/marty_core/src/cpu_vx0/cycle.rs b/crates/lib/marty_core/src/cpu_vx0/cycle.rs
-index 2b85359..159c704 100644
+index 2b85359..c131724 100644
 --- a/crates/lib/marty_core/src/cpu_vx0/cycle.rs
 +++ b/crates/lib/marty_core/src/cpu_vx0/cycle.rs
 @@ -534,6 +534,8 @@ impl NecVx0 {
@@ -194,17 +194,17 @@ index 2b85359..159c704 100644
 +                std::env::var("MARTY_PC_TO").ok().and_then(|v| v.parse().ok()).unwrap_or(0)));
 +            {
 +                // MARTY_RING=N:LO[:HI]  keep the last N instructions; print them once when LO <= CS < HI
-+                static RG: std::sync::OnceLock<(usize, u16, u16)> = std::sync::OnceLock::new();
++                static RG: std::sync::OnceLock<(usize, u16, u16, i32)> = std::sync::OnceLock::new();
 +                static RB: std::sync::Mutex<(Vec<[u16; 13]>, Vec<u64>, usize, bool)> = std::sync::Mutex::new((Vec::new(), Vec::new(), 0, false));
 +                let rg = RG.get_or_init(|| std::env::var("MARTY_RING").ok().and_then(|v| {
-+                    let mut it = v.split(':'); let n = it.next()?.parse().ok()?; let t = u16::from_str_radix(it.next()?, 16).ok()?; let h = it.next().and_then(|x| u16::from_str_radix(x, 16).ok()).unwrap_or(0xFFFF); Some((n, t, h)) }).unwrap_or((0, 0, 0)));
++                    let mut it = v.split(':'); let n = it.next()?.parse().ok()?; let t = u16::from_str_radix(it.next()?, 16).ok()?; let h = it.next().and_then(|x| u16::from_str_radix(x, 16).ok()).unwrap_or(0xFFFF); let ip = it.next().and_then(|x| i32::from_str_radix(x, 16).ok()).unwrap_or(-1); Some((n, t, h, ip)) }).unwrap_or((0, 0, 0, -1)));
 +                if rg.0 != 0 {
 +                    let mut rb = RB.lock().unwrap();
 +                    if !rb.3 {
 +                        let e = [self.cs, self.ip(), self.a.x(), self.b.x(), self.c.x(), self.d.x(), self.si, self.di, self.ds, self.es, self.ss, self.sp, self.bp];
 +                        if rb.0.len() < rg.0 { rb.0.push(e); rb.1.push(self.instruction_count); } else { let k = rb.2; rb.0[k] = e; rb.1[k] = self.instruction_count; }
 +                        rb.2 = (rb.2 + 1) % rg.0;
-+                        if self.cs >= rg.1 && self.cs < rg.2 {
++                        if self.cs >= rg.1 && self.cs < rg.2 && (rg.3 < 0 || self.ip() as i32 == rg.3) {
 +                            rb.3 = true;
 +                            let k = rb.2; let n = rb.0.len();
 +                            for j in 0..n { let r = rb.0[(k + j) % n];
