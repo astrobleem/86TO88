@@ -6,7 +6,7 @@ set -e
 : "${VBW_ORIG:?set VBW_ORIG to the directory holding the original VBRUN100.DLL and FIELD100.DLL}"
 HERE=$(cd "$(dirname "$0")" && pwd); OUT=${1:?usage: build.sh OUTDIR}; mkdir -p "$OUT"
 FSHRINK=1 VBPROBE=0x200 FIXSEGS=${VB_FIXSEGS:-4,5,16} WRAP=@"$HERE/data/callees.json" WRAPMAP="$OUT/wrapmap.json" \
-VBHEAPRES=0x100 VBHEAPGROW=1 TABGROW=1 CTXGROW=1 VBLHEAP=0x1000 VBLHEAP71=0x3000 VBLHEAP88=0x400 \
+VBHEAPRES=${VBHEAPRES-0x100} VBHEAPGROW=${VBHEAPGROW-1} TABGROW=1 CTXGROW=1 VBLHEAP=0x1000 VBLHEAP71=${VBLHEAP71-0x3000} VBLHEAP88=0x400 \
 VBALLOCFIXED=${VBALLOCFIXED-1} FSW8087=1 GROWKEEP=1 I186=${I186:-1} \
   python3 "$HERE/conv.py" "$VBW_ORIG/VBRUN100.DLL" "$OUT/VBRUN100.DLL"
 # FIELD100 (custom control): data segment 4 fixed, because VB keeps a far pointer to the
