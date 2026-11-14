@@ -13,8 +13,11 @@ Default output is the 8088 build: every reachable 80186 instruction rewritten
 `i186.py --check` (no 80186 site left in reachable code). `I186=0` gives the previous
 V20/80186-only output.
 
-Experimental / diagnostic switches (off by default): `APPDSLOCK=1` (lock the app DGROUP
-after the entry grow), `WRAPSTATS=1` (wrapper counters, read with `wstats.py`),
+Heap/placement defaults (see "Memory and startup layouts" below): `VBALLOCFIXED` off,
+`VBHEAPSKIP4=1`, `VBHEAPRES2=0x400`, `APPDSLOCK=1` (lock the app DGROUP after the entry
+grow; unlocked again at exit), `WRAPFIX=1`, WEPUTIL `I186WEPSEG=1`, no fast-load area.
+
+Diagnostic switches (off by default): `WRAPSTATS=1` (wrapper counters, read with `wstats.py`),
 `STRTRACE=1` (string-space grow log on port E9), `RAISECHK=1` (error-reset log on port
 E9), `KEEPFASTLOAD=1`.
 
@@ -149,7 +152,11 @@ Open, Scramble, Hint, Fast Solve, Rescramble, Alt+F4, close the shell, End Sessi
 | same, I186=0 | same | — |
 | allocfixed off | plays to Hint; KERNEL cannot load a 6 KB USER segment in Fast Solve, task terminated | 17 KB, largest 6.5 KB |
 | allocfixed off, no headroom at all | VB quits at start (string-space block cannot grow) | — |
-| allocfixed off + VBHEAPSKIP4 + WRAPFIX (new default) | whole scenario passes, back to DOS | 13-20 KB; 297 KB after exit |
+| allocfixed off + VBHEAPSKIP4 + WRAPFIX | whole scenario passes, back to DOS | 13-20 KB; 297 KB after exit |
+| same, but apps started as the shell | RATTLER, RODENT, JIGSAWED quit at start ("Not enough memory to run"): string-space block has a locked upper neighbour | — |
+| + VBHEAPRES2=0x400 | as shell: start; beside MS-DOS Executive: "Custom control '' not found" (stale app-DGROUP pointer, below) | — |
+| allocfixed + all headroom + VBHEAPRES2=0x400 | as shell: puzzle and RODENT pass; beside MS-DOS Executive: freezes after Scramble, 144 bytes free | — |
+| allocfixed off + SKIP4 + RES2=0x400 + APPDSLOCK + WEPUTIL fixes (default) | as shell: RATTLER, RODENT, PIPE run, JIGSAWED plays the puzzle; beside MS-DOS Executive: whole scenario passes | 13-15 KB |
 
 Why: VB grows a few heap blocks in place through 105:008A; real mode cannot move them
 (callers keep the segment). With `allocfixed` the string-space block (allocated through
@@ -159,7 +166,19 @@ smaller fixed VBRUN segment. Traced callers (MARTY_XW_DEPTH=48): ~100 of JIGSAWE
 seg-105 allocations come from fixed seg 4:274B; their grows go through CTXGROW's grow2
 (105:0214), which may move the block, so the 1.25x / 0x100 headroom on them never served a
 grow (each measured grow exceeded it) and cost ~20 KB. `VBHEAPSKIP4` drops it for callers
-whose CS is seg 4's. Margins remain thin: one KERNEL segment load still fails once during
+whose CS is seg 4's. The few non-seg-4 blocks (string space through seg 35, program data
+through seg 5, seg 7) are grown in place only and get `VBHEAPRES2` (1 KB) up front.
+Not taken: `allocfixed` with no seg-4 headroom - grow2 then moves GMEM_FIXED blocks
+(traced 3EC5 -> 489D) and JIGSAWED as shell spun at 3BDF:0E2x, i.e. something else held the
+old segment.
+
+Cost of the default (measured, JIGSAWED as shell after the About box): ~74% of PC samples
+in KERNEL's global-heap code (0FA7:20Fx-21Ex, 354x), against 38% with the old allocfixed
+settings; Game>Open takes more than 60M instructions (about 13 s of 4.77 MHz 8088 time
+before the dialog shows, by instruction count alone). Locked movable VB blocks spread
+through the movable area make every allocation search and compaction longer.
+
+Margins remain thin: one KERNEL segment load still fails once during
 Fast Solve and succeeds after compaction.
 
 ## WEPUTIL conversion faults (found on the as-shell runs)
