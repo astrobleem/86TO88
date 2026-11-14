@@ -69,8 +69,27 @@ by WEP (routed through `wep`) if the vector still points at it; an INT 3 that is
 rewritten site (no CC before the return address) goes to the previous handler.
 
 Verification: `tests/test_i186.py` (each form against the native instruction, random
-states, corner cases); `i186test.py` on the real DLLs (all 2946 + 89 sites, zero
-differences; it detects deliberately broken trampolines/handler); `i186.py --check`.
+states, corner cases); `i186test.py` on the real DLLs (VBRUN 2974, FIELD100 89, WEPUTIL
+223 sites, zero differences; it detects deliberately broken trampolines/handler);
+`i186.py --check`. The table above counts the first pass; the totals include the sites
+found later in converter stubs, post-jump code and handlers without a descriptor word.
+
+Coverage evidence (observed, not proven): the V20 core with `MARTY_W186=1` reports every
+80186-only opcode executed outside the ROM BIOS. On the final build the full JIGSAWED
+workflow (launch, open bitmap, scramble, hint, solve, rescramble) reported none. Earlier
+runs of the same check found the misses fixed in 914c30a, 2af748d and e1758a0 (a switch
+case, class registration in 75:019C, p-code handler 2:41E6, and WEPUTIL). A path not
+exercised by a run can still hold a missed site; the static census is the only guard
+there.
+
+WEPUTIL.DLL (Entertainment Pack helper, imported by JIGSAWED and the non-VB EP games) is
+converted with only the 80186 rewrite (no wrapper, no segment changes). Its INT 3 handler
+lives in its own fixed segment 3, because non-VB games load it without VBRUN; two handlers
+chain through each other's `old3`, and each WEP restores the vector only if it still points
+at itself, so when the DLL that installed first is unloaded first, the other handler's `old3` (and,
+after the second unload, the vector) points at freed code. Only an INT 3 that is not one
+of our sites (a debugger breakpoint) reaches it; rewritten sites are gone with their DLL.
+Known limitation, not fixed.
 
 Limitation: an INT 3 used by something else while VBRUN is loaded is still interpreted as
 ours when the byte before the return address is CC (a debugger breakpoint, or the W8X
