@@ -31,8 +31,9 @@ E9), `KEEPFASTLOAD=1`.
 * `i186test.py` — per-site differential test (Unicorn) of the 80186 rewrite against the
   same conversion without it.
 * `rig/` — MartyPC scenarios (`puzzle.sh`, `shell.sh`, `exit.sh`, `app.sh`, `trial.sh`).
-  The emulator must stay a child of the scenario script (`boot` in `lib.sh`): an orphaned
-  emulator is stopped by the session after a few minutes.
+  `run.sh` stops only a previous instance of its own binary: it used to `pkill -x martypc`,
+  so running `tests/test_tools.py` (which exercises run.sh with a fake binary) killed any
+  scenario in progress — that was the "emulator dies after a few minutes" seen on 2026-11-13.
 * `emulator/martypc/trace-hooks.patch` — PC samples, XW call watches, dumps, ring trace
   (V20 core); PC samples, dumps and an "80186 opcode executed" report (8088 core).
 

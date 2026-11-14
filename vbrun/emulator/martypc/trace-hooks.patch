@@ -1,5 +1,5 @@
 diff --git a/crates/lib/marty_core/src/cpu_808x/step.rs b/crates/lib/marty_core/src/cpu_808x/step.rs
-index 6f9b9be..47dc7d4 100644
+index 6f9b9be..66e80d6 100644
 --- a/crates/lib/marty_core/src/cpu_808x/step.rs
 +++ b/crates/lib/marty_core/src/cpu_808x/step.rs
 @@ -83,6 +83,7 @@ impl Intel808x {
@@ -10,7 +10,7 @@ index 6f9b9be..47dc7d4 100644
              //log::warn!("instruction address: {:05X}", instruction_address);
  
              if self.end_addr == (instruction_address as usize) {
-@@ -657,3 +658,43 @@ impl Intel808x {
+@@ -657,3 +658,45 @@ impl Intel808x {
          Ok(())
      }
  }
@@ -23,6 +23,7 @@ index 6f9b9be..47dc7d4 100644
 +    pub(crate) fn m88_check(&mut self, addr: u32) {
 +        static PS: std::sync::OnceLock<(u64, String)> = std::sync::OnceLock::new();
 +        static N186: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
++        static NCC: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 +        let ps = PS.get_or_init(|| (
 +            std::env::var("MARTY_PCSAMPLE").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
 +            std::env::var("MARTY_DUMP_FILE").unwrap_or("/tmp/marty_dump.bin".into())));
@@ -32,6 +33,7 @@ index 6f9b9be..47dc7d4 100644
 +            k += 1;
 +            op = self.bus.peek_u8((addr as usize + k) & 0xFFFFF).unwrap_or(0);
 +        }
++        if op == 0xcc { NCC.fetch_add(1, std::sync::atomic::Ordering::Relaxed); }
 +        if matches!(op, 0x60..=0x6f | 0xc0 | 0xc1 | 0xc8 | 0xc9 | 0x0f) {
 +            let n = N186.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 +            if n < 100 {
@@ -40,7 +42,7 @@ index 6f9b9be..47dc7d4 100644
 +            }
 +        }
 +        if ps.0 != 0 && self.instruction_count % ps.0 == 0 {
-+            eprintln!("PC {:04X}:{:04X} SS:{:04X} SP:{:04X} BP:{:04X} DS:{:04X} ES:{:04X} AX:{:04X} i{}", self.cs, self.instruction_ip, self.ss, self.sp, self.bp, self.ds, self.es, self.a.x(), self.instruction_count);
++            eprintln!("PC {:04X}:{:04X} SS:{:04X} SP:{:04X} BP:{:04X} DS:{:04X} ES:{:04X} AX:{:04X} CC:{} cyc{} i{}", self.cs, self.instruction_ip, self.ss, self.sp, self.bp, self.ds, self.es, self.a.x(), NCC.load(std::sync::atomic::Ordering::Relaxed), self.cycle_num, self.instruction_count);
 +            static DN: std::sync::OnceLock<String> = std::sync::OnceLock::new();
 +            let dn = DN.get_or_init(|| std::env::var("MARTY_DUMP_NOW").unwrap_or_default());
 +            if !dn.is_empty() && std::path::Path::new(dn).exists() {
