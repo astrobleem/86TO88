@@ -16,7 +16,12 @@ env -u WRAP -u WRAPSTATS FIXSEGS=4 I186=${I186:-1} python3 "$HERE/conv.py" "$VBW
 [ "${KEEPFASTLOAD:-}" = 1 ] || for f in VBRUN100.DLL FIELD100.DLL; do
   r=$(python3 "$HERE/nevalid.py" "$OUT/$f" --reviewed "$HERE/data/pushret-reviewed.json" | tail -1); case "$r" in OK*) ;; *) echo "$f: $r" >&2; exit 1;; esac
 done
+# WEPUTIL.DLL (Entertainment Pack helper imported by JIGSAWED, also used by non-VB games):
+# only the 80186 rewrite, with its own INT 3 handler in its fixed data segment 3
+if [ "${I186:-1}" != 0 ] && [ -f "$VBW_ORIG/WEPUTIL.DLL" ]; then
+  env -u WRAP -u WRAPSTATS FIXSEGS= I186=1 I186HOME=3 python3 "$HERE/conv.py" "$VBW_ORIG/WEPUTIL.DLL" "$OUT/WEPUTIL.DLL" novb
+fi
 # 8088: no 80186 instruction left in reachable code (I186=0 builds a V20/80186-only pair)
-[ "${I186:-1}" = 0 ] || for f in VBRUN100.DLL FIELD100.DLL; do
+[ "${I186:-1}" = 0 ] || for f in VBRUN100.DLL FIELD100.DLL $([ -f "$OUT/WEPUTIL.DLL" ] && echo WEPUTIL.DLL); do
   r=$(python3 "$HERE/i186.py" --check "$VBW_ORIG/$f" "$OUT/$f" | tail -1); [ "$r" = OK ] || { echo "$f: 80186 check: $r" >&2; exit 1; }
 done

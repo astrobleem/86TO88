@@ -122,7 +122,7 @@ def switch_count(code, pc):
 
 INT3_IMM = False      # analysing converted output: CC is INT 3 + the PUSH imm8 byte
 
-def descend(code, roots, noreturn=(), blocked=frozenset()):
+def descend(code, roots, noreturn=(), blocked=frozenset(), stopbad=False):
     """-> (insns: off -> ins, targets: set of direct branch/call targets, ft_only: offsets
     reached only by falling through a near or far call)"""
     insns = {}; targets = set(roots); todo = [(r, False) for r in roots]; tabs = set()
@@ -135,6 +135,7 @@ def descend(code, roots, noreturn=(), blocked=frozenset()):
             if pc in insns: break
             ins = next(md.disasm(code[pc:pc + 16], pc, 1), None)
             if ins is None: break
+            if stopbad and suspicious(code, ins): break
             insns[pc] = ins
             m = ins.mnemonic; b = ins.bytes; nxt = pc + ins.size; after_call = False
             if INT3_IMM and b[0] == 0xcc: nxt += 1
@@ -190,7 +191,13 @@ def kind(ins):
 
 
 SIMPLE = {'mov', 'pop', 'push', 'xor', 'sub', 'add', 'or', 'and', 'inc', 'dec', 'cwd', 'cbw', 'xchg', 'lea'}
-BAD = {'in', 'out', 'insb', 'insw', 'outsb', 'outsw', 'hlt', 'arpl', 'bound', 'into', 'iret', 'lock', 'int1', 'salc'}
+BAD = {'in', 'out', 'insb', 'insw', 'outsb', 'outsw', 'hlt', 'arpl', 'bound', 'into', 'iret', 'lock', 'int1', 'salc',
+       'daa', 'das', 'aaa', 'aas', 'aad', 'cli'}     # none occurs in VBRUN's known code
+
+def suspicious(code, ins):
+    """an instruction that does not occur in this code: data decoded as code"""
+    if ins.mnemonic in BAD or kind(ins) in ('other186', 'imul'): return True
+    return kind(ins) == 'leave' and code[ins.address + 1:ins.address + 2] not in (b'\xc3', b'\xcb', b'\xc2', b'\xca')
 
 def plausible(code, t, limit=300):
     """straight-line decode from t reaches an unconditional transfer without undecodable
@@ -199,7 +206,7 @@ def plausible(code, t, limit=300):
     pc = t
     for _ in range(limit):
         ins = next(md.disasm(code[pc:pc + 16], pc, 1), None)
-        if ins is None or ins.mnemonic in BAD or kind(ins) == 'other186': return False
+        if ins is None or suspicious(code, ins): return False
         b = ins.bytes[0]
         if b in (0xc2, 0xc3, 0xca, 0xcb, 0xe9, 0xeb, 0xea) or ins.mnemonic == 'jmp': return True
         pc += ins.size
@@ -246,6 +253,12 @@ def census(d, noreturn_by_seg=None, cur=None, heuristic=True):
         for s in segs0:
             roots[s['n']] |= {t for t in r2[s['n']] if t >= len(s['code'])}
         segs = cur
+    # W stubs (call center / dd target / dw X): center never returns to the bytes after the call
+    noreturn_by_seg = {k: set(v) for k, v in (noreturn_by_seg or {}).items()}
+    for s in segs:
+        for pat in (b'\x55\x55\x89\xe5\x9c\x50\x53\x51\x52\x56\x06', b'\x55\x55\x8b\xec\x9c\x50\x53\x51\x52\x56\x06'):
+            i = s['code'].find(pat)
+            if i >= 0: noreturn_by_seg.setdefault(s['n'], set()).add(i)
     cand_by_seg = heuristic_roots(segs0) if heuristic else {}
     out = []
     for s in segs:
@@ -261,14 +274,16 @@ def census(d, noreturn_by_seg=None, cur=None, heuristic=True):
             hroots = set()
             for t in sorted(cand_by_seg[k]):
                 if t in starts or t in cover or t >= len(segs0[k - 1]['code']): continue
-                hi, _, _ = descend(c, {t}, nr, cover)
-                if any(kind(i) in ('other186', 'imul') or i.mnemonic in BAD or
-                       (o not in starts and set(range(o + 1, o + i.size)) & starts) for o, i in hi.items()):
+                if not plausible(c, t): continue    # its own straight-line run must be clean
+                # deeper paths stop at instructions that do not occur in this code (inline
+                # operand bytes behind a call that does not return there)
+                hi, _, _ = descend(c, {t}, nr, cover, stopbad=True)
+                if any(o not in starts and set(range(o + 1, o + i.size)) & starts for o, i in hi.items()):
                     continue
                 hroots.add(t); starts |= set(hi)
                 for o, i in hi.items(): cover.update(range(o + 1, o + i.size))
             if hroots:
-                hi, ht, hft = descend(c, hroots, nr, cover - set(insns))
+                hi, ht, hft = descend(c, hroots, nr, cover - set(insns), stopbad=True)
                 for o, i in hi.items(): insns.setdefault(o, i)
                 targets = targets | ht
         for off, ins in sorted(insns.items()):

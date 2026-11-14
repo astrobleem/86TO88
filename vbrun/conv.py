@@ -317,7 +317,7 @@ def conv(src, dst, report=True, vb=True):
     for (seg,off),o in sorted(ords.items(), key=lambda kv: kv[1]):
         assert o==len(L)+1; L.append(('M',seg,1,off))
     L=[('F',e[1],e[2],e[3]) if e and e[0]=='M' and e[1] in FIX else e for e in L]
-    if i186_info.get('wep'): L[0]=('F',WRAPSEG,L[0][2],i186_info['wep'])
+    if i186_info.get('wep'): L[0]=('F',i186_info['seg'],L[0][2],i186_info['wep'])
     if LOCK:
         nmods=struct.unpack_from('<H',d,ne+0x1e)[0]; mo=struct.unpack_from('<H',d,ne+0x28)[0]; io=struct.unpack_from('<H',d,ne+0x2a)[0]
         mods=[bytes(d[ne+io+struct.unpack_from('<H',d,ne+mo+2*k)[0]+1:ne+io+struct.unpack_from('<H',d,ne+mo+2*k)[0]+1+d[ne+io+struct.unpack_from('<H',d,ne+mo+2*k)[0]]]).upper() for k in range(nmods)]
@@ -377,7 +377,7 @@ def conv(src, dst, report=True, vb=True):
     MOVCNT[0]=sum(1 for e in L if e and e[0]=='M')
     nrs=struct.unpack_from('<I',d,ne+0x2c)[0]; nrsz=struct.unpack_from('<H',d,ne+0x20)[0]
     head=bytearray(d[:ne+eto])+et
-    if i186_info.get('entry'): struct.pack_into('<HH',head,ne+0x14,i186_info['entry'],WRAPSEG)
+    if i186_info.get('entry'): struct.pack_into('<HH',head,ne+0x14,i186_info['entry'],i186_info['seg'])
     struct.pack_into('<H',head,ne+6,len(et))
     struct.pack_into('<I',head,ne+0x2c,len(head))
     head+=d[nrs:nrs+nrsz]+b'\0'*16
@@ -521,9 +521,15 @@ def i186_pass(d,ne,blobs,ordn,stats):
     probs=i186.rewrite(None,blobs,sites,stats)
     assert not probs, probs
     info={}
-    if not VB: return info
+    # the INT 3 handler lives in a fixed segment of the module that installs it: VBRUN's
+    # wrapper segment; for another DLL (WEPUTIL, used by non-VB games too) I186HOME names a
+    # fixed segment of its own (FIELD100 has none and relies on VBRUN's, which is loaded
+    # whenever it is)
+    F=WRAPSEG if VB else int(os.environ.get('I186HOME','0'))
+    if not F or not any(s['kind']=='push8' for s in sites): return info
     segs,ent,csip=i186.load(orig)
-    F=WRAPSEG; code,rr=blobs[F-1]
+    assert VB or not segs[F-1]['flags']&0x10, 'I186HOME must be a fixed segment'
+    code,rr=blobs[F-1]
     while len(code)&1: code.append(0x90)
     base=len(code); here=os.path.dirname(os.path.abspath(__file__))
     with tempfile.TemporaryDirectory() as td:
@@ -535,11 +541,11 @@ def i186_pass(d,ne,blobs,ordn,stats):
                 try: sym[pr[2]]=int(pr[1],16)
                 except ValueError: pass
     def far(site,seg,off):
-        if seg in FIX: rr.append(struct.pack('<BBHHH',3,0,site,seg,off))
+        if seg in FIX or not segs[seg-1]['flags']&0x10: rr.append(struct.pack('<BBHHH',3,0,site,seg,off))
         else: rr.append(struct.pack('<BBHHH',3,0,site,0xff,ordn(seg,off)))
     far(sym['..@entry']+1,*csip)
     far(sym['..@wep']+1,*ent[1])
-    info['entry']=sym['init']; info['wep']=sym['wep']
+    info['entry']=sym['init']; info['wep']=sym['wep']; info['seg']=F
     stats['i186_int3h']=1
     return info
 

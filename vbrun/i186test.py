@@ -88,8 +88,15 @@ def main():
     hcode, hsym = handler()
     rng = random.Random(1)
     fails = 0; n = 0; skipped = 0
+    fix = {}                                          # relocation sites in the reference build
+    for sg_ in so:
+        st = fix.setdefault(sg_['n'], set())
+        for t, fl, o_, a_, b_ in sg_['recs']:
+            st.update(i186.chain(sg_['code'], o_, bool(fl & 4)))
     for s in sites:
         sg, off, k = s['seg'], s['off'], s['kind']
+        if k == 'push16' and off + 1 in fix.get(sg, ()):
+            continue        # immediate is a fixup (chain link here): checked by test_push_imm16_relocated
         if off >= len(s0[sg - 1]['code']): continue       # converter stubs: covered by i186.py --check
         ocode, ccode = so[sg - 1]['code'], sc[sg - 1]['code']
         oins = s['ins']; size = oins.size
