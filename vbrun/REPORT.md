@@ -1,6 +1,6 @@
 # VBRUN100 real mode / 8088 — engineering report
 
-Branch `wip/vbrun100-realmode`, 2026-11-14. Not merged, not released. All testing is in
+Originally developed on `wip/vbrun100-realmode`, then merged to `main` in [PR #3](https://github.com/astrobleem/86TO88/pull/3) on 2026-11-14. Still experimental; not released. All testing is in
 MartyPC (V20 and 8088 cores, 640 KB, IBM CGA); **no real hardware was tested**. Details and
 evidence are in `NOTES.md`.
 
