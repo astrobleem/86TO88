@@ -49,6 +49,7 @@ direct flow (this removed a false `shr cl,0` inside a `mov ax,imm` in one game).
 | 5 / 6 | calling-convention push / leave | `INT 3` key, ctx-aware |
 | 7 | `imul reg,[ea],imm8` | |
 | 9 | `imul reg,[ea],imm16` | the immediate is read from the code stream by the handler |
+| 10 | `ENTER imm16,0` | experimental zero-nesting frame setup; requires the updated 3,991-byte bridge |
 | 8 | static byte patch | never trapped; used for the version stamp and similar |
 
 Immediates that are covered by a relocation fix-up are resolved by the generator rather

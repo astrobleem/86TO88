@@ -2,6 +2,59 @@
 
 This continues the preliminary [first-pass attempts](WEP-MARTY-8088.md). Results below are restricted to the uploaded edition and the described interactions. They do not claim complete game playthroughs or physical hardware validation.
 
+**Current clean result: 32 of 44 edition entries have an inspected action and clean exit (29 games and three saver editions). The remaining 12 are partial or failed configurations; no full-playthrough or all-games compatibility claim is made.**
+
+## All 44 edition entries
+
+Verified means only the interaction and clean exit described below. Every entry received its own launch attempt; identical titles in different editions are separate rows.
+
+| Edition | Entry | Configuration | Current result |
+| --- | --- | --- | --- |
+| Pack 1 | Cruel | VGA | Verified |
+| Pack 1 | Golf | VGA | Verified |
+| Pack 1 | IdleWild | VGA | Verified saver |
+| Pack 1 | Pegged | CGA | Verified |
+| Pack 1 | Tetris | VGA | Verified |
+| Pack 1 | TicTactics | CGA | Verified |
+| Pack 1 | Taipei | VGA | Verified |
+| Pack 1 | WinMine | CGA | Verified |
+| Pack 2 | FreeCell | VGA | Verified |
+| Pack 2 | IdleWild | VGA | Verified saver |
+| Pack 2 | Jigsawed | CGA/VGA, converted helpers | Partial / runtime failure |
+| Pack 2 | Pipe Dream | CGA | Verified |
+| Pack 2 | RattleRace | CGA/VGA, converted helpers | Partial / runtime failure |
+| Pack 2 | Rodent's Revenge | CGA/VGA, converted helpers | Partial / runtime failure |
+| Pack 2 | Stones | VGA | Verified after dependency fix |
+| Pack 2 | Tut's Tomb | VGA | Verified |
+| Pack 3 | Fuji Golf | VGA | Verified swing input; ball travel unverified |
+| Pack 3 | IdleWild | VGA | Verified saver |
+| Pack 3 | Klotski | CGA | Verified |
+| Pack 3 | LifeGenesis | CGA | Verified |
+| Pack 3 | SkiFree | CGA | Verified |
+| Pack 3 | TetraVex | CGA | Verified |
+| Pack 3 | TriPeaks | VGA | Verified |
+| Pack 3 | WordZap | VGA | Verified |
+| Pack 4 | Blackjack | VGA | Runtime failure |
+| Pack 4 | Chess | VGA | Runtime failure after partial ENTER fix |
+| Pack 4 | Chips Challenge | VGA | Insufficient memory beside Executive; shell follow-up inconclusive |
+| Pack 4 | Go Figure! | VGA | Runtime failure with original VB helpers |
+| Pack 4 | JezzBall | CGA | Verified |
+| Pack 4 | Maxwell's Maniac | VGA | Partial; gate operation not verified |
+| Pack 4 | Tic Tac Drop | VGA | Runtime failure with original VB helpers |
+| Best of | Blackjack | CGA | Inconclusive startup |
+| Best of | Chips Challenge | CGA/VGA | Insufficient memory beside Executive; shell follow-up inconclusive |
+| Best of | FreeCell | VGA | Verified |
+| Best of | Golf | VGA | Verified |
+| Best of | JezzBall | CGA | Verified |
+| Best of | Pipe Dream | VGA | Verified |
+| Best of | Rodent's Revenge | CGA, converted helpers | Inconclusive startup |
+| Best of | SkiFree | CGA | Verified |
+| Best of | TetraVex | CGA | Verified |
+| Best of | Tetris | VGA | Verified |
+| Best of | Taipei | VGA | Verified |
+| Best of | TriPeaks | VGA | Verified |
+| Best of | Tut's Tomb | VGA | Verified |
+
 ## Configuration
 
 MartyPC source `05c0d088e84ad6bbfac9b3f0d051e7eadefd9f44`, IBM XT 8088 core, 640 KiB conventional RAM, CGA, XT-IDE and Windows 3.0 real mode beside MS-DOS Executive. The headless runner was changed to accept stepwise commands, including mouse movement/button transitions and keyboard sequences, and to report cycle/instruction counters and CPU errors after each command. Captures are actual emulator front-framebuffer dumps converted to PNG, not desktop screenshots. The [local frontend patch](../emulator/martypc/headless-wep-test.patch) applies to that MartyPC revision; it is a test harness, not a change to the 86TO88 bridge.
@@ -61,16 +114,13 @@ VGA framebuffers are native 32-bit RGBA, so the capture helper exports their RGB
 | Edition / game | Interaction observed | Exit | Evidence |
 | --- | --- | --- | --- |
 | Pack 1 Tetris | Left-arrow input shifted the falling T piece left. Space dropped it into the stack; score increased from 108 to 142. | In a fresh repeat, Alt+F4 opened the confirmation; Enter accepted Yes and returned to Executive. | [before](../evidence/wep-clean-8088/pack1-tetris-vga-before.png), [moved left](../evidence/wep-clean-8088/pack1-tetris-vga-left.png), [drop and score](../evidence/wep-clean-8088/pack1-tetris-vga-drop.png), [confirmed exit](../evidence/wep-clean-8088/pack1-tetris-vga-exit.png) |
-
 | Edition / game | Interaction observed | Exit | Evidence |
 | --- | --- | --- | --- |
 | Pack 2 FreeCell (VGA) | Moved the ten of diamonds from a tableau column to the first free cell. The exposed ace of hearts also moved automatically to a foundation; Cards Left changed from 52 to 51. | Alt+F4 displayed “You resign”; Enter dismissed it and returned to Executive. | [before](../evidence/wep-clean-8088/pack2-freecell-vga-before.png), [card moved](../evidence/wep-clean-8088/pack2-freecell-vga-move.png), [exit](../evidence/wep-clean-8088/pack2-freecell-vga-exit.png) |
 | Pack 2 Tut's Tomb (VGA) | Clicking the stock dealt three face-up waste cards. This is a stock draw during play, not a new deal; no tableau pair was removed. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack2-tutstomb-vga-before.png), [stock drawn](../evidence/wep-clean-8088/pack2-tutstomb-vga-move.png), [exit](../evidence/wep-clean-8088/pack2-tutstomb-vga-exit.png) |
-
 | Edition / game | Interaction observed | Exit | Evidence |
 | --- | --- | --- | --- |
 | Pack 3 Klotski (CGA) | Selected Level 1 / Daisy, entered a test name, and dragged a small block downward into an empty bottom-center square. The old square became empty. | A fresh repeat used Game > Exit and returned to Executive. The earlier Alt+F4 attempt did not close the game. | [before](../evidence/wep-clean-8088/pack3-klotski-before.png), [block moved](../evidence/wep-clean-8088/pack3-klotski-move.png), [menu exit](../evidence/wep-clean-8088/pack3-klotski-exit.png) |
-
 | Edition / game | Interaction observed | Exit | Evidence |
 | --- | --- | --- | --- |
 | Pack 3 TriPeaks (VGA) | Played the exposed three of diamonds onto the waste four of diamonds. The tableau card disappeared, the waste became three of diamonds, and Won increased from $0 to $1. | Alt+F4 opened its penalty confirmation; accepting Yes returned to Executive. | [before](../evidence/wep-clean-8088/pack3-tripeaks-vga-before.png), [card played](../evidence/wep-clean-8088/pack3-tripeaks-vga-move.png), [confirmed exit](../evidence/wep-clean-8088/pack3-tripeaks-vga-exit.png) |
@@ -84,25 +134,15 @@ The Best of executables were launched separately with that edition's original he
 | Best of TetraVex (CGA) | Moved the top-left right-tray tile into the top-left empty board square. Its tray position became empty. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/bestof-tetravex-before.png), [tile moved](../evidence/wep-clean-8088/bestof-tetravex-move.png), [exit](../evidence/wep-clean-8088/bestof-tetravex-exit.png) |
 | Best of SkiFree (CGA) | The down key started skiing; the scene moved and distance reached 979 m at 9 m/s. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/bestof-skifree-before.png), [skiing](../evidence/wep-clean-8088/bestof-skifree-move.png), [exit](../evidence/wep-clean-8088/bestof-skifree-exit.png) |
 | Best of JezzBall (CGA) | A click completed a vertical wall and increased the score from 0 to 140. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/bestof-jezzball-before.png), [wall and score](../evidence/wep-clean-8088/bestof-jezzball-move.png), [exit](../evidence/wep-clean-8088/bestof-jezzball-exit.png) |
-
 | Best of Pipe Dream (VGA) | Placed a curved pipe in an empty upper-left board cell; the pipe queue advanced. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/bestof-pipe-vga-before.png), [action](../evidence/wep-clean-8088/bestof-pipe-vga-action.png), [exit](../evidence/wep-clean-8088/bestof-pipe-vga-exit.png) |
-
 | Best of FreeCell (VGA) | Moved the ten of diamonds to the first free cell. An ace moved to its foundation and Cards Left changed from 52 to 51. | Alt+F4 returned to Executive; Enter dismissed the resignation message. | [before](../evidence/wep-clean-8088/bestof-freecell-vga-before.png), [action](../evidence/wep-clean-8088/bestof-freecell-vga-action.png), [exit](../evidence/wep-clean-8088/bestof-freecell-vga-exit.png) |
-
 | Best of Tut's Tomb (VGA) | Drew three face-up waste cards from the stock during play. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/bestof-tutstomb-vga-before.png), [action](../evidence/wep-clean-8088/bestof-tutstomb-vga-action.png), [exit](../evidence/wep-clean-8088/bestof-tutstomb-vga-exit.png) |
-
-| Pack 3 Fuji Golf (VGA) | Started a round, activated Backswing/Hit Ball, and registered strokes. The shot counter advanced to fourth shot; distance to cup stayed 460 yards. Ball travel and completion of a hole were not verified. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack3-fujigolf-vga-before.png), [action](../evidence/wep-clean-8088/pack3-fujigolf-vga-action.png), [exit](../evidence/wep-clean-8088/pack3-fujigolf-vga-exit.png) |
-
+| Pack 3 Fuji Golf (VGA) | Started a round, activated Backswing/Hit Ball, and registered strokes. The shot counter advanced to fourth shot; distance to cup stayed 460 yards. Ball travel and completion of a hole were not verified. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack3-fujigolf-vga-before.png), [action](../evidence/wep-clean-8088/pack3-fujigolf-vga-action.png), [stroke count](../evidence/wep-clean-8088/pack3-fujigolf-vga-hit.png), [exit](../evidence/wep-clean-8088/pack3-fujigolf-vga-exit.png) |
 | Pack 1 Golf (VGA) | Played the exposed ten of hearts onto the waste nine of diamonds. Its tableau column then exposed the ten of diamonds. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack1-golf-vga-before.png), [move](../evidence/wep-clean-8088/pack1-golf-vga-move.png), [exit](../evidence/wep-clean-8088/pack1-golf-vga-exit.png) |
-
 | Pack 1 Cruel (VGA) | Dragged the two of spades onto the ace-of-spades foundation. The foundation became two of spades and its source exposed the queen of clubs. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack1-cruel-vga-before.png), [move](../evidence/wep-clean-8088/pack1-cruel-vga-move.png), [exit](../evidence/wep-clean-8088/pack1-cruel-vga-exit.png) |
-
 | Pack 1 Taipei (VGA) | Requested a hint, then clicked the matching highlighted bamboo pair on the upper-right side. Both tiles disappeared, revealing the tiles below. | Game > Exit returned to Executive. | [before](../evidence/wep-clean-8088/pack1-taipei-vga-before.png), [move](../evidence/wep-clean-8088/pack1-taipei-vga-move.png), [exit](../evidence/wep-clean-8088/pack1-taipei-vga-exit.png) |
-
 | Best of Golf (VGA) | Drew from the stock; the visible waste changed and the stock count decreased from 16 to 15. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/bestof-golf-vga-before.png), [move](../evidence/wep-clean-8088/bestof-golf-vga-move.png), [exit](../evidence/wep-clean-8088/bestof-golf-vga-exit.png) |
-
 | Best of TriPeaks (VGA) | Drew a card from the stock; Cards Left decreased from 23 to 22 and the waste became seven of hearts. | Alt+F4 returned to Executive; Enter accepted the confirmation. | [before](../evidence/wep-clean-8088/bestof-tripeaks-vga-before.png), [move](../evidence/wep-clean-8088/bestof-tripeaks-vga-move.png), [exit](../evidence/wep-clean-8088/bestof-tripeaks-vga-exit.png) |
-
 | Best of Tetris (VGA) | Sent left-arrow input and a space drop during an active game. The dropped piece joined the stack and score reached 178. | Alt+F4 returned to Executive; Enter accepted the confirmation. | [before](../evidence/wep-clean-8088/bestof-tetris-vga-before.png), [move](../evidence/wep-clean-8088/bestof-tetris-vga-move.png), [exit](../evidence/wep-clean-8088/bestof-tetris-vga-exit.png) |
 
 
@@ -112,9 +152,9 @@ These are saver selection, activation, wake and termination checks, not game tes
 
 | Edition / saver | Observed | Exit | Evidence |
 | --- | --- | --- | --- |
-| Pack 1 IdleWild (VGA) | Selected Dancing Lines drew colored lines on the black screen; Escape restored its settings window. | Alt+F4 closed IdleWild. | [selection](../evidence/wep-clean-8088/pack1-idlewild-vga-selection.png), [saving](../evidence/wep-clean-8088/pack1-idlewild-vga-saving.png), [awake](../evidence/wep-clean-8088/pack1-idlewild-vga-awake.png), [exit](../evidence/wep-clean-8088/pack1-idlewild-vga-exit.png) |
-| Pack 2 IdleWild (VGA) | Selected Bricks overlaid the desktop with its masonry grid; Escape woke the desktop and minimized IdleWild. | Restored the minimized icon, then Options > Exit terminated IdleWild. The initial Alt+F4 targeted Executive; its End Session dialog was cancelled. | [selection](../evidence/wep-clean-8088/pack2-idlewild-vga-selection.png), [saving](../evidence/wep-clean-8088/pack2-idlewild-vga-saving.png), [awake](../evidence/wep-clean-8088/pack2-idlewild-vga-awake.png), [exit](../evidence/wep-clean-8088/pack2-idlewild-vga-exit.png) |
-| Pack 3 IdleWild (VGA) | Selected Boat Race animated boats on a black screen; Escape woke the desktop and minimized IdleWild. | Restored the minimized icon, then Options > Exit terminated IdleWild. The initial Alt+F4 targeted Executive; its End Session dialog was cancelled. | [selection](../evidence/wep-clean-8088/pack3-idlewild-vga-selection.png), [saving](../evidence/wep-clean-8088/pack3-idlewild-vga-saving.png), [awake](../evidence/wep-clean-8088/pack3-idlewild-vga-awake.png), [exit](../evidence/wep-clean-8088/pack3-idlewild-vga-exit.png) |
+| Pack 1 IdleWild (VGA) | Selected Dancing Lines; it drew colored lines on the black screen; Escape restored its settings window. | Alt+F4 closed IdleWild. | [selection](../evidence/wep-clean-8088/pack1-idlewild-vga-selection.png), [saving](../evidence/wep-clean-8088/pack1-idlewild-vga-saving.png), [awake](../evidence/wep-clean-8088/pack1-idlewild-vga-awake.png), [exit](../evidence/wep-clean-8088/pack1-idlewild-vga-exit.png) |
+| Pack 2 IdleWild (VGA) | Selected Bricks; it overlaid the desktop with its masonry grid; Escape woke the desktop and minimized IdleWild. | Restored the minimized icon, then Options > Exit terminated IdleWild. The initial Alt+F4 targeted Executive; its End Session dialog was cancelled. | [selection](../evidence/wep-clean-8088/pack2-idlewild-vga-selection.png), [saving](../evidence/wep-clean-8088/pack2-idlewild-vga-saving.png), [awake](../evidence/wep-clean-8088/pack2-idlewild-vga-awake.png), [exit](../evidence/wep-clean-8088/pack2-idlewild-vga-exit.png) |
+| Pack 3 IdleWild (VGA) | Selected Boat Race; it animated boats on a black screen; Escape woke the desktop and minimized IdleWild. | Restored the minimized icon, then Options > Exit terminated IdleWild. The initial Alt+F4 targeted Executive; its End Session dialog was cancelled. | [selection](../evidence/wep-clean-8088/pack3-idlewild-vga-selection.png), [saving](../evidence/wep-clean-8088/pack3-idlewild-vga-saving.png), [awake](../evidence/wep-clean-8088/pack3-idlewild-vga-awake.png), [exit](../evidence/wep-clean-8088/pack3-idlewild-vga-exit.png) |
 
 
 ## Partial and failed configurations under investigation
@@ -123,7 +163,7 @@ A CPU error of `None` is not proof of valid 8088 execution: later instruction by
 
 | Edition / configuration | Observed limitation | Evidence |
 | --- | --- | --- |
-| Pack 2 Stones, WM88X3/VGA | Reported stone-style DLLs corrupted or missing. The style DLLs are present beside the executable; this is a loader/runtime failure, not a missing-media conclusion. | [capture](../evidence/wep-clean-8088/stones-fixed-limitation.png) |
+| Pack 2 Stones, WM88X3/VGA | Reported stone-style DLLs corrupted or missing. The style DLLs were present. The dependency discovery fix below resolved this run's loader failure; a fresh placement and exit subsequently passed. | [capture](../evidence/wep-clean-8088/stones-fixed-limitation.png) |
 | Pack 4 Chips, WM88X3/VGA | Reported insufficient memory to run CHIPS.EXE with 640 KiB beside Executive. | [capture](../evidence/wep-clean-8088/p4-chips-limitation.png) |
 | Best of Chips, WM88X3/CGA | Independently reported insufficient memory with 640 KiB beside Executive. | [capture](../evidence/wep-clean-8088/best-chips-limitation.png) |
 | Pack 4 Go Figure!, WM88X3/VGA | Produced corrupted text instead of a game window. Original VBRUN100/VBX dependencies were used; the separate converted-runtime route is not validated for this game. | [capture](../evidence/wep-clean-8088/p4-gofigure-limitation.png) |
@@ -142,4 +182,43 @@ A CPU error of `None` is not proof of valid 8088 execution: later instruction by
 
 ## Stones dependency discovery correction
 
-Stones constructs style DLL filenames from `STONE%02u.DLL` and `STONEE%02u.DLL`. The original literal-name scan missed all nine supplied styles, so their protected-mode-only header flags remained set. Discovery now expands the observed two-digit filename formats against DLLs actually present in the extracted pack. This uses the existing header-patch mechanism; no new instruction handler or module format is introduced. The [private-input regression log](../evidence/wep-clean-8088/stones-dependencies.txt) verifies all nine styles are discovered and receive that real-mode header patch. Gameplay is being retested separately.
+Stones constructs style DLL filenames from `STONE%02u.DLL` and `STONEE%02u.DLL`. The original literal-name scan missed all nine supplied styles, so their protected-mode-only header flags remained set. Discovery now expands the observed two-digit filename formats against DLLs actually present in the extracted pack. This uses the existing header-patch mechanism; no new instruction handler or module format is introduced. The [private-input regression log](../evidence/wep-clean-8088/stones-dependencies.txt) verifies all nine styles are discovered and receive that real-mode header patch. A fresh retest reached the Stones board, accepted a placement, and exited cleanly, as recorded below.
+
+
+| Edition / game | Interaction observed | Exit | Evidence |
+| --- | --- | --- | --- |
+| Pack 2 Stones (VGA), after dependency fix | Clicked a cell below the existing right-side tile. A new green north tile appeared in the cell, the queue advanced, and score increased from 0 to 2. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack2-stones-fixed-before.png), [move](../evidence/wep-clean-8088/pack2-stones-fixed-move.png), [exit](../evidence/wep-clean-8088/pack2-stones-fixed-exit.png) |
+| Edition / game | Interaction observed | Exit | Evidence |
+| --- | --- | --- | --- |
+| Pack 3 WordZap (VGA) | Selected G, E and T, then End Word. GET remained in the completed bottom tray row, the bank letters returned, and the active-word marker advanced upward. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack3-wordzap-vga-before.png), [word](../evidence/wep-clean-8088/pack3-wordzap-vga-word.png), [exit](../evidence/wep-clean-8088/pack3-wordzap-vga-exit.png) |
+
+
+## Remaining observed limitations
+
+| Edition / configuration | Observation | Evidence |
+| --- | --- | --- |
+| Pack 4 Blackjack, WM88X3/VGA | No game window after the extended launch wait; state had escaped into DOS segment 0070. Not a pass. | [capture](../evidence/wep-clean-8088/p4-blakjak-partial.png) |
+| Best of Blackjack, WM88X3/CGA | No game window in this separate launch capture. Startup remains inconclusive; no play or exit verified. | [capture](../evidence/wep-clean-8088/best-blakjak-partial.png) |
+| Best of Rodent's Revenge, converted helpers/CGA | Still Executive/hourglass after an extended 3.54-billion-cycle run and F2 attempt. No game window, move or clean exit verified. | [capture](../evidence/wep-clean-8088/best-rodent-partial.png) |
+| Pack 4 Maxwell's Maniac, WM88X3/VGA | Displayed the field and responded to input, then advanced through level-complete dialogs without a verified gate operation. Game-menu exit returned to Executive. The automatic-looking progression is not counted as a played level. | [capture](../evidence/wep-clean-8088/p4-maxwell-partial.png) |
+
+
+## Chess ENTER work and residual failure
+
+Chess has 80 reached `ENTER imm16,0` sites. The bridge now implements those sites as type 10, preserving registers and flags, pushing the guest BP, setting its frame pointer and allocating the frame. It restores saved registers before constructing the return frame so zero or small allocations cannot overwrite registers that have yet to be restored. Nonzero nesting remains unsupported. The current rebuilt WM88X3 is 3,991 bytes; libraries containing type 10 require this updated experimental bridge. Earlier interaction results used the preceding 3,835-byte bridge, except this Chess follow-up.
+
+All 800 focused original-allocation trials passed. Another focused 800-trial run exercised the original allocation, zero, one byte and a larger frame. The complete Chess site suite passed 16,978 nonoverlapping-stack trials, including 800 ENTER trials with those allocation variants. The initial full test had two memory-IMUL mismatches where random BP values made the operand overlap the interrupt/handler stack below SP. An interrupt necessarily overwrites those unallocated bytes; those are legal CPU inputs that this trap-based bridge cannot preserve. Typical Win16 allocated-local accesses avoid that region. The revised test explicitly reports and excludes those two overlaps rather than hiding them. It also asserts on remaining mismatches. This does not claim support for arbitrary code reading below SP.
+
+[Initial full log](../evidence/wep-clean-8088/chess-sites-before-stack-precondition.txt), [full result with explicit exclusions](../evidence/wep-clean-8088/chess-sites-after.txt), [focused original allocations](../evidence/wep-clean-8088/chess-enter-focused.txt), [focused allocation edges](../evidence/wep-clean-8088/chess-enter-edge.txt), [path regressions with rebuilt bridge](../evidence/wep-clean-8088/paths-with-enter.txt).
+
+The emulator got farther, reporting the missing opening book. The private fixture had retained `OPENING.BKG` and `OPENING.TX_`; the pack's setup INF specifies destination names `OPENING.BK` and `OPENING.TXT`. Supplying those names removed that error. The subsequent run went black and escaped to CS=CE5A, outside conventional RAM. Chess therefore remains a runtime failure; the ENTER handler is host-tested progress, not a verified Chess fix.
+
+[Chess failed framebuffer](../evidence/wep-clean-8088/pack4-chess-enter-runaway.png).
+
+
+## Final bridge regression
+
+The final 3,991-byte bridge also repeated Pack 1 WinMine on a fresh CGA disk. A click revealed the top-left square, and Alt+F4 returned to Executive. This is a regression check of the updated artifact, not a second edition result.
+[before](../evidence/wep-clean-8088/pack1-winmine-final-before.png) [reveal](../evidence/wep-clean-8088/pack1-winmine-final-reveal.png) [exit](../evidence/wep-clean-8088/pack1-winmine-final-exit.png) 
+
+The final [install-option tests](../evidence/wep-clean-8088/install-with-enter.txt), [Pack 3 loader reads](../evidence/wep-clean-8088/pack3-read-with-enter.txt) and [Pack 3 instruction-site tests](../evidence/wep-clean-8088/pack3-sites-with-enter.txt) passed. The last suite ran 5,500 trials, with no stack-overlap exclusions and no mismatches.

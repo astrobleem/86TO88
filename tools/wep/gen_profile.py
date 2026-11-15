@@ -96,6 +96,9 @@ def collect(specs):
                     assert len(raw) < 16
                     if op == 0x69: add(off, 9, (mrm >> 3) & 7, 0, disp & 0xFFFF, len(raw) | (ea << 4))   # imm16 is read from the code stream by the handler
                     else: add(off, 7, (mrm >> 3) & 7, imm8, disp & 0xFFFF, len(raw) | (ea << 4))
+                elif u['kind'] == 'unsup-enter' and len(raw) == 4 and raw[0] == 0xC8 and (raw[3] & 31) == 0:
+                    assert not ({off, off + 1} & chain)
+                    add(off, 10, 0, 0, struct.unpack_from('<H', raw, 1)[0], 4)
                 else:
                     print('  UNSUPPORTED', name, sg['seg'], hex(off), u['kind'], u['raw'])
     return mods, entries
