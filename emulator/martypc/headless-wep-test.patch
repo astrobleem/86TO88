@@ -1,0 +1,134 @@
+diff --git a/crates/bin/martypc_headless/src/emulator/mod.rs b/crates/bin/martypc_headless/src/emulator/mod.rs
+index bb058f5..926e9d7 100644
+--- a/crates/bin/martypc_headless/src/emulator/mod.rs
++++ b/crates/bin/martypc_headless/src/emulator/mod.rs
+@@ -243,6 +243,12 @@ impl Emulator {
+                                 }
+                             }
+                         }
++                        else if let Some(hdc) = self.machine.xtide_mut() {
++                            match hdc.set_vhd(config_drive_idx, vhd) {
++                                Ok(_) => eprintln!("Mounted XTIDE VHD {}", config_drive_idx),
++                                Err(err) => eprintln!("XTIDE mount failed: {}", err),
++                            }
++                        }
+                         else {
+                             log::error!("Couldn't load VHD: No Hard Disk Controller present!");
+                         }
+diff --git a/crates/bin/martypc_headless/src/lib.rs b/crates/bin/martypc_headless/src/lib.rs
+index 833e341..7c05aaa 100644
+--- a/crates/bin/martypc_headless/src/lib.rs
++++ b/crates/bin/martypc_headless/src/lib.rs
+@@ -734,9 +734,68 @@ pub fn run() {
+     // Start emulator
+     emu.start();
+ 
+-    // TODO: We don't have any backend to run an event loop. If we want to actually run the
+-    //       emulator now we need some way of controlling / stopping it.
+-    log::debug!("Headless operation not implemented. Exiting.");
+-
++    use marty_core::machine::{ExecutionControl, ExecutionOperation};
++    use marty_common::types::keys::MartyKey as K;
++    let mut exec = ExecutionControl::new(); exec.set_op(ExecutionOperation::Run);
++    if std::env::var("MARTY_REPL").is_ok() {
++        use std::io::{BufRead, Write};
++        eprintln!("REPL READY");
++        for line in std::io::stdin().lock().lines() {
++            let line=line.unwrap(); let a:Vec<&str>=line.split_whitespace().collect();
++            if a.is_empty() {continue;}
++            match a[0] {
++                "run" => { let n:u32=a.get(1).unwrap_or(&"1").parse().unwrap(); for _ in 0..n { emu.machine.run(100_000,&mut exec); } },
++                "key" => {
++                    let keys:Vec<K>=a[1..].iter().map(|v| match *v {
++                        "alt"=>K::AltLeft,"ctrl"=>K::ControlLeft,"shift"=>K::ShiftLeft,"enter"=>K::Enter,"esc"=>K::Escape,"tab"=>K::Tab,"space"=>K::Space,"f2"=>K::F2,"f4"=>K::F4,"up"=>K::ArrowUp,"down"=>K::ArrowDown,"left"=>K::ArrowLeft,"right"=>K::ArrowRight,"backspace"=>K::Backspace,"."=>K::Period,"\\"=>K::Backslash,";"=>K::Semicolon,
++                        "a"=>K::KeyA,"b"=>K::KeyB,"c"=>K::KeyC,"d"=>K::KeyD,"e"=>K::KeyE,"f"=>K::KeyF,"g"=>K::KeyG,"h"=>K::KeyH,"i"=>K::KeyI,"j"=>K::KeyJ,"k"=>K::KeyK,"l"=>K::KeyL,"m"=>K::KeyM,"n"=>K::KeyN,"o"=>K::KeyO,"p"=>K::KeyP,"q"=>K::KeyQ,"r"=>K::KeyR,"s"=>K::KeyS,"t"=>K::KeyT,"u"=>K::KeyU,"v"=>K::KeyV,"w"=>K::KeyW,"x"=>K::KeyX,"y"=>K::KeyY,"z"=>K::KeyZ,_=>panic!("unknown key {}",v)
++                    }).collect(); emu.machine.emit_key_sequence(&keys);
++                },
++                "mouse" => { use marty_core::devices::mouse::MouseInput; if let Some(m)=emu.machine.mouse_mut() { m.submit_input(MouseInput {delta_x:a[1].parse().unwrap(),delta_y:a[2].parse().unwrap(),left_button:a.get(3)==Some(&"1"),..Default::default()}); } },
++                "shot" => save_frame(&mut emu.machine,a.get(1).unwrap_or(&"repl.ppm")),
++                "quit" => break,
++                _ => eprintln!("UNKNOWN COMMAND")
++            }
++            eprintln!("REPL cycles={} instructions={} error={:?}",emu.machine.cpu_cycles(),emu.machine.cpu_instructions(),emu.machine.get_error_str());
++            std::io::stdout().flush().unwrap();
++        }
++        return;
++    }
++    let batches: u32 = std::env::var("MARTY_BATCHES").ok().and_then(|s| s.parse().ok()).unwrap_or(4800);
++    let game = std::env::var("MARTY_GAME").unwrap_or_default().to_uppercase();
++    let keys: Vec<K> = game.chars().filter_map(|ch| match ch {
++        'A'=>Some(K::KeyA),'B'=>Some(K::KeyB),'C'=>Some(K::KeyC),'D'=>Some(K::KeyD),'E'=>Some(K::KeyE),'F'=>Some(K::KeyF),'G'=>Some(K::KeyG),'H'=>Some(K::KeyH),'I'=>Some(K::KeyI),'J'=>Some(K::KeyJ),'K'=>Some(K::KeyK),'L'=>Some(K::KeyL),'M'=>Some(K::KeyM),'N'=>Some(K::KeyN),'O'=>Some(K::KeyO),'P'=>Some(K::KeyP),'Q'=>Some(K::KeyQ),'R'=>Some(K::KeyR),'S'=>Some(K::KeyS),'T'=>Some(K::KeyT),'U'=>Some(K::KeyU),'V'=>Some(K::KeyV),'W'=>Some(K::KeyW),'X'=>Some(K::KeyX),'Y'=>Some(K::KeyY),'Z'=>Some(K::KeyZ),_=>None }).collect();
++    for n in 0..batches {
++        if !game.is_empty() {
++            if n==3000 { emu.machine.emit_key_sequence(&[K::AltLeft,K::KeyF]); }
++            if n==3020 { emu.machine.emit_key_sequence(&[K::KeyR]); }
++            if n>=3040 && n<3040+keys.len() as u32*20 && (n-3040)%20==0 { let i=((n-3040)/20) as usize; emu.machine.emit_key_sequence(&[keys[i]]); }
++            if n==3400 { emu.machine.emit_key_sequence(&[K::Enter]); }
++            if n==4000 { save_frame(&mut emu.machine,"initial.ppm"); }
++            if std::env::var("MARTY_MOUSE").is_ok() {
++                use marty_core::devices::mouse::MouseInput;
++                let pos = match n { 4050 => Some((-1200.0,-1200.0,false)), 4100 => Some((420.0,100.0,false)), 4200 => Some((0.0,0.0,true)), 4250 => Some((0.0,0.0,false)), _ => None };
++                if let Some((x,y,b))=pos { if let Some(m)=emu.machine.mouse_mut() { m.submit_input(MouseInput { delta_x:x, delta_y:y, left_button:b, ..Default::default() }); } }
++                if n==4150 { save_frame(&mut emu.machine,"mouse-position.ppm"); }
++            } else if n==4100 { emu.machine.emit_key_sequence(&[K::F2]); }
++            if n==4350 { save_frame(&mut emu.machine,"after-f2.ppm"); }
++            if n==4400 { emu.machine.emit_key_sequence(&[K::AltLeft,K::F4]); }
++            if n==4700 { save_frame(&mut emu.machine,"after-exit.ppm"); }
++        }
++        emu.machine.run(100_000, &mut exec);
++        if n % 500 == 0 { eprintln!("MARTY_BATCH {}", n); }
++    }
++    save_frame(&mut emu.machine,"frame.ppm");
+     std::process::exit(0);
+ }
++
++fn save_frame(machine: &mut marty_core::machine::Machine, name: &str) {
++ use std::io::Write;
++ if let Some(vc) = machine.primary_videocard() {
++  let ext=vc.display_extents(); let w=ext.row_stride; let buf=vc.display_buf(); let h=buf.len()/w;
++  let mut out=std::fs::File::create(name).unwrap();write!(out,"P6\n{} {}\n255\n",w,h).unwrap();
++  let pal:[[u8;3];16]=[[0,0,0],[0,0,170],[0,170,0],[0,170,170],[170,0,0],[170,0,170],[170,85,0],[170,170,170],[85,85,85],[85,85,255],[85,255,85],[85,255,255],[255,85,85],[255,85,255],[255,255,85],[255,255,255]];
++  for y in 0..h { for x in 0..w { let i=y*w+x; let c=buf.get(i).copied().unwrap_or(0) as usize & 15; out.write_all(&pal[c]).unwrap(); } }
++  eprintln!("SAVED {} {}x{}",name,w,h);
++ }
++}
+diff --git a/crates/bin/martypc_headless/src/main.rs b/crates/bin/martypc_headless/src/main.rs
+index 18ae7dc..d115f87 100644
+--- a/crates/bin/martypc_headless/src/main.rs
++++ b/crates/bin/martypc_headless/src/main.rs
+@@ -1,34 +1 @@
+-/*
+-    MartyPC
+-    https://github.com/dbalsom/martypc
+-
+-    Copyright 2022-2026 Daniel Balsom
+-
+-    Permission is hereby granted, free of charge, to any person obtaining a
+-    copy of this software and associated documentation files (the “Software”),
+-    to deal in the Software without restriction, including without limitation
+-    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+-    and/or sell copies of the Software, and to permit persons to whom the
+-    Software is furnished to do so, subject to the following conditions:
+-
+-    The above copyright notice and this permission notice shall be included in
+-    all copies or substantial portions of the Software.
+-
+-    THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+-    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+-    DEALINGS IN THE SOFTWARE.
+-
+-    --------------------------------------------------------------------------
+-*/
+-
+-//! Main binary entrypoint for this front end.
+-
+-use martypc_headless::run;
+-
+-pub fn main() {
+-    run();
+-}
++fn main() { martypc_headless::run(); }

@@ -1,5 +1,7 @@
 # Entertainment Pack: preliminary MartyPC 8088 runs
 
+**Later follow-up:** [Clean interaction tests](WEP-CLEAN-8088.md) verified a legal Pegged move and exit on the 8088. The single-pass observations below describe the earlier setup.
+
 These are individual, incomplete experiments, not completed compatibility results. None has a verified player move. Additional runs and dependency isolation are needed.
 
 ## Setup and evidence
