@@ -16,10 +16,18 @@ index bb058f5..926e9d7 100644
                              log::error!("Couldn't load VHD: No Hard Disk Controller present!");
                          }
 diff --git a/crates/bin/martypc_headless/src/lib.rs b/crates/bin/martypc_headless/src/lib.rs
-index 833e341..7c05aaa 100644
+index 833e341..1a158a3 100644
 --- a/crates/bin/martypc_headless/src/lib.rs
 +++ b/crates/bin/martypc_headless/src/lib.rs
-@@ -734,9 +734,68 @@ pub fn run() {
+@@ -58,6 +58,7 @@ use crate::cpu_test::run_tests::run_runtests;
+ 
+ use marty_common::types::keys::MartyKey;
+ use marty_config::TestMode;
++use marty_core::cpu_common::Cpu;
+ 
+ use marty_core::{devices::keyboard_common::KeyboardModifiers, machine::MachineBuilder, supported_floppy_extensions};
+ 
+@@ -734,9 +735,73 @@ pub fn run() {
      // Start emulator
      emu.start();
  
@@ -46,6 +54,11 @@ index 833e341..7c05aaa 100644
 +                },
 +                "mouse" => { use marty_core::devices::mouse::MouseInput; if let Some(m)=emu.machine.mouse_mut() { m.submit_input(MouseInput {delta_x:a[1].parse().unwrap(),delta_y:a[2].parse().unwrap(),left_button:a.get(3)==Some(&"1"),..Default::default()}); } },
 +                "shot" => save_frame(&mut emu.machine,a.get(1).unwrap_or(&"repl.ppm")),
++                "dump" => emu.machine.bus().dump_mem(std::path::Path::new(a.get(1).unwrap_or(&"memory.bin"))),
++                "step" => {let n:u32=a.get(1).unwrap_or(&"1").parse().unwrap();for _ in 0..n {emu.machine.run(1,&mut exec);} },
++                "watch" => { use marty_core::cpu_common::{Register16,CpuOption};emu.machine.set_cpu_option(CpuOption::InstructionHistory(true));let n:u32=a.get(1).unwrap_or(&"1000000").parse().unwrap();for i in 0..n {emu.machine.run(1,&mut exec);if (a.len()<4 && emu.machine.cpu().get_register16(Register16::CS)==0) || (a.len()>=4 && emu.machine.cpu().get_register16(Register16::CS)==u16::from_str_radix(a[2],16).unwrap() && emu.machine.cpu_mut().get_ip()==u16::from_str_radix(a[3],16).unwrap()) {emu.machine.bus().dump_mem(std::path::Path::new("zero-cs-memory.bin"));eprintln!("ZERO CS at step {}",i);eprintln!("{}",emu.machine.cpu().dump_instruction_history_string());break;}} },
++                "profile" => { use marty_core::cpu_common::Register16; let mut counts=std::collections::HashMap::new();let n:u32=a.get(1).unwrap_or(&"100").parse().unwrap();for _ in 0..n {emu.machine.run(100_000,&mut exec);let cpu=emu.machine.cpu_mut();*counts.entry((cpu.get_register16(Register16::CS),cpu.get_ip())).or_insert(0u32)+=1;}let mut rows:Vec<_>=counts.into_iter().collect();rows.sort_by_key(|v|std::cmp::Reverse(v.1));for ((cs,ip),n) in rows.iter().take(16) {eprintln!("PC {:04X}:{:04X} {}",cs,ip,n);} },
++                "state" => { eprintln!("{:?}",emu.machine.cpu_mut().get_string_state()); },
 +                "quit" => break,
 +                _ => eprintln!("UNKNOWN COMMAND")
 +            }

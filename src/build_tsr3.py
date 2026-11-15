@@ -773,6 +773,11 @@ bl_back:
  DEC CX
  JMP bl_back
 bl_start:
+ ; CX is the prefix length left after scanning backwards. Convert it to
+ ; the basename length before the forward copy (also works without a path).
+ MOV AX, CS:[o_len]
+ SUB AX, CX
+ MOV CX, AX
  MOV DI, CS:[libend]
  XOR BX, BX
 bl_copy:
