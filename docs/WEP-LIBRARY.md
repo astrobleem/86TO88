@@ -1,5 +1,7 @@
 # Entertainment Pack games on a stock 8088: the module library
 
+**Latest 8088 follow-up:** [Clean interaction tests and short-path module lookup fix](WEP-CLEAN-8088.md). The inventory and historical results below are retained as an earlier record.
+
 Technical notes. The README links here; nothing in it depends on this file.
 
 **Fresh follow-up:** [DOSBox-X 8086-prefetch diagnostics](WEP-FRESH-DOSBOXX.md) are available separately; they are incomplete and are not MartyPC 8088 or physical-hardware results.

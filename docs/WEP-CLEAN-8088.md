@@ -38,3 +38,26 @@ These runs still use the stock emulated Intel 8088 CPU core and CGA, with the re
 | Pack 3 TetraVex | Dragged the top-left tile from the right tray into the top-left empty board square; the source tray position became empty. | Alt+F4 returned to Executive; no reported CPU error. | [before](../evidence/wep-clean-8088/pack3-tetravex-before.png), [tile moved](../evidence/wep-clean-8088/pack3-tetravex-move.png), [exit](../evidence/wep-clean-8088/pack3-tetravex-exit.png) |
 
 Pegged's legal move and exit were also repeated successfully from another fresh boot before the bridge fix: [repeated move](../evidence/wep-clean-8088/pack1-pegged-repeat-move.png), [repeated exit](../evidence/wep-clean-8088/pack1-pegged-repeat-exit.png). None of these observations claims a completed game or validates a different pack's executable.
+
+| Edition / game | Interaction observed | Exit | Evidence |
+| --- | --- | --- | --- |
+| Pack 1 TicTactics | A click placed a playing piece in the top board plane. Lower planes extend beyond the CGA viewport. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack1-tictactics-before.png), [piece placed](../evidence/wep-clean-8088/pack1-tictactics-move.png), [exit](../evidence/wep-clean-8088/pack1-tictactics-exit.png) |
+| Pack 4 JezzBall | A click built a wall, cleared the right part of the field and increased the score from 0 to 2,100. The bottom of the field is clipped on CGA. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack4-jezzball-before.png), [wall and score](../evidence/wep-clean-8088/pack4-jezzball-move.png), [exit](../evidence/wep-clean-8088/pack4-jezzball-exit.png) |
+
+Pack 1 Taipei reached a dealt board after F2 with the fixed bridge, but no tile pair or clean exit was verified in this CGA run. Its menu and some of the board extend beyond the viewport; it remains partial.
+
+| Edition / game | Interaction observed | Exit | Evidence |
+| --- | --- | --- | --- |
+| Pack 3 LifeGenesis | A mouse click added a live cell; the cell count changed from 0 to 1. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack3-lifegen-before.png), [live cell](../evidence/wep-clean-8088/pack3-lifegen-move.png), [exit](../evidence/wep-clean-8088/pack3-lifegen-exit.png) |
+| Pack 3 SkiFree | The down key started skiing. Distance reached 953 m, speed 13 m/s, and the slope/character moved. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack3-skifree-before.png), [skiing](../evidence/wep-clean-8088/pack3-skifree-move.png), [exit](../evidence/wep-clean-8088/pack3-skifree-exit.png) |
+| Pack 2 Pipe Dream | A mouse click placed a pipe in the play field and advanced the pipe queue. The lower field is clipped on CGA. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack2-pipe-before.png), [pipe placed](../evidence/wep-clean-8088/pack2-pipe-move.png), [exit](../evidence/wep-clean-8088/pack2-pipe-exit.png) |
+
+## VGA follow-up for a game that rejects CGA
+
+Pack 1 Tetris 2.00 runs with the existing source-built VGA88.DRV from `astrobleem/windows-3-vga-8088` at revision `427ff8db22fdb60b59d40ab847fd513e36bc2a0f`. This remains MartyPC's stock Intel 8088 CPU core, 640 KiB and Windows 3.0 real mode. The video configuration is VGA plus the bundled open Bochs VGA ROM; original Windows 3.0 VGA fonts and the real-mode grabber are installed. The headless frontend must be built with `--features marty_frontend_common/vga` and configured with the `ibm_vga` overlay. CGA results above use the CGA driver instead.
+
+VGA framebuffers are native 32-bit RGBA, so the capture helper exports their RGB bytes directly; CGA uses its 16-color palette. The Tetris PNGs crop only the hardware-defined active VGA aperture at (96,32), 640x480; the complete raw framebuffer includes blanking/debug margins. They are not generated or reconstructed game scenes.
+
+| Edition / game | Interaction observed | Exit | Evidence |
+| --- | --- | --- | --- |
+| Pack 1 Tetris | Left-arrow input shifted the falling T piece left. Space dropped it into the stack; score increased from 108 to 142. | In a fresh repeat, Alt+F4 opened the confirmation; Enter accepted Yes and returned to Executive. | [before](../evidence/wep-clean-8088/pack1-tetris-vga-before.png), [moved left](../evidence/wep-clean-8088/pack1-tetris-vga-left.png), [drop and score](../evidence/wep-clean-8088/pack1-tetris-vga-drop.png), [confirmed exit](../evidence/wep-clean-8088/pack1-tetris-vga-exit.png) |

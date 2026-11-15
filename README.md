@@ -233,7 +233,7 @@ A stock Windows 3.0 install crashes on a real 8088 because its own EGA display d
 80186 instructions, not because of the bridge. Details and evidence are in
 [docs/STOCK-8088.md](docs/STOCK-8088.md).
 
-**New diagnostics:** [Fresh DOSBox-X 8086-prefetch attempts](docs/WEP-FRESH-DOSBOXX.md) cover Pack 1, the seven Pack 4 titles and Best of RODENT. These are incomplete, configuration-specific results; gameplay moves remain unverified, and they do not establish 8088 compatibility.
+**Fresh 8088 tests:** [Clean Entertainment Pack interaction tests](docs/WEP-CLEAN-8088.md) document a short-path module lookup fix and actual gameplay inputs and clean exits on MartyPC's Intel 8088 core. The edition pass remains incomplete. [Earlier DOSBox-X diagnostics](docs/WEP-FRESH-DOSBOXX.md) use an emulated 8086 and remain separate.
 
 ### More games: the Entertainment Packs — complete inventory
 
@@ -324,10 +324,10 @@ slow. No 80186-only opcode was observed executing in the tested scenarios;
 untested paths and other applications are not thereby proved compatible.
 
 **Do all Entertainment Pack games work? Not established.** See the
-[44-entry coverage matrix](docs/WEP-COVERAGE.md). Pack 4 remains completely
-untested here; Pack 2 Stones and Best of Blackjack and Chips previously failed,
-and the Best of RODENT edition has not been retested with the new runtime.
-Most other games have only earlier startup-level `WM88X3` evidence. The
+[historical 44-entry inventory](docs/WEP-COVERAGE.md) and
+[current 8088 interaction tests](docs/WEP-CLEAN-8088.md). The new tests
+verify selected edition-specific gameplay inputs and exits, including Pack 4
+JezzBall; the remaining editions and prior failures still need validation. The
 converter is experimental, not an all-games guarantee, and mixed runtime/TSR
 configurations also need testing (including INT 3 handler unload order).
 

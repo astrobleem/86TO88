@@ -16,7 +16,7 @@ index bb058f5..926e9d7 100644
                              log::error!("Couldn't load VHD: No Hard Disk Controller present!");
                          }
 diff --git a/crates/bin/martypc_headless/src/lib.rs b/crates/bin/martypc_headless/src/lib.rs
-index 833e341..1a158a3 100644
+index 833e341..63a42ff 100644
 --- a/crates/bin/martypc_headless/src/lib.rs
 +++ b/crates/bin/martypc_headless/src/lib.rs
 @@ -58,6 +58,7 @@ use crate::cpu_test::run_tests::run_runtests;
@@ -98,10 +98,10 @@ index 833e341..1a158a3 100644
 +fn save_frame(machine: &mut marty_core::machine::Machine, name: &str) {
 + use std::io::Write;
 + if let Some(vc) = machine.primary_videocard() {
-+  let ext=vc.display_extents(); let w=ext.row_stride; let buf=vc.display_buf(); let h=buf.len()/w;
++  let ext=vc.display_extents(); let w=ext.row_stride; let buf=vc.display_buf(); let rgba=vc.render_depth()==marty_core::device_traits::videocard::RenderBpp::ThirtyTwo; let h=buf.len()/w/if rgba {4} else {1};
 +  let mut out=std::fs::File::create(name).unwrap();write!(out,"P6\n{} {}\n255\n",w,h).unwrap();
 +  let pal:[[u8;3];16]=[[0,0,0],[0,0,170],[0,170,0],[0,170,170],[170,0,0],[170,0,170],[170,85,0],[170,170,170],[85,85,85],[85,85,255],[85,255,85],[85,255,255],[255,85,85],[255,85,255],[255,255,85],[255,255,255]];
-+  for y in 0..h { for x in 0..w { let i=y*w+x; let c=buf.get(i).copied().unwrap_or(0) as usize & 15; out.write_all(&pal[c]).unwrap(); } }
++  for y in 0..h { for x in 0..w { let i=y*w+x; if rgba {out.write_all(&buf[i*4..i*4+3]).unwrap();} else {let c=buf.get(i).copied().unwrap_or(0) as usize & 15; out.write_all(&pal[c]).unwrap();} } }
 +  eprintln!("SAVED {} {}x{}",name,w,h);
 + }
 +}
