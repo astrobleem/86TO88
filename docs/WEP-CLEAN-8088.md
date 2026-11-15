@@ -61,3 +61,8 @@ VGA framebuffers are native 32-bit RGBA, so the capture helper exports their RGB
 | Edition / game | Interaction observed | Exit | Evidence |
 | --- | --- | --- | --- |
 | Pack 1 Tetris | Left-arrow input shifted the falling T piece left. Space dropped it into the stack; score increased from 108 to 142. | In a fresh repeat, Alt+F4 opened the confirmation; Enter accepted Yes and returned to Executive. | [before](../evidence/wep-clean-8088/pack1-tetris-vga-before.png), [moved left](../evidence/wep-clean-8088/pack1-tetris-vga-left.png), [drop and score](../evidence/wep-clean-8088/pack1-tetris-vga-drop.png), [confirmed exit](../evidence/wep-clean-8088/pack1-tetris-vga-exit.png) |
+
+| Edition / game | Interaction observed | Exit | Evidence |
+| --- | --- | --- | --- |
+| Pack 2 FreeCell (VGA) | Moved the ten of diamonds from a tableau column to the first free cell. The exposed ace of hearts also moved automatically to a foundation; Cards Left changed from 52 to 51. | Alt+F4 displayed “You resign”; Enter dismissed it and returned to Executive. | [before](../evidence/wep-clean-8088/pack2-freecell-vga-before.png), [card moved](../evidence/wep-clean-8088/pack2-freecell-vga-move.png), [exit](../evidence/wep-clean-8088/pack2-freecell-vga-exit.png) |
+| Pack 2 Tut's Tomb (VGA) | Clicking the stock dealt three face-up waste cards. This is a stock draw during play, not a new deal; no tableau pair was removed. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack2-tutstomb-vga-before.png), [stock drawn](../evidence/wep-clean-8088/pack2-tutstomb-vga-move.png), [exit](../evidence/wep-clean-8088/pack2-tutstomb-vga-exit.png) |
