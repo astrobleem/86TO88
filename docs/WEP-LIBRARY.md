@@ -2,6 +2,10 @@
 
 Technical notes. The README links here; nothing in it depends on this file.
 
+**Fresh follow-up:** [DOSBox-X 8086-prefetch diagnostics](WEP-FRESH-DOSBOXX.md) are available separately; they are incomplete and are not MartyPC 8088 or physical-hardware results.
+
+
+
 **Historical test record, not a current all-pack pass claim.** This report describes
 the earlier `WM88X3` module-library tests. Since then, the separate `vbrun/`
 converter brought the Pack 2 JIGSAWED, RATTLER, RODENT and PIPE executables
