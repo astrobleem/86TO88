@@ -1,6 +1,6 @@
 # Entertainment Pack compatibility coverage — edition-specific audit
 
-**Fresh follow-up:** [DOSBox-X 8086-prefetch diagnostics](WEP-FRESH-DOSBOXX.md) attempted all seven Pack 4 editions and Best of RODENT. These single-run observations are incomplete and do not establish 8088 compatibility. The historical inventory and counts below describe the earlier audit.
+**Fresh follow-up:** [DOSBox-X 8086-prefetch diagnostics](WEP-FRESH-DOSBOXX.md) attempted all Pack 1 and Pack 4 editions and Best of RODENT. These single-run observations are incomplete and do not establish 8088 compatibility. The historical inventory and counts below describe the earlier audit.
 
 **Status as of November 14, 2026.** This inventory was checked against the user's uploaded Pack 1, Pack 2, Pack 3, Pack 4 floppy images and *Best of* ZIP. It covers **44 pack-specific executable/screen-saver entries representing 29 distinct titles** (28 games and IdleWild). Installers and support DLLs are not counted as games.
 

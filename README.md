@@ -233,7 +233,7 @@ A stock Windows 3.0 install crashes on a real 8088 because its own EGA display d
 80186 instructions, not because of the bridge. Details and evidence are in
 [docs/STOCK-8088.md](docs/STOCK-8088.md).
 
-**New diagnostics:** [Fresh DOSBox-X 8086-prefetch attempts](docs/WEP-FRESH-DOSBOXX.md) cover the seven Pack 4 titles and Best of RODENT. These are incomplete, configuration-specific results; gameplay and clean exits were not verified, and they do not establish 8088 compatibility.
+**New diagnostics:** [Fresh DOSBox-X 8086-prefetch attempts](docs/WEP-FRESH-DOSBOXX.md) cover Pack 1, the seven Pack 4 titles and Best of RODENT. These are incomplete, configuration-specific results; gameplay moves remain unverified, and they do not establish 8088 compatibility.
 
 ### More games: the Entertainment Packs — complete inventory
 

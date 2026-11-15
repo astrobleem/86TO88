@@ -1,7 +1,9 @@
 # Fresh Entertainment Pack diagnostics — 14 November 2026
 
 **Incomplete.** These are new attempts, not a complete compatibility pass. No
-fresh interactive gameplay or clean game exit was established. The remaining
+fresh card move or complete gameplay was established. Golf and Cruel accepted
+new-deal commands and exited to Windows. All eight Pack 1 entries were also
+attempted. The remaining
 entries in the [edition inventory](WEP-COVERAGE.md) have not been freshly run
 in this session. Historical MartyPC results remain separate.
 
@@ -29,6 +31,29 @@ Some Pack 4 module generation reported unsupported instructions, including
 proof that all code was translated. In particular, the following single-run
 observations have not yet been repeated or isolated enough to call them
 reproducible game defects.
+
+## Pack 1 follow-up
+
+Same DOSBox-X 8086-prefetch/CGA configuration, with a Pack 1-specific WM88X3
+module library and the Pack 1 files. Windows reached MS-DOS Executive before
+launches. These are single attempts and are not 8088 claims.
+
+| Executable | Observation | Input / exit | Evidence |
+| --- | --- | --- | --- |
+| GOLF.EXE | Dealt board, clipped by the CGA display | Game > New dealt a different board; exited to Windows. No card move verified. | [screen](../evidence/wep-20261114/pack1-golf-8086-cga.png) |
+| CRUEL.EXE | Dealt board, clipped by the CGA display | Game > New dealt a different board; exited to Windows. No card move verified. | [screen](../evidence/wep-20261114/pack1-cruel-8086-cga.png) |
+| TETRIS.EXE | Reported insufficient monitor resolution | No gameplay | [screen](../evidence/wep-20261114/pack1-tetris-8086-cga.png) |
+| PEGGED.EXE | ROM BASIC message loop after launch | No gameplay or exit observed | [screen](../evidence/wep-20261114/pack1-pegged-8086-cga.png) |
+| WINMINE.EXE | ROM BASIC message after launch | No gameplay or exit observed | [screen](../evidence/wep-20261114/pack1-winmine-8086-cga.png) |
+| TIC.EXE | ROM BASIC message after launch | No gameplay or exit observed | [screen](../evidence/wep-20261114/pack1-tictactics-8086-cga.png) |
+| TP.EXE | ROM BASIC message loop after launch | No gameplay or exit observed | [screen](../evidence/wep-20261114/pack1-taipei-8086-cga.png) |
+| IDLEWILD.EXE | ROM BASIC message after launch | No saver operation or exit observed | [screen](../evidence/wep-20261114/pack1-idlewild-8086-cga.png) |
+
+[Pack 1 contact sheet](../evidence/wep-20261114/pack1-contact-sheet.png).
+
+The ROM BASIC messages are emulator outcomes, not diagnoses of the specific
+cause. In particular, the runs need repetition on MartyPC and examination of
+module and memory behavior before being treated as reproducible failures.
 
 ## Observed results
 
