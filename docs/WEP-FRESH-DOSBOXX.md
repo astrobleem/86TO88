@@ -7,6 +7,8 @@ attempted. The remaining
 entries in the [edition inventory](WEP-COVERAGE.md) have not been freshly run
 in this session. Historical MartyPC results remain separate.
 
+Later separate 8088 launch attempts and their limitations are recorded in [WEP-MARTY-8088.md](WEP-MARTY-8088.md). The inventory statement above describes only this earlier DOSBox-X pass.
+
 ## Configuration
 
 DOSBox-X 2025.02.01, `cputype=8086_prefetch`, CGA, 640 KiB conventional
