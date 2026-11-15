@@ -66,3 +66,21 @@ VGA framebuffers are native 32-bit RGBA, so the capture helper exports their RGB
 | --- | --- | --- | --- |
 | Pack 2 FreeCell (VGA) | Moved the ten of diamonds from a tableau column to the first free cell. The exposed ace of hearts also moved automatically to a foundation; Cards Left changed from 52 to 51. | Alt+F4 displayed “You resign”; Enter dismissed it and returned to Executive. | [before](../evidence/wep-clean-8088/pack2-freecell-vga-before.png), [card moved](../evidence/wep-clean-8088/pack2-freecell-vga-move.png), [exit](../evidence/wep-clean-8088/pack2-freecell-vga-exit.png) |
 | Pack 2 Tut's Tomb (VGA) | Clicking the stock dealt three face-up waste cards. This is a stock draw during play, not a new deal; no tableau pair was removed. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack2-tutstomb-vga-before.png), [stock drawn](../evidence/wep-clean-8088/pack2-tutstomb-vga-move.png), [exit](../evidence/wep-clean-8088/pack2-tutstomb-vga-exit.png) |
+
+| Edition / game | Interaction observed | Exit | Evidence |
+| --- | --- | --- | --- |
+| Pack 3 Klotski (CGA) | Selected Level 1 / Daisy, entered a test name, and dragged a small block downward into an empty bottom-center square. The old square became empty. | A fresh repeat used Game > Exit and returned to Executive. The earlier Alt+F4 attempt did not close the game. | [before](../evidence/wep-clean-8088/pack3-klotski-before.png), [block moved](../evidence/wep-clean-8088/pack3-klotski-move.png), [menu exit](../evidence/wep-clean-8088/pack3-klotski-exit.png) |
+
+| Edition / game | Interaction observed | Exit | Evidence |
+| --- | --- | --- | --- |
+| Pack 3 TriPeaks (VGA) | Played the exposed three of diamonds onto the waste four of diamonds. The tableau card disappeared, the waste became three of diamonds, and Won increased from $0 to $1. | Alt+F4 opened its penalty confirmation; accepting Yes returned to Executive. | [before](../evidence/wep-clean-8088/pack3-tripeaks-vga-before.png), [card played](../evidence/wep-clean-8088/pack3-tripeaks-vga-move.png), [confirmed exit](../evidence/wep-clean-8088/pack3-tripeaks-vga-exit.png) |
+
+## Independent Best of edition checks
+
+The Best of executables were launched separately with that edition's original helpers and generated module library. A result from an earlier pack was not reused as its execution result.
+
+| Edition / game | Interaction observed | Exit | Evidence |
+| --- | --- | --- | --- |
+| Best of TetraVex (CGA) | Moved the top-left right-tray tile into the top-left empty board square. Its tray position became empty. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/bestof-tetravex-before.png), [tile moved](../evidence/wep-clean-8088/bestof-tetravex-move.png), [exit](../evidence/wep-clean-8088/bestof-tetravex-exit.png) |
+| Best of SkiFree (CGA) | The down key started skiing; the scene moved and distance reached 979 m at 9 m/s. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/bestof-skifree-before.png), [skiing](../evidence/wep-clean-8088/bestof-skifree-move.png), [exit](../evidence/wep-clean-8088/bestof-skifree-exit.png) |
+| Best of JezzBall (CGA) | A click completed a vertical wall and increased the score from 0 to 140. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/bestof-jezzball-before.png), [wall and score](../evidence/wep-clean-8088/bestof-jezzball-move.png), [exit](../evidence/wep-clean-8088/bestof-jezzball-exit.png) |
