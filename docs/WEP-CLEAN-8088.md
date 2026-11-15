@@ -92,3 +92,54 @@ The Best of executables were launched separately with that edition's original he
 | Best of Tut's Tomb (VGA) | Drew three face-up waste cards from the stock during play. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/bestof-tutstomb-vga-before.png), [action](../evidence/wep-clean-8088/bestof-tutstomb-vga-action.png), [exit](../evidence/wep-clean-8088/bestof-tutstomb-vga-exit.png) |
 
 | Pack 3 Fuji Golf (VGA) | Started a round, activated Backswing/Hit Ball, and registered strokes. The shot counter advanced to fourth shot; distance to cup stayed 460 yards. Ball travel and completion of a hole were not verified. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack3-fujigolf-vga-before.png), [action](../evidence/wep-clean-8088/pack3-fujigolf-vga-action.png), [exit](../evidence/wep-clean-8088/pack3-fujigolf-vga-exit.png) |
+
+| Pack 1 Golf (VGA) | Played the exposed ten of hearts onto the waste nine of diamonds. Its tableau column then exposed the ten of diamonds. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack1-golf-vga-before.png), [move](../evidence/wep-clean-8088/pack1-golf-vga-move.png), [exit](../evidence/wep-clean-8088/pack1-golf-vga-exit.png) |
+
+| Pack 1 Cruel (VGA) | Dragged the two of spades onto the ace-of-spades foundation. The foundation became two of spades and its source exposed the queen of clubs. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/pack1-cruel-vga-before.png), [move](../evidence/wep-clean-8088/pack1-cruel-vga-move.png), [exit](../evidence/wep-clean-8088/pack1-cruel-vga-exit.png) |
+
+| Pack 1 Taipei (VGA) | Requested a hint, then clicked the matching highlighted bamboo pair on the upper-right side. Both tiles disappeared, revealing the tiles below. | Game > Exit returned to Executive. | [before](../evidence/wep-clean-8088/pack1-taipei-vga-before.png), [move](../evidence/wep-clean-8088/pack1-taipei-vga-move.png), [exit](../evidence/wep-clean-8088/pack1-taipei-vga-exit.png) |
+
+| Best of Golf (VGA) | Drew from the stock; the visible waste changed and the stock count decreased from 16 to 15. | Alt+F4 returned to Executive. | [before](../evidence/wep-clean-8088/bestof-golf-vga-before.png), [move](../evidence/wep-clean-8088/bestof-golf-vga-move.png), [exit](../evidence/wep-clean-8088/bestof-golf-vga-exit.png) |
+
+| Best of TriPeaks (VGA) | Drew a card from the stock; Cards Left decreased from 23 to 22 and the waste became seven of hearts. | Alt+F4 returned to Executive; Enter accepted the confirmation. | [before](../evidence/wep-clean-8088/bestof-tripeaks-vga-before.png), [move](../evidence/wep-clean-8088/bestof-tripeaks-vga-move.png), [exit](../evidence/wep-clean-8088/bestof-tripeaks-vga-exit.png) |
+
+| Best of Tetris (VGA) | Sent left-arrow input and a space drop during an active game. The dropped piece joined the stack and score reached 178. | Alt+F4 returned to Executive; Enter accepted the confirmation. | [before](../evidence/wep-clean-8088/bestof-tetris-vga-before.png), [move](../evidence/wep-clean-8088/bestof-tetris-vga-move.png), [exit](../evidence/wep-clean-8088/bestof-tetris-vga-exit.png) |
+
+
+## Screen-saver operation
+
+These are saver selection, activation, wake and termination checks, not game tests.
+
+| Edition / saver | Observed | Exit | Evidence |
+| --- | --- | --- | --- |
+| Pack 1 IdleWild (VGA) | Selected Dancing Lines drew colored lines on the black screen; Escape restored its settings window. | Alt+F4 closed IdleWild. | [selection](../evidence/wep-clean-8088/pack1-idlewild-vga-selection.png), [saving](../evidence/wep-clean-8088/pack1-idlewild-vga-saving.png), [awake](../evidence/wep-clean-8088/pack1-idlewild-vga-awake.png), [exit](../evidence/wep-clean-8088/pack1-idlewild-vga-exit.png) |
+| Pack 2 IdleWild (VGA) | Selected Bricks overlaid the desktop with its masonry grid; Escape woke the desktop and minimized IdleWild. | Restored the minimized icon, then Options > Exit terminated IdleWild. The initial Alt+F4 targeted Executive; its End Session dialog was cancelled. | [selection](../evidence/wep-clean-8088/pack2-idlewild-vga-selection.png), [saving](../evidence/wep-clean-8088/pack2-idlewild-vga-saving.png), [awake](../evidence/wep-clean-8088/pack2-idlewild-vga-awake.png), [exit](../evidence/wep-clean-8088/pack2-idlewild-vga-exit.png) |
+| Pack 3 IdleWild (VGA) | Selected Boat Race animated boats on a black screen; Escape woke the desktop and minimized IdleWild. | Restored the minimized icon, then Options > Exit terminated IdleWild. The initial Alt+F4 targeted Executive; its End Session dialog was cancelled. | [selection](../evidence/wep-clean-8088/pack3-idlewild-vga-selection.png), [saving](../evidence/wep-clean-8088/pack3-idlewild-vga-saving.png), [awake](../evidence/wep-clean-8088/pack3-idlewild-vga-awake.png), [exit](../evidence/wep-clean-8088/pack3-idlewild-vga-exit.png) |
+
+
+## Partial and failed configurations under investigation
+
+A CPU error of `None` is not proof of valid 8088 execution: later instruction bytes can alias original 8088 instructions and run into unrelated code. These rows are not passes.
+
+| Edition / configuration | Observed limitation | Evidence |
+| --- | --- | --- |
+| Pack 2 Stones, WM88X3/VGA | Reported stone-style DLLs corrupted or missing. The style DLLs are present beside the executable; this is a loader/runtime failure, not a missing-media conclusion. | [capture](../evidence/wep-clean-8088/stones-fixed-limitation.png) |
+| Pack 4 Chips, WM88X3/VGA | Reported insufficient memory to run CHIPS.EXE with 640 KiB beside Executive. | [capture](../evidence/wep-clean-8088/p4-chips-limitation.png) |
+| Best of Chips, WM88X3/CGA | Independently reported insufficient memory with 640 KiB beside Executive. | [capture](../evidence/wep-clean-8088/best-chips-limitation.png) |
+| Pack 4 Go Figure!, WM88X3/VGA | Produced corrupted text instead of a game window. Original VBRUN100/VBX dependencies were used; the separate converted-runtime route is not validated for this game. | [capture](../evidence/wep-clean-8088/p4-gofigure-limitation.png) |
+| Pack 4 Tic Tac Drop, WM88X3/VGA | Produced corrupted text instead of a game window. Original VBRUN100/VBX dependencies were used; CMDIALOG.VBX also has unsupported ES-prefixed memory-IMUL sites. | [capture](../evidence/wep-clean-8088/p4-tictacdp-limitation.png) |
+| Pack 2 RattleRace, converted helpers/VGA, no WM88X3 | Stayed on the Executive/hourglass frame and reached CS=FFFF, IP=000F with execution counters no longer advancing. The CGA run had displayed its window and exited, but play was not verified. | [capture](../evidence/wep-clean-8088/rattler-vga-limitation.png) |
+| Pack 2 Rodent's Revenge, converted helpers/VGA, no WM88X3 | Displayed the DOS fatal internal stack failure message instead of a playable window. CGA startup and exit succeeded separately; no visible move verified. | [capture](../evidence/wep-clean-8088/rodent-vga-limitation.png) |
+| Pack 2 Jigsawed, converted helpers/VGA, no WM88X3 | Produced corrupted text and reached CS=0000 rather than a playable puzzle. The CGA wait also did not establish gameplay. | [capture](../evidence/wep-clean-8088/jigsawed-vga-limitation.png) |
+
+
+## Additional Best of result
+
+| Edition / game | Interaction observed | Exit | Evidence |
+| --- | --- | --- | --- |
+| Best of Taipei (VGA) | Requested a hint, then removed the highlighted matching two-character tiles on the right edge. The spaces exposed the tiles below. | Game > Exit returned to Executive. | [before](../evidence/wep-clean-8088/bestof-taipei-vga-before.png), [move](../evidence/wep-clean-8088/bestof-taipei-vga-move.png), [exit](../evidence/wep-clean-8088/bestof-taipei-vga-exit.png) |
+
+
+## Stones dependency discovery correction
+
+Stones constructs style DLL filenames from `STONE%02u.DLL` and `STONEE%02u.DLL`. The original literal-name scan missed all nine supplied styles, so their protected-mode-only header flags remained set. Discovery now expands the observed two-digit filename formats against DLLs actually present in the extracted pack. This uses the existing header-patch mechanism; no new instruction handler or module format is introduced. The [private-input regression log](../evidence/wep-clean-8088/stones-dependencies.txt) verifies all nine styles are discovered and receive that real-mode header patch. Gameplay is being retested separately.

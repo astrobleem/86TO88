@@ -206,6 +206,12 @@ def auto_specs(exe, wepdir):
         if not seen_root:
             seen_root = True    # by-name LoadLibrary strings are taken from the game EXE only (DLL copyright strings are noise)
             names |= {m.group(0).decode().upper() for m in re.finditer(rb'[A-Za-z0-9_]{3,12}\.(?:DLL|VBX)', data, re.I)}
+            # Stones formats its style DLL names at run time (STONE%02u.DLL
+            # and STONEE%02u.DLL), so literal-name discovery misses them.
+            for fmt in re.finditer(rb'[A-Za-z0-9_]{1,8}%02[uUdD]\.DLL', data, re.I):
+                pattern = re.escape(fmt.group(0).decode().upper())
+                pattern = re.sub(r'%02[UD]', '[0-9]{2}', pattern)
+                names |= {nm for nm in have if re.fullmatch(pattern, nm)}
         for nm in sorted(names):
             if nm in have and nm not in seen:
                 seen.add(nm); specs.append((1, str(have[nm]))); todo.append(str(have[nm]))
