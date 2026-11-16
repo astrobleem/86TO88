@@ -5,7 +5,7 @@ stated, XT-IDE, IBM CGA, Windows 3.0 real mode. **No real hardware was tested. N
 played through**; "played" means the brief inputs listed. "8088 core" is MartyPC's Intel 8088;
 V20 runs are diagnostics (they allow tracing) and are labelled V20.
 
-Runtime: `wip/vbrun100-realmode` at 14ddd2f, `vbrun/build.sh` from the supplied originals. Default
+Runtime: `wip/vbrun100-realmode` at e4a47e1, `vbrun/build.sh` from the supplied originals. Default
 VBRUN100.DLL / FIELD100.DLL / WEPUTIL.DLL are byte-identical to the builds tested before
 (298976 / 14992 / 20544 bytes). Game files: the supplied archives (Pack 2 JIGSAWED, RATTLER,
 RODENT identical to the copies tested earlier; Best of RODENT byte-identical to Pack 2's).
@@ -18,7 +18,7 @@ RODENT identical to the copies tested earlier; Best of RODENT byte-identical to 
 | Pack 2 RattleRace | 8088, beside the Executive: F2, steering, Alt+F4, End Session, DOS prompt | pack2-rattler-exit-8088.png |
 | Pack 2 Rodent's Revenge | 8088, beside the Executive: F2, blocks pushed, Alt+F4, End Session, DOS prompt | pack2-rodent-exit-8088.png |
 | Best of Rodent's Revenge | separate launch, runtime built from the Best of files: same sequence passes | bestof-rodent-exit-8088.png |
-| Pack 4 Go Figure! | default build: "Property or control 'uGameNewMatch' not found" (8088 ~200M instructions). With `VBLHEAP88=0x1000 VBLHEAP71=0x4000`: game window, Game menu opened and closed (8088, as shell). Beside the Executive: hang, 160 bytes free | gofigure-heaps-menu-8088.png, gofigure-default-576k-640k.png, gofigure-heaps-beside-executive-hang-8088.png |
+| Pack 4 Go Figure! | default build: "Property or control 'uGameNewMatch' not found" (8088 ~200M instructions). With `VBLHEAP88=0x1000 VBLHEAP71=0x4000`: game window, Game menu opened and closed (8088, as shell). **Beside the Executive, default build (8088): window, Game menu, F2 starts a puzzle (digits dealt, score and timer running), Alt+F4 to the Executive, End Session, DOS prompt.** Larger heaps beside the Executive: hang from memory corruption (see below) | gofigure-default-beside-executive-newgame-exit-8088.png, gofigure-heaps-menu-8088.png, gofigure-default-576k-640k.png, gofigure-heaps-beside-executive-hang-8088.png |
 | Pack 4 Tic Tac Drop | splash and credits; "Invalid property value" (error 380) at ~460-490M, default and larger heaps; traced to a combo box selection with index -2 | tictacdrop-converted-splash-8088.png, tictacdrop-converted-error-8088.png |
 | Pack 4 Chess | three COMMDLG variants compared; none gives a usable game; see below | chess-commdlg-original-flagcleared-converted-8088.png |
 
@@ -37,8 +37,13 @@ allocations were not matched one by one to control names. With 576 KB instead of
 fails; the locked heap cannot grow where it sits. Creating the seg
 88 heap with 0x1000 (and seg 71's with 0x4000, the next heap that failed to grow) removes
 every allocation failure. These sizes are opt-in; the default build is unchanged.
-Beside the Executive Go Figure runs out of global memory (160 bytes free) and VBRUN seg 4
-loops walking a list.
+Beside the Executive the default build works (above). With the larger heaps it hangs, and
+that is memory corruption, not exhaustion: VBRUN seg 73 copies a "counted string" from a
+stale pointer (it points into a block that now holds p-code; its length byte 0xDD is
+sign-extended), so ~64 KB is written over the stack segment and the next heap arenas. The
+pointer comes from VB's module-context table; with the converter's moving context grow
+(`CTXGROW`) disabled the window appears (V20). So that grow leaves another holder of a
+block's old segment; the holder is not yet identified.
 
 ## Tic Tac Drop: invalid property value
 
