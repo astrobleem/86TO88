@@ -233,6 +233,8 @@ A stock Windows 3.0 install crashes on a real 8088 because its own EGA display d
 80186 instructions, not because of the bridge. Details and evidence are in
 [docs/STOCK-8088.md](docs/STOCK-8088.md).
 
+**Fresh 8088 tests:** [Clean Entertainment Pack interaction tests](docs/WEP-CLEAN-8088.md) cover all 44 edition entries: 33 have verified input and clean exit, while 11 remain partial or failed. The report includes the short-path lookup and Stones dependency fixes, exact limitations, and actual MartyPC 8088 captures. The [follow-up of the remaining eleven](docs/WEP-RESUMED-8088.md) includes converted VB/control trials, original mode refusals, input in both Rodent editions and RattleRace, and the unsuccessful exit/loader cases. [Earlier DOSBox-X diagnostics](docs/WEP-FRESH-DOSBOXX.md) remain separate.
+
 ### More games: the Entertainment Packs — complete inventory
 
 **We do not yet have a successful launch for every game.** An audit of the
@@ -322,10 +324,10 @@ slow. No 80186-only opcode was observed executing in the tested scenarios;
 untested paths and other applications are not thereby proved compatible.
 
 **Do all Entertainment Pack games work? Not established.** See the
-[44-entry coverage matrix](docs/WEP-COVERAGE.md). Pack 4 remains completely
-untested here; Pack 2 Stones and Best of Blackjack and Chips previously failed,
-and the Best of RODENT edition has not been retested with the new runtime.
-Most other games have only earlier startup-level `WM88X3` evidence. The
+[historical 44-entry inventory](docs/WEP-COVERAGE.md) and
+[current 8088 interaction tests](docs/WEP-CLEAN-8088.md). All 44 edition entries
+received separate attempts; 33 have an inspected action and clean exit. The
+remaining 11 are partial or failed configurations, not compatibility passes. The
 converter is experimental, not an all-games guarantee, and mixed runtime/TSR
 configurations also need testing (including INT 3 handler unload order).
 

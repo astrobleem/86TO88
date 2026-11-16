@@ -1,6 +1,12 @@
 # Entertainment Pack games on a stock 8088: the module library
 
+**Latest 8088 follow-up:** [Clean interaction tests and short-path module lookup fix](WEP-CLEAN-8088.md). The inventory and historical results below are retained as an earlier record.
+
 Technical notes. The README links here; nothing in it depends on this file.
+
+**Fresh follow-up:** [DOSBox-X 8086-prefetch diagnostics](WEP-FRESH-DOSBOXX.md) are available separately; they are incomplete and are not MartyPC 8088 or physical-hardware results.
+
+
 
 **Historical test record, not a current all-pack pass claim.** This report describes
 the earlier `WM88X3` module-library tests. Since then, the separate `vbrun/`
@@ -43,6 +49,7 @@ direct flow (this removed a false `shr cl,0` inside a `mov ax,imm` in one game).
 | 5 / 6 | calling-convention push / leave | `INT 3` key, ctx-aware |
 | 7 | `imul reg,[ea],imm8` | |
 | 9 | `imul reg,[ea],imm16` | the immediate is read from the code stream by the handler |
+| 10 | `ENTER imm16,0` | experimental zero-nesting frame setup; requires the updated 3,991-byte bridge |
 | 8 | static byte patch | never trapped; used for the version stamp and similar |
 
 Immediates that are covered by a relocation fix-up are resolved by the generator rather

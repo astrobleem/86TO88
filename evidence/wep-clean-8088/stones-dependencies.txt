@@ -1,0 +1,10 @@
+STONE00.DLL discovered; real-mode header patch present
+STONE01.DLL discovered; real-mode header patch present
+STONE02.DLL discovered; real-mode header patch present
+STONE03.DLL discovered; real-mode header patch present
+STONE04.DLL discovered; real-mode header patch present
+STONEE00.DLL discovered; real-mode header patch present
+STONEE01.DLL discovered; real-mode header patch present
+STONEE02.DLL discovered; real-mode header patch present
+STONEE03.DLL discovered; real-mode header patch present
+PASS: 9 formatted style DLL dependencies

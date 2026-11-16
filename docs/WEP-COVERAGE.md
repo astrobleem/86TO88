@@ -1,5 +1,9 @@
 # Entertainment Pack compatibility coverage — edition-specific audit
 
+**Latest 8088 follow-up:** [Clean interaction tests and short-path module lookup fix](WEP-CLEAN-8088.md). The inventory and historical results below are retained as an earlier record.
+
+**Fresh follow-up:** [DOSBox-X 8086-prefetch diagnostics](WEP-FRESH-DOSBOXX.md) attempted all Pack 1 and Pack 4 editions and Best of RODENT. These single-run observations are incomplete and do not establish 8088 compatibility. The historical inventory and counts below describe the earlier audit.
+
 **Status as of November 14, 2026.** This inventory was checked against the user's uploaded Pack 1, Pack 2, Pack 3, Pack 4 floppy images and *Best of* ZIP. It covers **44 pack-specific executable/screen-saver entries representing 29 distinct titles** (28 games and IdleWild). Installers and support DLLs are not counted as games.
 
 **Important: this is a complete *inventory*, not 44 successful execution tests.** The current review environment could extract and inspect the media but could not launch Windows: a compatible MartyPC/DOSBox executable was unavailable. **No new gameplay or startup screenshot was captured for this audit.** All execution results below are historical, taken from the committed [WM88X3 test report](WEP-LIBRARY.md) and the merged [VB runtime report](../vbrun/REPORT.md). Do not interpret an untested row as incompatible, a startup screen as completed gameplay, or a successful result from one pack as proof about a different executable in another pack.

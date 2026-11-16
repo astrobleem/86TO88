@@ -96,6 +96,9 @@ def collect(specs):
                     assert len(raw) < 16
                     if op == 0x69: add(off, 9, (mrm >> 3) & 7, 0, disp & 0xFFFF, len(raw) | (ea << 4))   # imm16 is read from the code stream by the handler
                     else: add(off, 7, (mrm >> 3) & 7, imm8, disp & 0xFFFF, len(raw) | (ea << 4))
+                elif u['kind'] == 'unsup-enter' and len(raw) == 4 and raw[0] == 0xC8 and (raw[3] & 31) == 0:
+                    assert not ({off, off + 1} & chain)
+                    add(off, 10, 0, 0, struct.unpack_from('<H', raw, 1)[0], 4)
                 else:
                     print('  UNSUPPORTED', name, sg['seg'], hex(off), u['kind'], u['raw'])
     return mods, entries
@@ -206,6 +209,12 @@ def auto_specs(exe, wepdir):
         if not seen_root:
             seen_root = True    # by-name LoadLibrary strings are taken from the game EXE only (DLL copyright strings are noise)
             names |= {m.group(0).decode().upper() for m in re.finditer(rb'[A-Za-z0-9_]{3,12}\.(?:DLL|VBX)', data, re.I)}
+            # Stones formats its style DLL names at run time (STONE%02u.DLL
+            # and STONEE%02u.DLL), so literal-name discovery misses them.
+            for fmt in re.finditer(rb'[A-Za-z0-9_]{1,8}%02[uUdD]\.DLL', data, re.I):
+                pattern = re.escape(fmt.group(0).decode().upper())
+                pattern = re.sub(r'%02[UD]', '[0-9]{2}', pattern)
+                names |= {nm for nm in have if re.fullmatch(pattern, nm)}
         for nm in sorted(names):
             if nm in have and nm not in seen:
                 seen.add(nm); specs.append((1, str(have[nm]))); todo.append(str(have[nm]))
