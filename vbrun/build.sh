@@ -18,10 +18,26 @@ env -u WRAP -u WRAPSTATS FIXSEGS=4 I186=${I186:-1} python3 "$HERE/conv.py" "$VBW
 done
 # WEPUTIL.DLL (Entertainment Pack helper imported by JIGSAWED, also used by non-VB games):
 # only the 80186 rewrite, with its own INT 3 handler in its fixed data segment 3
-if [ "${I186:-1}" != 0 ] && [ -f "$VBW_ORIG/WEPUTIL.DLL" ]; then
-  env -u WRAP -u WRAPSTATS FIXSEGS= I186=1 I186HOME=3 I186WEPSEG=${I186WEPSEG-1} python3 "$HERE/conv.py" "$VBW_ORIG/WEPUTIL.DLL" "$OUT/WEPUTIL.DLL" novb
-fi
+# (WEP4UTIL.DLL, Entertainment Pack 4's version, has the same layout and gets the same treatment)
+for f in WEPUTIL.DLL WEP4UTIL.DLL; do
+  if [ "${I186:-1}" != 0 ] && [ -f "$VBW_ORIG/$f" ]; then
+    env -u WRAP -u WRAPSTATS FIXSEGS= I186=1 I186HOME=3 I186WEPSEG=${I186WEPSEG-1} python3 "$HERE/conv.py" "$VBW_ORIG/$f" "$OUT/$f" novb
+  fi
+done
+# Other custom controls (*.VBX: THREED, GAUGE, CMDIALOG from Entertainment Pack 4) and
+# COMMDLG.DLL, when present: every data segment FIXED (VB keeps far pointers into them, like
+# FIELD100), selector/offset references made through their own movable entries resolved
+# (ORDSEL), no far-pointer table segment. They rely on VBRUN's INT 3 handler, like FIELD100.
+CTL=""
+for p in "$VBW_ORIG"/*.VBX "$VBW_ORIG"/*.vbx "$VBW_ORIG/COMMDLG.DLL"; do
+  [ -f "$p" ] || continue; f=$(basename "$p" | tr a-z A-Z); CTL="$CTL $f"
+  ds=$(python3 -c 'import struct,sys
+d=open(sys.argv[1],"rb").read(); ne=struct.unpack_from("<I",d,0x3c)[0]; st,=struct.unpack_from("<H",d,ne+0x22); n,=struct.unpack_from("<H",d,ne+0x1c)
+print(",".join(str(i+1) for i in range(n) if struct.unpack_from("<H",d,ne+st+8*i+4)[0]&1))' "$p")
+  env -u WRAP -u WRAPSTATS FIXSEGS=$ds ORDSEL=1 TABSEGS= I186=${I186:-1} python3 "$HERE/conv.py" "$p" "$OUT/$f" novb
+  r=$(python3 "$HERE/nevalid.py" "$OUT/$f" | tail -1); case "$r" in OK*) ;; *) echo "$f: $r" >&2; exit 1;; esac
+done
 # 8088: no 80186 instruction left in reachable code (I186=0 builds a V20/80186-only pair)
-[ "${I186:-1}" = 0 ] || for f in VBRUN100.DLL FIELD100.DLL $([ -f "$OUT/WEPUTIL.DLL" ] && echo WEPUTIL.DLL); do
+[ "${I186:-1}" = 0 ] || for f in VBRUN100.DLL FIELD100.DLL $(cd "$OUT" && ls WEPUTIL.DLL WEP4UTIL.DLL 2>/dev/null) $CTL; do
   r=$(python3 "$HERE/i186.py" --check "$VBW_ORIG/$f" "$OUT/$f" | tail -1); [ "$r" = OK ] || { echo "$f: 80186 check: $r" >&2; exit 1; }
 done

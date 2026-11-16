@@ -368,3 +368,58 @@ class ReviewedList(PushedReturnFlow):
 
 if __name__ == '__main__':
     unittest.main()
+
+def ord_ne(code, recs, seg2_flags=0x0010):
+    """NE for conv.py novb: seg 1 = movable code `code` with relocation records recs,
+    seg 2 = a 4-byte code segment (flags seg2_flags); entry ordinal 1 = movable seg 1 offset 0."""
+    import struct
+    ne = 0x40; sto = 0x40; et = sto + 16; ent = bytes([1, 0xff, 3, 0xcd, 0x3f, 1, 0, 0, 0])
+    d = bytearray(0x200)
+    d[0:2] = b'MZ'; struct.pack_into('<I', d, 0x3c, ne); d[ne:ne + 2] = b'NE'
+    struct.pack_into('<HH', d, ne + 4, et, len(ent)); d[ne + et:ne + et + len(ent)] = ent
+    for k in (0x26, 0x28, 0x2a, 0x2c): struct.pack_into('<H', d, ne + k, et + len(ent))
+    struct.pack_into('<H', d, ne + 0x1c, 2); struct.pack_into('<H', d, ne + 0x22, sto)
+    struct.pack_into('<H', d, ne + 0x32, 4)
+    seg2 = (0x200 + len(code) + 2 + 8 * len(recs) + 15) & ~15
+    struct.pack_into('<HHHH', d, ne + sto, 0x200 >> 4, len(code), 0x0110 | 0x1000, len(code))
+    struct.pack_into('<HHHH', d, ne + sto + 8, seg2 >> 4, 4, seg2_flags, 4)
+    d += code + struct.pack('<H', len(recs)) + b''.join(struct.pack('<BBHHH', *r) for r in recs)
+    d += bytes(seg2 - len(d)) + b'\xcb\x90\x90\x90'
+    return bytes(d)
+
+class OrdinalRefs(unittest.TestCase):
+    """conv.py on a custom control: selector/offset references made through a movable entry
+    ordinal (THREED, GAUGE, CMDIALOG, COMMDLG) and far calls into originally FIXED segments."""
+    def conv(self, img, **env):
+        import struct
+        with tempfile.TemporaryDirectory() as td:
+            src, dst = os.path.join(td, 'a.dll'), os.path.join(td, 'b.dll')
+            open(src, 'wb').write(img)
+            e = dict(os.environ, I186='0', TABSEGS='', **env); e.pop('WRAP', None); e.pop('FIXSEGS', None)
+            subprocess.run([sys.executable, os.path.join(HERE, '..', 'conv.py'), src, dst, 'novb'],
+                           env=e, check=True, capture_output=True)
+            d = open(dst, 'rb').read()
+        ne = struct.unpack_from('<I', d, 0x3c)[0]; sto, = struct.unpack_from('<H', d, ne + 0x22)
+        o, l, f, m = struct.unpack_from('<HHHH', d, ne + sto); b = o << 4
+        n, = struct.unpack_from('<H', d, b + l)
+        recs = [struct.unpack_from('<BBHHH', d, b + l + 2 + 8 * k) for k in range(n)]
+        return d[b:b + l], recs
+    # push seg(ord 1) ; push off(ord 1) ; retf
+    CODE = bytes.fromhex('68ffff68ffffcb')
+    RECS = [(2, 0, 1, 0xff, 1), (5, 0, 4, 0xff, 1)]
+    def test_far_pointer_by_ordinal_goes_through_entry(self):
+        code, recs = self.conv(ord_ne(self.CODE, self.RECS), ORDSEL='1')
+        self.assertEqual(code[0], 0xe8)          # the push pair now calls a stub
+        self.assertTrue(any(r[0] == 3 and r[3] == 0xff for r in recs), recs)   # far pointer via an entry
+        self.assertFalse(any(r[0] in (2, 5) and r[3] == 0xff for r in recs), recs)
+    def test_without_switch_unchanged(self):
+        code, recs = self.conv(ord_ne(self.CODE, self.RECS))
+        self.assertEqual(code[:6], self.CODE[:6])
+        self.assertIn((2, 0, 1, 0xff, 1), recs)
+    def test_far_call_into_fixed_segment_stays_direct(self):
+        # call far seg2:0000 where seg 2 is FIXED in the original
+        code, recs = self.conv(ord_ne(bytes.fromhex('9a0000ffffcb'), [(2, 0, 3, 2, 0)], seg2_flags=0x0000), ORDSEL='1')
+        self.assertIn((2, 0, 3, 2, 0), recs)
+    def test_far_call_into_movable_segment_goes_through_entry(self):
+        code, recs = self.conv(ord_ne(bytes.fromhex('9a0000ffffcb'), [(2, 0, 3, 2, 0)]), ORDSEL='1')
+        self.assertTrue(any(r[0] == 3 and r[2] == 1 and r[3] == 0xff for r in recs), recs)

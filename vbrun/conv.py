@@ -112,6 +112,7 @@ def conv(src, dst, report=True, vb=True):
     global VB,RETF_SEGS,TABS
     VB=vb
     TABS={15,33,80,103,107} if vb else {4}
+    if 'TABSEGS' in os.environ: TABS={int(x) for x in os.environ['TABSEGS'].split(',') if x}   # segments holding far-pointer tables (FIELD100: 4)
     if not vb: RETF_SEGS=set()
     d=bytearray(open(src,'rb').read())
     ne=struct.unpack_from('<I',d,0x3c)[0]
@@ -133,9 +134,12 @@ def conv(src, dst, report=True, vb=True):
     global CONV_ORDN,CONV_ORIGLEN
     CONV_ORDN=ordn; CONV_ORIGLEN=lambda a: max(ents[a-1][1],ents[a-1][3])
     eto0,etl0=struct.unpack_from('<HH',d,ne+4)
-    tot=0; q=ne+eto0
+    tot=0; q=ne+eto0; ordseg={}; ordoff={}
     while d[q]:
         c,ty=d[q],d[q+1]; q+=2
+        for k in range(c):
+            if ty==0xff: ordseg[tot+k+1]=d[q+6*k+3]; ordoff[tot+k+1]=struct.unpack_from('<H',d,q+6*k+4)[0]
+            elif ty: ordseg[tot+k+1]=ty; ordoff[tot+k+1]=struct.unpack_from('<H',d,q+3*k+1)[0]
         if ty==0: pass
         elif ty==0xff: q+=6*c
         else: q+=3*c
@@ -154,6 +158,11 @@ def conv(src, dst, report=True, vb=True):
         newrecs=[]; rem=collections.defaultdict(list); t5={}
         for r in recs:
             t,fl,off,a,b=struct.unpack('<BBHHH',r)
+            if t&15 in (2,5) and fl&3==0 and not fl&4 and a==0xff and os.environ.get('ORDSEL'):
+                # selector or offset of a movable entry (VBX controls build far pointers
+                # to their own procedures and load data segments this way): it names that
+                # entry's segment and offset, so handle it like a direct reference
+                a,b=ordseg[b],(0 if t&15==2 else ordoff[b]); r=struct.pack('<BBHHH',t,fl,off,a,b)
             if t&15==2 and fl&3==0:
                 p=off; sites=[]
                 while True:
@@ -167,6 +176,8 @@ def conv(src, dst, report=True, vb=True):
                     conv_ok = (a not in FIX) and (VB and (i+1,p)==(4,0x268)) or (a not in FIX) and (op in (0x9a,0xea) or ((i+1) in TABS and not (0xb8<=prev<=0xbf or prev==0x68)))
                     if VB and i==0 and p in (59,182):
                         continue
+                    if conv_ok and a!=0xff and not ents[a-1][2]&0x10:
+                        conv_ok=False   # target segment is FIXED in the original (CMDIALOG seg 1): keep the direct reference
                     if conv_ok:
                         lit=struct.unpack_from('<H',code,p-2)[0]
                         newrecs.append(struct.pack('<BBHHH',3,0,p-2,0xff,ordn(a,lit))); stats['call']+=1
