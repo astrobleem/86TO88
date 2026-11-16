@@ -2,7 +2,7 @@
 
 This continues the preliminary [first-pass attempts](WEP-MARTY-8088.md). Results below are restricted to the uploaded edition and the described interactions. They do not claim complete game playthroughs or physical hardware validation.
 
-**Current clean result: 32 of 44 edition entries have an inspected action and clean exit (29 games and three saver editions). The remaining 12 are partial or failed configurations; no full-playthrough or all-games compatibility claim is made.**
+**Current clean result: 33 of 44 edition entries have an inspected action and clean exit (30 games and three saver editions). The remaining 11 are partial or failed configurations; no full-playthrough or all-games compatibility claim is made.**
 
 ## All 44 edition entries
 
@@ -39,7 +39,7 @@ Verified means only the interaction and clean exit described below. Every entry 
 | Pack 4 | Chips Challenge | VGA | Insufficient memory beside Executive; shell follow-up inconclusive |
 | Pack 4 | Go Figure! | VGA | Runtime failure with original VB helpers |
 | Pack 4 | JezzBall | CGA | Verified |
-| Pack 4 | Maxwell's Maniac | VGA | Partial; gate operation not verified |
+| Pack 4 | Maxwell's Maniac | VGA | Verified gate hold/release and clean exit |
 | Pack 4 | Tic Tac Drop | VGA | Runtime failure with original VB helpers |
 | Best of | Blackjack | CGA | Inconclusive startup |
 | Best of | Chips Challenge | CGA/VGA | Insufficient memory beside Executive; shell follow-up inconclusive |
@@ -222,3 +222,22 @@ The final 3,991-byte bridge also repeated Pack 1 WinMine on a fresh CGA disk. A 
 [before](../evidence/wep-clean-8088/pack1-winmine-final-before.png) [reveal](../evidence/wep-clean-8088/pack1-winmine-final-reveal.png) [exit](../evidence/wep-clean-8088/pack1-winmine-final-exit.png) 
 
 The final [install-option tests](../evidence/wep-clean-8088/install-with-enter.txt), [Pack 3 loader reads](../evidence/wep-clean-8088/pack3-read-with-enter.txt) and [Pack 3 instruction-site tests](../evidence/wep-clean-8088/pack3-sites-with-enter.txt) passed. The last suite ran 5,500 trials, with no stack-overlap exclusions and no mismatches.
+
+
+## Resumed verification: Maxwell's Maniac
+
+After recovering the cleared temporary workspace from the committed branch and the original private uploads, a fresh stock-8088/VGA run verified the control described in the game's help: holding the left button stops the slidergate; releasing it allows movement. The two held captures show the same gate position while the molecules and timer change; the release capture shows the gate displaced. Level 1 reached its completion dialog with score 752, then testing continued into Level 2. Game > Exit returned to Executive. This resolves the earlier missing control verification; it does not claim a full game win.
+
+[Held, first](../evidence/wep-resume/pack4-maxwell-gate-stopped-one.png), [held, later](../evidence/wep-resume/pack4-maxwell-gate-stopped-two.png), [released](../evidence/wep-resume/pack4-maxwell-gate-moving-again.png), [exit](../evidence/wep-resume/pack4-maxwell-exit.png).
+
+## Resumed Blackjack diagnosis
+
+With the generated real-mode-check bypass removed from the private test library, Pack 4 Blackjack displays its original Standard/Enhanced Mode requirement. The original Pack 4 and Best of executables are byte-identical; their edition-specific results remain separate. The native message confirms an explicit protected-mode requirement. Bypassing the check is not a sufficient real-mode port.
+
+[Unmodified mode check](../evidence/wep-resume/pack4-blackjack-original-mode-refusal.png).
+
+An instruction audit found the first corrupting write in KERNEL.OpenFile: an invalid OFSTRUCT pointer led it to write error code 2 to address 0000:0072, changing INT 1Ch from F000:FF53 to 0002:FF53. The subsequent timer interrupt escaped to that address. No unpatched 80186 instruction was detected beforehand. The same corruption reproduced with the game as shell and about 100 KB free, so low memory beside Executive alone is not the explanation. Clearing the private files' fast-load metadata did not solve it either. These are diagnostic controls, not compatibility passes. The WEP4UTIL instruction-site and loader-read checks passed separately.
+
+The resumed frontend patch adds `audit186 N`, vector-write tracing, and explicit `keydown`/`keyup` commands (including numeric-keypad directions). It changes no CPU instruction semantics. BIOS boot-sector execution at 0000:7C00 is legitimate; control-escape auditing must begin after that boot step. Private memory dumps and Microsoft media are not committed.
+
+The Best of edition independently displayed the same mode-refusal dialog with its own original executable and helpers: [Best of original mode check](../evidence/wep-resume/bestof-blackjack-original-mode-refusal.png). Its executable is byte-identical to Pack 4, but this is a separate launch result.
