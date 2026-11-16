@@ -217,6 +217,44 @@ puzzle. The locked 35 KB DGROUP sits in the middle of the movable area (7A33 as 
 and every compaction has to work around it. Placing it low first (GlobalWire) was tried
 in an earlier session and crashed on close; not retried.
 
+## Entertainment Pack 4 controls (Go Figure!, Tic Tac Drop)
+
+`build.sh` now also converts any supplied `*.VBX` and `COMMDLG.DLL` (every data segment
+fixed, `ORDSEL=1`, `TABSEGS=` empty) and `WEP4UTIL.DLL` (WEPUTIL recipe).
+
+* The controls take selectors and offsets of their own procedures and data segments through
+  their movable entry ordinals (THREED 7 push pairs and 2 stores, GAUGE 2, CMDIALOG 3,
+  COMMDLG 21 `mov ax,off / mov dx,seg` pairs). `ORDSEL` resolves such fixups to the entry's
+  segment/offset so the existing far-pointer patterns apply; before, GAUGE raised an
+  IndexError and THREED got an entry with segment 0xFF.
+* `TABSEGS`: FIELD100's far-pointer table segment 4 was assumed for every non-VB module;
+  in the controls seg 4 is code (a `mov [bp-18h],seg` there became a bogus entry).
+* A far call into a segment that is FIXED in the original (CMDIALOG seg 1) is no longer
+  turned into a movable entry.
+* 80186 differential test: GAUGE 112 sites, THREED 742, CMDIALOG 98, no difference.
+  COMMDLG has no 80186 instruction; all its KERNEL/USER/GDI/KEYBOARD imports exist in the
+  real-mode 3.0 modules; its LibEntry only looks at bit 15 of __WINFLAGS.
+
+Runs (as shell, CGA; V20 = diagnostic only):
+
+| app | controls | result |
+| --- | --- | --- |
+| Tic Tac Drop | original (V20) | "Custom control 'CommonDialog' not found" |
+| Tic Tac Drop | converted (8088 core) | splash and credits from ~175M instructions; "Invalid property value" at ~460M |
+| Go Figure! | original (V20) | "Custom control 'SSPanel' not found" |
+| Go Figure! | converted (8088 core; V20 the same at 176M) | blank until ~176-200M, then "Property or control 'uGameNewMatch' not found" (raised from VBRUN seg 21) |
+
+Both start very slowly: as shell the heap holds ~100 KB free in pieces but KERNEL keeps
+discarding and reloading code segments (about 8 loads per million instructions, VBRUN
+segments 49-100, THREED, CGA.DRV, USER/GDI). A GlobalAlloc of 0x13D4 bytes repeating every
+cycle was traced to a system module's bitmap path (386 branch next to it), not a control.
+At the Go Figure error the USER-owned 13 KB local-heap block at 404B had a few hundred bytes
+free and a locked VB block directly above; whether a failed USER allocation dropped the
+menu item is not established.
+
+Exits beside MS-DOS Executive on the 8088 core (Pack 2 files): RATTLER and RODENT both
+started a game, played, closed with Alt+F4 back to the Executive, End Session to DOS.
+
 ## Open items / limits
 
 * No real hardware tested. All results are MartyPC (V20 and 8088 cores, 640K, IBM CGA).
