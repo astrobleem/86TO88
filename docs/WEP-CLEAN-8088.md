@@ -2,7 +2,9 @@
 
 This continues the preliminary [first-pass attempts](WEP-MARTY-8088.md). Results below are restricted to the uploaded edition and the described interactions. They do not claim complete game playthroughs or physical hardware validation.
 
-**Current clean result: 33 of 44 edition entries have an inspected action and clean exit (30 games and three saver editions). The remaining 11 are partial or failed configurations; no full-playthrough or all-games compatibility claim is made.**
+**Current clean result: 33 of 44 edition entries have an inspected action and clean exit (30 games and three saver editions). The remaining 11 are investigated partial or failed configurations; no full-playthrough or all-games compatibility claim is made.**
+
+The [resumed failure investigation](WEP-RESUMED-8088.md) records further original-mode controls, converted VB/control trials, gameplay input in RattleRace and both Rodent editions, and exit attempts for the remaining eleven. It supersedes earlier inconclusive labels where specified.
 
 ## All 44 edition entries
 
@@ -22,8 +24,8 @@ Verified means only the interaction and clean exit described below. Every entry 
 | Pack 2 | IdleWild | VGA | Verified saver |
 | Pack 2 | Jigsawed | CGA/VGA, converted helpers | Partial / runtime failure |
 | Pack 2 | Pipe Dream | CGA | Verified |
-| Pack 2 | RattleRace | CGA/VGA, converted helpers | Partial / runtime failure |
-| Pack 2 | Rodent's Revenge | CGA/VGA, converted helpers | Partial / runtime failure |
+| Pack 2 | RattleRace | VGA, converted helpers | Direction input observed as shell; clean exit unverified |
+| Pack 2 | Rodent's Revenge | VGA, converted helpers | Mouse movement and block push observed; clean exit unverified |
 | Pack 2 | Stones | VGA | Verified after dependency fix |
 | Pack 2 | Tut's Tomb | VGA | Verified |
 | Pack 3 | Fuji Golf | VGA | Verified swing input; ball travel unverified |
@@ -34,20 +36,20 @@ Verified means only the interaction and clean exit described below. Every entry 
 | Pack 3 | TetraVex | CGA | Verified |
 | Pack 3 | TriPeaks | VGA | Verified |
 | Pack 3 | WordZap | VGA | Verified |
-| Pack 4 | Blackjack | VGA | Runtime failure |
+| Pack 4 | Blackjack | CGA/VGA | Original protected-mode refusal; bypassed runtime failure |
 | Pack 4 | Chess | VGA | Runtime failure after partial ENTER fix |
-| Pack 4 | Chips Challenge | VGA | Insufficient memory beside Executive; shell follow-up inconclusive |
-| Pack 4 | Go Figure! | VGA | Runtime failure with original VB helpers |
+| Pack 4 | Chips Challenge | CGA/VGA | Loader memory error; no usable game in shell trials |
+| Pack 4 | Go Figure! | CGA/VGA | Startup failure with original and converted VB/control helpers |
 | Pack 4 | JezzBall | CGA | Verified |
 | Pack 4 | Maxwell's Maniac | VGA | Verified gate hold/release and clean exit |
-| Pack 4 | Tic Tac Drop | VGA | Runtime failure with original VB helpers |
-| Best of | Blackjack | CGA | Inconclusive startup |
-| Best of | Chips Challenge | CGA/VGA | Insufficient memory beside Executive; shell follow-up inconclusive |
+| Pack 4 | Tic Tac Drop | CGA/VGA | Control load error / startup failure with converted helpers |
+| Best of | Blackjack | CGA | Original protected-mode refusal independently verified |
+| Best of | Chips Challenge | CGA/VGA | Loader memory error independently reproduced |
 | Best of | FreeCell | VGA | Verified |
 | Best of | Golf | VGA | Verified |
 | Best of | JezzBall | CGA | Verified |
 | Best of | Pipe Dream | VGA | Verified |
-| Best of | Rodent's Revenge | CGA, converted helpers | Inconclusive startup |
+| Best of | Rodent's Revenge | VGA, converted helpers | Mouse movement and block push observed; clean exit unverified |
 | Best of | SkiFree | CGA | Verified |
 | Best of | TetraVex | CGA | Verified |
 | Best of | Tetris | VGA | Verified |
@@ -200,7 +202,7 @@ Stones constructs style DLL filenames from `STONE%02u.DLL` and `STONEE%02u.DLL`.
 | Pack 4 Blackjack, WM88X3/VGA | No game window after the extended launch wait; state had escaped into DOS segment 0070. Not a pass. | [capture](../evidence/wep-clean-8088/p4-blakjak-partial.png) |
 | Best of Blackjack, WM88X3/CGA | No game window in this separate launch capture. Startup remains inconclusive; no play or exit verified. | [capture](../evidence/wep-clean-8088/best-blakjak-partial.png) |
 | Best of Rodent's Revenge, converted helpers/CGA | Still Executive/hourglass after an extended 3.54-billion-cycle run and F2 attempt. No game window, move or clean exit verified. | [capture](../evidence/wep-clean-8088/best-rodent-partial.png) |
-| Pack 4 Maxwell's Maniac, WM88X3/VGA | Displayed the field and responded to input, then advanced through level-complete dialogs without a verified gate operation. Game-menu exit returned to Executive. The automatic-looking progression is not counted as a played level. | [capture](../evidence/wep-clean-8088/p4-maxwell-partial.png) |
+| Pack 4 Maxwell's Maniac, WM88X3/VGA (earlier attempt; superseded below) | Displayed the field and responded to input, then advanced through level-complete dialogs without a verified gate operation. Game-menu exit returned to Executive. The automatic-looking progression is not counted as a played level. | [capture](../evidence/wep-clean-8088/p4-maxwell-partial.png) |
 
 
 ## Chess ENTER work and residual failure

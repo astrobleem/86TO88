@@ -233,7 +233,7 @@ A stock Windows 3.0 install crashes on a real 8088 because its own EGA display d
 80186 instructions, not because of the bridge. Details and evidence are in
 [docs/STOCK-8088.md](docs/STOCK-8088.md).
 
-**Fresh 8088 tests:** [Clean Entertainment Pack interaction tests](docs/WEP-CLEAN-8088.md) cover all 44 edition entries: 33 have verified input and clean exit, while 11 remain partial or failed. The report includes the short-path lookup and Stones dependency fixes, exact limitations, and actual MartyPC 8088 captures. [Earlier DOSBox-X diagnostics](docs/WEP-FRESH-DOSBOXX.md) remain separate.
+**Fresh 8088 tests:** [Clean Entertainment Pack interaction tests](docs/WEP-CLEAN-8088.md) cover all 44 edition entries: 33 have verified input and clean exit, while 11 remain partial or failed. The report includes the short-path lookup and Stones dependency fixes, exact limitations, and actual MartyPC 8088 captures. The [follow-up of the remaining eleven](docs/WEP-RESUMED-8088.md) includes converted VB/control trials, original mode refusals, input in both Rodent editions and RattleRace, and the unsuccessful exit/loader cases. [Earlier DOSBox-X diagnostics](docs/WEP-FRESH-DOSBOXX.md) remain separate.
 
 ### More games: the Entertainment Packs — complete inventory
 
