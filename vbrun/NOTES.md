@@ -253,7 +253,9 @@ free and a locked VB block directly above; whether a failed USER allocation drop
 menu item is not established.
 
 Exits beside MS-DOS Executive on the 8088 core (Pack 2 files): RATTLER and RODENT both
-started a game, played, closed with Alt+F4 back to the Executive, End Session to DOS.
+started a game, played, closed with Alt+F4 back to the Executive, End Session to DOS;
+JIGSAWED the same after About, Game>Open of C:\PUZ.BMP and the scrambled puzzle.
+Tic Tac Drop's error box is raised from VBRUN seg 21 as well (V20, i476M).
 
 ## Open items / limits
 
