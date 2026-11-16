@@ -366,8 +366,6 @@ class ReviewedList(PushedReturnFlow):
         rc, out = self.run_rc(self.img(code), '--reviewed', self.lst([self.entry(code)]))
         self.assertIn('pushes a return address at 0 and jumps far at 2 to a movable target', out); self.assertNotEqual(rc, 0)
 
-if __name__ == '__main__':
-    unittest.main()
 
 def ord_ne(code, recs, seg2_flags=0x0010):
     """NE for conv.py novb: seg 1 = movable code `code` with relocation records recs,
@@ -394,11 +392,11 @@ class OrdinalRefs(unittest.TestCase):
         import struct
         with tempfile.TemporaryDirectory() as td:
             src, dst = os.path.join(td, 'a.dll'), os.path.join(td, 'b.dll')
-            open(src, 'wb').write(img)
+            with open(src, 'wb') as fh: fh.write(img)
             e = dict(os.environ, I186='0', TABSEGS='', **env); e.pop('WRAP', None); e.pop('FIXSEGS', None)
             subprocess.run([sys.executable, os.path.join(HERE, '..', 'conv.py'), src, dst, 'novb'],
                            env=e, check=True, capture_output=True)
-            d = open(dst, 'rb').read()
+            with open(dst, 'rb') as fh: d = fh.read()
         ne = struct.unpack_from('<I', d, 0x3c)[0]; sto, = struct.unpack_from('<H', d, ne + 0x22)
         o, l, f, m = struct.unpack_from('<HHHH', d, ne + sto); b = o << 4
         n, = struct.unpack_from('<H', d, b + l)
@@ -423,3 +421,7 @@ class OrdinalRefs(unittest.TestCase):
     def test_far_call_into_movable_segment_goes_through_entry(self):
         code, recs = self.conv(ord_ne(bytes.fromhex('9a0000ffffcb'), [(2, 0, 3, 2, 0)]), ORDSEL='1')
         self.assertTrue(any(r[0] == 3 and r[2] == 1 and r[3] == 0xff for r in recs), recs)
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -28,16 +28,22 @@ done
 # COMMDLG.DLL, when present: every data segment FIXED (VB keeps far pointers into them, like
 # FIELD100), selector/offset references made through their own movable entries resolved
 # (ORDSEL), no far-pointer table segment. They rely on VBRUN's INT 3 handler, like FIELD100.
-CTL=""
-for p in "$VBW_ORIG"/*.VBX "$VBW_ORIG"/*.vbx "$VBW_ORIG/COMMDLG.DLL"; do
-  [ -f "$p" ] || continue; f=$(basename "$p" | tr a-z A-Z); CTL="$CTL $f"
+# (names matched case-insensitively; outputs are upper case; one source per output name)
+CTL=""; CTLSRC=()
+while IFS= read -r p; do
+  f=$(basename "$p" | tr a-z A-Z); case " $CTL " in *" $f "*) continue;; esac
+  CTL="$CTL $f"; CTLSRC+=("$p")
   ds=$(python3 -c 'import struct,sys
 d=open(sys.argv[1],"rb").read(); ne=struct.unpack_from("<I",d,0x3c)[0]; st,=struct.unpack_from("<H",d,ne+0x22); n,=struct.unpack_from("<H",d,ne+0x1c)
 print(",".join(str(i+1) for i in range(n) if struct.unpack_from("<H",d,ne+st+8*i+4)[0]&1))' "$p")
   env -u WRAP -u WRAPSTATS FIXSEGS=$ds ORDSEL=1 TABSEGS= I186=${I186:-1} python3 "$HERE/conv.py" "$p" "$OUT/$f" novb
   r=$(python3 "$HERE/nevalid.py" "$OUT/$f" | tail -1); case "$r" in OK*) ;; *) echo "$f: $r" >&2; exit 1;; esac
-done
+done < <(find "$VBW_ORIG" -maxdepth 1 -type f \( -iname '*.vbx' -o -iname 'commdlg.dll' \) | sort)
 # 8088: no 80186 instruction left in reachable code (I186=0 builds a V20/80186-only pair)
-[ "${I186:-1}" = 0 ] || for f in VBRUN100.DLL FIELD100.DLL $(cd "$OUT" && ls WEPUTIL.DLL WEP4UTIL.DLL 2>/dev/null) $CTL; do
+[ "${I186:-1}" = 0 ] || for f in VBRUN100.DLL FIELD100.DLL $(cd "$OUT" && ls WEPUTIL.DLL WEP4UTIL.DLL 2>/dev/null); do
   r=$(python3 "$HERE/i186.py" --check "$VBW_ORIG/$f" "$OUT/$f" | tail -1); [ "$r" = OK ] || { echo "$f: 80186 check: $r" >&2; exit 1; }
+done
+[ "${I186:-1}" = 0 ] || for p in "${CTLSRC[@]}"; do
+  f=$(basename "$p" | tr a-z A-Z)
+  r=$(python3 "$HERE/i186.py" --check "$p" "$OUT/$f" | tail -1); [ "$r" = OK ] || { echo "$f: 80186 check: $r" >&2; exit 1; }
 done
