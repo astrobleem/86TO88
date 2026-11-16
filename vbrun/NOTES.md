@@ -273,6 +273,22 @@ GlobalAlloc, GlobalReAlloc, LocalAlloc, LocalReAlloc and MessageBox watched, as 
   ~200M). In the default build the seg 71 heap reached 0x38A4 and the seg 88 heap 0xA8C
   (Tic Tac Drop).
 
+On the 8088 core with both larger heaps, as shell: the window appears at ~200M and the Game
+menu opens and closes (no puzzle played). Beside MS-DOS Executive it does not start: the
+global heap is down to 160 bytes and VBRUN seg 4:0E2B loops walking a list. With the larger
+heaps JIGSAWED (About, Open, scramble), RATTLER and RODENT still pass the Executive exit
+sequence on the 8088 core.
+
+### Tic Tac Drop's "Invalid property value"
+
+Not an allocation failure: no LocalAlloc failure, four in-place GlobalReAlloc failures of
+0x470 bytes from VBRUN seg 105 that VB retries, and the error is unchanged with the larger
+heaps. Trace (V20, deterministic, error raised at 487.95M through entry 106 = seg 7:0294 with
+BX=0x17C): VBRUN seg 83:03D5 calls the subclassed control's original window procedure
+(CallWindowProc) with message 0x040E (CB_SETCURSEL), wParam 0xFFFE (-2), on hwnd 1A90; USER's
+combo box code returns -1 (CB_ERR) and VB turns that into error 380. Where the index -2 comes
+from (e.g. a list count of -1) is not established.
+
 The default build keeps VBLHEAP88=0x400 and VBLHEAP71=0x3000 (byte-identical runtime);
 `VBLHEAP88` is now overridable like `VBLHEAP71`. The larger heaps cost ~7 KB of locked
 memory, which matters beside MS-DOS Executive (13-20 KB free with JIGSAWED).
