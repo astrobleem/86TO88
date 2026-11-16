@@ -274,8 +274,25 @@ GlobalAlloc, GlobalReAlloc, LocalAlloc, LocalReAlloc and MessageBox watched, as 
   (Tic Tac Drop).
 
 On the 8088 core with both larger heaps, as shell: the window appears at ~200M and the Game
-menu opens and closes (no puzzle played). Beside MS-DOS Executive it does not start: the
-global heap is down to 160 bytes and VBRUN seg 4:0E2B loops walking a list. With the larger
+menu opens and closes (no puzzle played).
+
+Beside MS-DOS Executive the outcome depends on the build, not on free memory:
+
+* Default build (8088): the window appears (~330M), Game menu, F2 starts a puzzle (digits
+  dealt, score and timer running), Alt+F4 returns to the Executive, End Session to DOS.
+* Larger heaps (8088 and V20): hang. This is memory corruption, not exhaustion (an earlier
+  reading of "160 bytes free" came from a broken arena chain). V20 write watch on the
+  overwritten arena: VBRUN seg 73:00C5-00FA copies a counted string into a 64-byte stack
+  buffer. The string pointer came from seg 4:0DCD (name lookup through the module-context
+  table in [2E04]) and pointed into a block that now holds p-code (5803:00DE, "length"
+  0xDD sign-extended by CBW), so the loop copied ~64 KB over the stack segment and the
+  next arenas; seg 4:0E2B then loops on the damaged list.
+* Larger heaps with `CTXGROW=` (no moving grow2 for seg-4 context blocks, V20): the window
+  appears. So a context block moved by CTXGROW's grow2 leaves another holder of its old
+  segment; only [di+2] is updated. Same symptom as the earlier allocfixed note (spin at
+  seg 4:0E2x). The other holder is not identified; candidates are the context cache copies
+  at DGROUP 2E54/2E94 (seg 4:0326/0339) and the table at [2E04]. `TABGROW` and `CTXGROW`
+  are now overridable; defaults unchanged (runtime byte-identical). With the larger
 heaps JIGSAWED (About, Open, scramble), RATTLER and RODENT still pass the Executive exit
 sequence on the 8088 core.
 
