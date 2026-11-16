@@ -30,6 +30,7 @@ ap.add_argument('out'); ap.add_argument('dlldir')
 ap.add_argument('--video', default='cga', choices=('cga', 'vga'))
 ap.add_argument('--shell'); ap.add_argument('--win-args', default='')
 ap.add_argument('--no-autowin', action='store_true')
+ap.add_argument('--pre', action='append', default=[], help='AUTOEXEC.BAT line before WIN (e.g. a TSR)')
 ap.add_argument('extra', nargs='*')
 a = ap.parse_args()
 env = lambda k: os.environ.get(k) or sys.exit('set %s (see build_disk.py)' % k)
@@ -73,6 +74,7 @@ def put_text(name, data):
 put_text('WINDOWS/SYSTEM.INI', ini)
 put_text('CONFIG.SYS', b'files = 30\r\nbuffers = 30\r\n')
 ae = 'PATH C:\\;C:\\WINDOWS;C:\\GAME\nSET TEMP=C:\\WINDOWS\\TEMP\nLOG21\n'
+ae += ''.join(l + '\n' for l in a.pre)
 if not a.no_autowin: ae += ('WIN /R ' + a.win_args).rstrip() + '\n'
 put_text('AUTOEXEC.BAT', ae.replace('\n', '\r\n').encode())
 vhd.to_vhd(raw, a.out, 615, 4, 17)

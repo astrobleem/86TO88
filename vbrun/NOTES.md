@@ -248,9 +248,34 @@ Both start very slowly: as shell the heap holds ~100 KB free in pieces but KERNE
 discarding and reloading code segments (about 8 loads per million instructions, VBRUN
 segments 49-100, THREED, CGA.DRV, USER/GDI). A GlobalAlloc of 0x13D4 bytes repeating every
 cycle was traced to a system module's bitmap path (386 branch next to it), not a control.
-At the Go Figure error the USER-owned 13 KB local-heap block at 404B had a few hundred bytes
-free and a locked VB block directly above; whether a failed USER allocation dropped the
-menu item is not established.
+
+### Go Figure's missing control: a VB local heap that cannot grow in place
+
+Traced on the V20 (diagnostic; the same error and timing class as the 8088 core) with
+GlobalAlloc, GlobalReAlloc, LocalAlloc, LocalReAlloc and MessageBox watched, as shell:
+
+* Up to the error at 176M there are 44 failed LocalAlloc calls, all between 16.67M and
+  17.07M, all from VBRUN seg 78:0025 (VB's "allocate in local heap X" helper, sizes
+  0x11-0x1C, LMEM_MOVEABLE|ZEROINIT) in the heap at 474B (handle 0532). No GlobalAlloc
+  failed in the run.
+* That heap was created at 15.46M by seg 88:0013 through seg 77 (GlobalAlloc 0x42 of
+  0x400+0x210 bytes, locked, LocalInit). At 16.32M KERNEL's LocalGrow asked
+  GlobalReAlloc(0532, 0x840, 0) - in place, the block is locked - and it failed after
+  ~350k instructions of compaction. Every later allocation in that heap failed.
+* Then VB could not find a control by name: 'uGameNewMatch' at 640 KB. With 576 KB
+  (machine xt_win576, 8088 core) the error comes at the same point with a different name,
+  'uLevelBeginner'. So the failure is where the locked heap sits, not the total free memory
+  (~100 KB free, largest block ~95 KB at the error).
+* `VBLHEAP88=0x1000` (seg 88 heap created with 0x1000+0x210): no LocalAlloc failure; the
+  next failure is the seg 71 heap (handle 06CA) growing to 0x3324 in place, followed by a VB
+  error box with an empty message at 38.8M. `VBLHEAP71=0x4000` as well: no allocation
+  failure, and the game window with its menu and controls appears (V20 76M, 8088 core
+  ~200M). In the default build the seg 71 heap reached 0x38A4 and the seg 88 heap 0xA8C
+  (Tic Tac Drop).
+
+The default build keeps VBLHEAP88=0x400 and VBLHEAP71=0x3000 (byte-identical runtime);
+`VBLHEAP88` is now overridable like `VBLHEAP71`. The larger heaps cost ~7 KB of locked
+memory, which matters beside MS-DOS Executive (13-20 KB free with JIGSAWED).
 
 Exits beside MS-DOS Executive on the 8088 core (Pack 2 files): RATTLER and RODENT both
 started a game, played, closed with Alt+F4 back to the Executive, End Session to DOS;
