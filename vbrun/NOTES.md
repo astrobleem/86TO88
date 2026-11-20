@@ -316,7 +316,10 @@ heaps. Trace (V20, deterministic, error raised at 487.95M through entry 106 = se
 BX=0x17C): VBRUN seg 83:03D5 calls the subclassed control's original window procedure
 (CallWindowProc) with message 0x040E (CB_SETCURSEL), wParam 0xFFFE (-2), on hwnd 1A90; USER's
 combo box code returns -1 (CB_ERR) and VB turns that into error 380. Where the index -2 comes
-from (e.g. a list count of -1) is not established.
+from (e.g. a list count of -1) is not established. Beside MS-DOS Executive (default build,
+8088, ~521M) the same error appears. With the converted COMMDLG but the original
+CMDIALOG/THREED/GAUGE (V20) VB stops at load with "Custom control 'CommonDialog' not found",
+so the original controls cannot be compared at the error.
 
 The default build keeps VBLHEAP88=0x400 and VBLHEAP71=0x3000 (byte-identical runtime);
 `VBLHEAP88` is now overridable like `VBLHEAP71`. The larger heaps cost ~7 KB of locked
