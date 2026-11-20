@@ -649,6 +649,11 @@ def growkeep_pass(d,ne,blobs,stats):
     c[0xec]=0xe8; struct.pack_into('<h',c,0xed,base-0xef); c[0xef]=0x90; c[0xf0]=0x90
     stats['growkeep']=1
 
+# runs before 'mov [di+2],dx' in the ctxgrow stubs (DS = DGROUP, DX = segment after the grow):
+# push ax / mov ax,[di+2] / cmp ax,[2E28] / jne +4 / mov [2E28],dx / cmp ax,[2E2A] / jne +4 /
+# mov [2E2A],dx / pop ax
+CTXMIRROR_FIX=bytes.fromhex('508b4502'+'3b06282e7504'+'8916282e'+'3b062a2e7504'+'89162a2e'+'58')
+
 def ctxgrow_pass(d,ne,blobs,ordn,stats):
     # VB module contexts (seg 4 grow paths) keep their data segment in [di+2]. Route
     # their grows through seg 105 'grow2', which falls back to a moving GlobalReAlloc
@@ -683,14 +688,19 @@ def ctxgrow_pass(d,ne,blobs,ordn,stats):
         raise AssertionError('no ordinal reloc at 4:%x'%lc)
     retarget(0xaa); retarget(0x156)
     assert bytes(c[0xaf:0xb6])==bytes.fromhex('0bc07414c1e804'), c[0xaf:0xb6].hex()
+    # VB also mirrors the main context records' segments into DGROUP words 2E28 (from
+    # 2E6C) and 2E2A (from 2E5C), set in seg 5; 4:1609 hands [2E28] out as the segment of
+    # names. When the grow moved the block, a mirror still holding the old segment is
+    # updated too (CTXMIRROR=1).
+    fix=CTXMIRROR_FIX if os.environ.get('CTXMIRROR') else b''
     sa=len(c)
-    stub=bytearray(bytes.fromhex('895502')+b'\x0b\xc0\x74\x04'+bytes.fromhex('c1e804')+b'\xc3'+b'\x83\xc4\x02\xe9\x00\x00')
+    stub=bytearray(fix+bytes.fromhex('895502')+b'\x0b\xc0\x74\x04'+bytes.fromhex('c1e804')+b'\xc3'+b'\x83\xc4\x02\xe9\x00\x00')
     struct.pack_into('<h',stub,len(stub)-2,0xc7-(sa+len(stub)))
     c+=stub
     c[0xaf]=0xe8; struct.pack_into('<h',c,0xb0,sa-0xb2)
     for k in range(0xb2,0xb6): c[k]=0x90
     assert bytes(c[0x15b:0x160])==bytes.fromhex('8bc8c1e804'), c[0x15b:0x160].hex()
-    sb=len(c); c+=bytes.fromhex('8955028bc8c1e804c3')
+    sb=len(c); c+=fix+bytes.fromhex('8955028bc8c1e804c3')
     c[0x15b]=0xe8; struct.pack_into('<h',c,0x15c,sb-0x15e); c[0x15e]=0x90; c[0x15f]=0x90
     stats['ctxgrow']=1
 

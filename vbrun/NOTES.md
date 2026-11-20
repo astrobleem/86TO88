@@ -289,10 +289,22 @@ Beside MS-DOS Executive the outcome depends on the build, not on free memory:
   next arenas; seg 4:0E2B then loops on the damaged list.
 * Larger heaps with `CTXGROW=` (no moving grow2 for seg-4 context blocks, V20): the window
   appears. So a context block moved by CTXGROW's grow2 leaves another holder of its old
-  segment; only [di+2] is updated. Same symptom as the earlier allocfixed note (spin at
-  seg 4:0E2x). The other holder is not identified; candidates are the context cache copies
-  at DGROUP 2E54/2E94 (seg 4:0326/0339) and the table at [2E04]. `TABGROW` and `CTXGROW`
-  are now overridable; defaults unchanged (runtime byte-identical). With the larger
+  segment; only [di+2] is updated.
+* The holder: DGROUP word 2E28. Seg 5:0144-0150 copies the main context records' segments
+  into 2E2A (from 2E5C) and 2E28 (from 2E6C) when byte [2F] is 0, and seg 4:1609 returns
+  DX=[2E28] as the segment of the name strings that 4:0DCD hands to seg 73. V20 grow2 trace:
+  the first moving grow (15.74M) moved 5803 to 59CB and updated [2E6C]; [2E28] kept 5803
+  (dump at 36.56M), the segment of the 5803:00DE pointer seg 73 copied from. Other words still
+  holding 5803 in that dump (DGROUP 2128, 2148, context table entry 0F18+0x10) were not on
+  the failing path and are not changed.
+* `CTXMIRROR=1` (opt-in): the two ctxgrow stubs compare the record's old segment with 2E28
+  and 2E2A and store the new segment into the one that matches (conv.CTXMIRROR_FIX; stub
+  test `CtxMirror`). 8088, beside the Executive, Go Figure with the larger heaps: window,
+  Game menu, F2 starts a puzzle, Alt+F4, End Session, DOS prompt. The default sizes with
+  `CTXMIRROR=1` pass the same sequence, and so do Pack 2 JIGSAWED (About, Open, scramble),
+  RATTLER and RODENT (8088, Executive exit sequence). Without the switch the runtime is
+  byte-identical to the earlier default.
+* `TABGROW` and `CTXGROW` are overridable; defaults unchanged. With the larger
 heaps JIGSAWED (About, Open, scramble), RATTLER and RODENT still pass the Executive exit
 sequence on the 8088 core.
 
