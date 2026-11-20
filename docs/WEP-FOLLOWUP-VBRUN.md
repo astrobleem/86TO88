@@ -5,7 +5,7 @@ stated, XT-IDE, IBM CGA, Windows 3.0 real mode. **No real hardware was tested. N
 played through**; "played" means the brief inputs listed. "8088 core" is MartyPC's Intel 8088;
 V20 runs are diagnostics (they allow tracing) and are labelled V20.
 
-Runtime: `wip/vbrun100-realmode` at e4a47e1, `vbrun/build.sh` from the supplied originals. Default
+Runtime: `wip/vbrun100-realmode` at 4df6ab9, `vbrun/build.sh` from the supplied originals. Default
 VBRUN100.DLL / FIELD100.DLL / WEPUTIL.DLL are byte-identical to the builds tested before
 (298976 / 14992 / 20544 bytes). Game files: the supplied archives (Pack 2 JIGSAWED, RATTLER,
 RODENT identical to the copies tested earlier; Best of RODENT byte-identical to Pack 2's).
@@ -18,7 +18,7 @@ RODENT identical to the copies tested earlier; Best of RODENT byte-identical to 
 | Pack 2 RattleRace | 8088, beside the Executive: F2, steering, Alt+F4, End Session, DOS prompt | pack2-rattler-exit-8088.png |
 | Pack 2 Rodent's Revenge | 8088, beside the Executive: F2, blocks pushed, Alt+F4, End Session, DOS prompt | pack2-rodent-exit-8088.png |
 | Best of Rodent's Revenge | separate launch, runtime built from the Best of files: same sequence passes | bestof-rodent-exit-8088.png |
-| Pack 4 Go Figure! | default build: "Property or control 'uGameNewMatch' not found" (8088 ~200M instructions). With `VBLHEAP88=0x1000 VBLHEAP71=0x4000`: game window, Game menu opened and closed (8088, as shell). **Beside the Executive, default build (8088): window, Game menu, F2 starts a puzzle (digits dealt, score and timer running), Alt+F4 to the Executive, End Session, DOS prompt.** Larger heaps beside the Executive: hang from memory corruption (see below) | gofigure-default-beside-executive-newgame-exit-8088.png, gofigure-heaps-menu-8088.png, gofigure-default-576k-640k.png, gofigure-heaps-beside-executive-hang-8088.png |
+| Pack 4 Go Figure! | default build: "Property or control 'uGameNewMatch' not found" (8088 ~200M instructions). With `VBLHEAP88=0x1000 VBLHEAP71=0x4000`: game window, Game menu opened and closed (8088, as shell). **Beside the Executive, default build (8088): window, Game menu, F2 starts a puzzle (digits dealt, score and timer running), Alt+F4 to the Executive, End Session, DOS prompt.** Larger heaps beside the Executive: hang from memory corruption (see below); **with opt-in `CTXMIRROR=1` the same sequence passes, larger heaps and default sizes (8088)** | gofigure-default-beside-executive-newgame-exit-8088.png, gofigure-heaps-ctxmirror-beside-executive-exit-8088.png, gofigure-default-ctxmirror-beside-executive-exit-8088.png, gofigure-heaps-menu-8088.png, gofigure-default-576k-640k.png, gofigure-heaps-beside-executive-hang-8088.png |
 | Pack 4 Tic Tac Drop | splash and credits; "Invalid property value" (error 380) at ~460-490M, default and larger heaps; traced to a combo box selection with index -2 | tictacdrop-converted-splash-8088.png, tictacdrop-converted-error-8088.png |
 | Pack 4 Chess | three COMMDLG variants compared; none gives a usable game; see below | chess-commdlg-original-flagcleared-converted-8088.png |
 
@@ -43,7 +43,16 @@ stale pointer (it points into a block that now holds p-code; its length byte 0xD
 sign-extended), so ~64 KB is written over the stack segment and the next heap arenas. The
 pointer comes from VB's module-context table; with the converter's moving context grow
 (`CTXGROW`) disabled the window appears (V20). So that grow leaves another holder of a
-block's old segment; the holder is not yet identified.
+block's old segment. The holder is DGROUP word 2E28: VB copies the main context record's
+segment there (VBRUN seg 5) and seg 4:1609 returns it as the segment of the name strings
+that seg 73 copies. In the V20 trace the first moving grow moved 5803 to 59CB and updated
+only the record; 2E28 still held 5803. The new opt-in `CTXMIRROR=1` makes the converter's
+grow stub update 2E28/2E2A when they hold the moved block's old segment. With it, on the
+8088 core beside the Executive, Go Figure with the larger heaps and with the default sizes
+both pass (window, Game menu, F2 starts a puzzle, Alt+F4, End Session, DOS prompt), and
+Pack 2 Jigsawed, RattleRace and Rodent pass their exit sequences
+(pack2-*-exit-ctxmirror-8088.png). Without the switch the runtime is byte-identical to the
+earlier default.
 
 ## Tic Tac Drop: invalid property value
 
@@ -52,7 +61,11 @@ that VB retries. The larger heaps do not change the error, so the low-memory exp
 not hold here. V20 instruction trace before VB's raiser (entry 106, seg 7:0294, BX=0x17C =
 380, at 487.95M): VBRUN seg 83 passes message 0x040E (CB_SETCURSEL) with index -2 to a combo
 box's original window procedure; USER returns -1 (CB_ERR) and VB reports error 380. Where the
--2 comes from is not established.
+-2 comes from is not established. Beside the Executive (default build, 8088) the same error
+appears (tictacdrop-default-beside-executive-error-8088.png), so it does not depend on being
+the shell. With the converted COMMDLG and the original CMDIALOG/THREED/GAUGE (V20, diagnostic)
+VB still stops at load with "Custom control 'CommonDialog' not found", so the original
+controls cannot be compared at the point of the error.
 
 ## Chess
 
@@ -75,9 +88,19 @@ case (V20) also ends with SP wrapped and a jump to E000; it was not traced furth
 failing path. Separately, a LEAVE at Chess 1:64DB is not in the module library (its function
 has no static reference); it executes before the failure and would run as RETF on an 8088.
 
+Since then (the V20 runs above loaded WM88X3 without /V, so its 8088 rewriting was active
+there too; a /V comparison was not run): the Chess function whose call returns to the stale address
+(1:9F18) has an ENTER prolog; only 19 of Chess's far prologs carry the real-mode
+`inc bp` marking that KERNEL's stack walk uses to fix far returns when a code segment
+moves. That fits the stale return but was not proven. A test-only copy of CHESS.EXE with
+code segment 1 marked FIXED (header byte only, same library) ran off earlier, before the
+Executive repainted (~26M), so this experiment did not confirm it either. Case B on the V20
+with `WM88X3 /V` (80186 code left native): hourglass, CPU at 4A00:8C75-8C76 from 26M to
+51M; not traced.
+
 ## Tests
 
-`python3 -m pytest vbrun/tests`: 107 passed. `python3 vbrun/tests/test_tools.py`: 91 tests
+`python3 -m pytest vbrun/tests`: 107 passed; `python3 vbrun/tests/stubtest.py`: 69 passed, including three `CtxMirror` tests. `python3 vbrun/tests/test_tools.py`: 91 tests
 including the four ordinal-reference tests. `vbrun/i186test.py` per-site differential: VBRUN
 2974 sites / FIELD100 89 / WEPUTIL 223 (default and larger-heap builds), GAUGE 112, THREED
 742, CMDIALOG 98: no difference. Lower-case control names build identical outputs.
