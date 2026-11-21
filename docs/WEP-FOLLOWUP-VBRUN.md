@@ -79,6 +79,23 @@ tictacdrop-hercules-default-beside-executive-8088.png); with the 8088 VGA88 driv
 "Property or control 'OptPlayersSubMenu' not found" (tictacdrop-vga-default-beside-executive-8088.png),
 and with larger heaps "Can't create AutoRedraw image". Not yet explained.
 
+**"System Error / Terminating current application" (as the shell with Hercules or VGA88):
+found and fixed.** V20 ring trace: COMMDLG raises INT 3F to reload its discarded segment 6;
+KERNEL reopens C:\WINDOWS\SYSTEM\COMMDLG.DLL and DOS answers "file not found", because
+real-mode KERNEL sized COMMDLG's module block up to the last path character and the path's
+NUL fell on the next arena header (the open log shows the name followed by garbage). It
+happens when the path ends on a paragraph boundary, which the converted COMMDLG's header
+layout produced for C:\WINDOWS\SYSTEM. The converter now pads the imported-names table
+(`NEPATHS`, default C:\WINDOWS\SYSTEM\ and C:\WINDOWS\) so the NUL stays inside;
+COMMDLG gets 1 byte, WEP4UTIL some, default VBRUN100/FIELD100/WEPUTIL are unchanged
+(`wip/vbrun100-realmode` 8a405c1). With it the dump shows the NUL intact and the System
+Error is gone; Tic Tac Drop with Hercules on the 8088 (as shell and beside the Executive)
+now stops later with "Illegal function call" (tictacdrop-hercules-padded-8088.png), not yet
+traced. Windows' global heap on this MartyPC setup spans 0F4C-A000 (~580 KB); in DOSBox
+(632 KB free) the converted game runs with Hercules, and fails with "System Error" when
+48 or 64 KB are taken away first (works at 16-44 and at 56), so it is close to the memory
+limit; that DOSBox failure was not traced.
+
 ## Chess
 
 Common: original CHESS.EXE, original WEP4UTIL.DLL, WM88X3.COM 3,991 bytes from PR #4, a
