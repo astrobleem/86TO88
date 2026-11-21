@@ -92,9 +92,12 @@ Since then (the V20 runs above loaded WM88X3 without /V, so its 8088 rewriting w
 there too; a /V comparison was not run): the Chess function whose call returns to the stale address
 (1:9F18) has an ENTER prolog; only 19 of Chess's far prologs carry the real-mode
 `inc bp` marking that KERNEL's stack walk uses to fix far returns when a code segment
-moves. That fits the stale return but was not proven. A test-only copy of CHESS.EXE with
-code segment 1 marked FIXED (header byte only, same library) ran off earlier, before the
-Executive repainted (~26M), so this experiment did not confirm it either. Case B on the V20
+moves. That fits the stale return but was not proven. A first test-only copy of CHESS.EXE with
+code segment 1 marked FIXED ran off at ~26M, but that run is invalid: the module library
+keys each image by size and checksum, so the changed copy got none of its Chess patches. Rerun with a library built for the
+changed copy (PR #4's `w8lib.py auto`, 1698 sites as before): it stops at exactly the same
+point (A0A2:D2CE, same registers, ~26M, before the Executive repaints), so marking the code
+segment FIXED breaks the start itself and says nothing about the stale return. Case B on the V20
 with `WM88X3 /V` (80186 code left native): hourglass, CPU at 4A00:8C75-8C76 from 26M to
 51M; not traced.
 
