@@ -55,7 +55,14 @@ follows an unconditional jump and a descriptor word. Calls into the error entrie
 the p-code escape dispatchers (2:48F9..4938, which pop their return address and read
 operand bytes behind it) are treated as not returning, so their inline bytes are not
 taken for code. The first 8088 run (descent only) hit an unconverted PUSH imm8 at 83:0DDD
-in a switch case; the wider coverage is from that. Each site is replaced by code of the
+in a switch case; the wider coverage is from that. A V20 run of Tic Tac Drop with
+`MARTY_W186=1` then showed PUSH 0 executing at 2:489C/489E in a code block that moves
+(46 hits by 526M): p-code escape handlers reached only through the runtime's word tables
+(MOV BX,table / JMP 2:3B9D, or MOV BX,table / ADD BX,AX twice / JMP CS:[BX-2]; 19 tables
+in segment 2). Their entries are now heuristic roots (`word_table_targets`); with the
+no-return set this adds exactly those 10 sites (2:489C..48F0), nothing else. VBRUN100.DLL
+changes for this (2984 sites; per-site differential test: 8937 runs, 0 failures); FIELD100
+and WEPUTIL are unchanged. Each site is replaced by code of the
 same length:
 
 | original | count (VBRUN/FIELD) | replacement |
