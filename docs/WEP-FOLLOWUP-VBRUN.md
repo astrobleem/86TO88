@@ -90,8 +90,23 @@ layout produced for C:\WINDOWS\SYSTEM. The converter now pads the imported-names
 COMMDLG gets 1 byte, WEP4UTIL some, default VBRUN100/FIELD100/WEPUTIL are unchanged
 (`wip/vbrun100-realmode` 8a405c1). With it the dump shows the NUL intact and the System
 Error is gone; Tic Tac Drop with Hercules on the 8088 (as shell and beside the Executive)
-now stops later with "Illegal function call" (tictacdrop-hercules-padded-8088.png), not yet
-traced. Windows' global heap on this MartyPC setup spans 0F4C-A000 (~580 KB); in DOSBox
+now stops later with "Illegal function call" (tictacdrop-hercules-padded-8088.png).
+
+**Missed 80186 sites in VBRUN: found and fixed.** As the shell with Hercules on the V20 the
+same build shows the Tic Tac Drop game window (tictacdrop-hercules-shell-window-v20.png),
+while the 8088 shows "Illegal function call". A V20 run with MartyPC's 80186-opcode report
+found PUSH 0 executing at VBRUN 2:489C/489E (46 times by 526M): p-code escape handlers
+reached only through the runtime's word jump tables (MOV BX,table then JMP 2:3B9D, or
+JMP CS:[BX-2]), which the converter's code discovery did not follow. On an 8088 those
+bytes run as a conditional jump. The converter now takes those tables' entries as candidate
+code (`wip/vbrun100-realmode` 0507e8e); that adds exactly 10 sites (2:489C..48F0), the
+per-site differential test passes (2984 sites, 8937 runs, 0 failures), and **VBRUN100.DLL
+is no longer byte-identical to the earlier build** (FIELD100 and WEPUTIL are). With it,
+on the 8088 beside the Executive, Pack 2 Jigsawed (About, Open, scramble), RattleRace and
+Rodent pass the exit sequence again (pack2-*-exit-tables-8088.png). Tic Tac Drop with
+Hercules beside the Executive then gets past the point of the earlier errors and ends in
+"System Error" at ~800M with 43 KB free in pieces (largest 19 KB) and all module paths
+intact, i.e. a segment that no longer fits. Windows' global heap on this MartyPC setup spans 0F4C-A000 (~580 KB); in DOSBox
 (632 KB free) the converted game runs with Hercules, and fails with "System Error" when
 48 or 64 KB are taken away first (works at 16-44 and at 56), so it is close to the memory
 limit; that DOSBox failure was not traced.
