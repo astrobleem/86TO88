@@ -19,7 +19,7 @@ RODENT identical to the copies tested earlier; Best of RODENT byte-identical to 
 | Pack 2 Rodent's Revenge | 8088, beside the Executive: F2, blocks pushed, Alt+F4, End Session, DOS prompt | pack2-rodent-exit-8088.png |
 | Best of Rodent's Revenge | separate launch, runtime built from the Best of files: same sequence passes | bestof-rodent-exit-8088.png |
 | Pack 4 Go Figure! | default build: "Property or control 'uGameNewMatch' not found" (8088 ~200M instructions). With `VBLHEAP88=0x1000 VBLHEAP71=0x4000`: game window, Game menu opened and closed (8088, as shell). **Beside the Executive, default build (8088): window, Game menu, F2 starts a puzzle (digits dealt, score and timer running), Alt+F4 to the Executive, End Session, DOS prompt.** Larger heaps beside the Executive: hang from memory corruption (see below); **with opt-in `CTXMIRROR=1` the same sequence passes, larger heaps and default sizes (8088)** | gofigure-default-beside-executive-newgame-exit-8088.png, gofigure-heaps-ctxmirror-beside-executive-exit-8088.png, gofigure-default-ctxmirror-beside-executive-exit-8088.png, gofigure-heaps-menu-8088.png, gofigure-default-576k-640k.png, gofigure-heaps-beside-executive-hang-8088.png |
-| Pack 4 Tic Tac Drop | splash and credits; "Invalid property value" (error 380) at ~460-490M, default and larger heaps; traced to a combo box selection with index -2 | tictacdrop-converted-splash-8088.png, tictacdrop-converted-error-8088.png |
+| Pack 4 Tic Tac Drop | Hercules, as shell, 8088 (current build): game window and Game menu. CGA: the game's own error (see below). Earlier: "Invalid property value" (error 380) at ~460-490M, default and larger heaps; traced to a combo box selection with index -2 | tictacdrop-converted-splash-8088.png, tictacdrop-converted-error-8088.png |
 | Pack 4 Chess | three COMMDLG variants compared; none gives a usable game; see below | chess-commdlg-original-flagcleared-converted-8088.png |
 
 With the larger heaps the Pack 2 regressions pass the same Executive sequence on the 8088
@@ -106,7 +106,10 @@ on the 8088 beside the Executive, Pack 2 Jigsawed (About, Open, scramble), Rattl
 Rodent pass the exit sequence again (pack2-*-exit-tables-8088.png). Tic Tac Drop with
 Hercules beside the Executive then gets past the point of the earlier errors and ends in
 "System Error" at ~800M with 43 KB free in pieces (largest 19 KB) and all module paths
-intact; consistent with a segment that no longer fits, not traced. (The driver script had sent Alt+G/Esc at 701M before it was stopped.) Windows' global heap on this MartyPC setup spans 0F4C-A000 (~580 KB); in DOSBox
+intact; consistent with a segment that no longer fits, not traced. (The driver script had sent Alt+G/Esc at 701M before it was stopped.) **As the shell (more free memory) the 8088 now shows the Tic Tac Drop game window with
+Hercules at ~450M and its Game menu opens** (tictacdrop-hercules-shell-window-gamemenu-8088.png;
+Alt+F4 then ends Windows, as for any shell). Beside the Executive with BUFFERS=10 it still
+ends in "System Error" (tictacdrop-hercules-beside-executive-buffers10-syserror-8088.png). Windows' global heap on this MartyPC setup spans 0F4C-A000 (~580 KB); in DOSBox
 (632 KB free) the converted game runs with Hercules, and fails with "System Error" when
 48 or 64 KB are taken away first (works at 16-44 and at 56), so it is close to the memory
 limit; that DOSBox failure was not traced.
