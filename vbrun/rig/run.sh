@@ -29,7 +29,8 @@ else
   cp -- "$VHD" "$TMP" && cmp -s -- "$VHD" "$TMP" && mv -f -- "$TMP" "$STAGE" \
     || { echo "run.sh: staging $VHD -> $STAGE failed" >&2; rm -f -- "$TMP"; [ -e "$STAGE" ] && ! [ "$VHD" -ef "$STAGE" ] && rm -f -- "$STAGE"; exit 1; }
 fi
-sed 's/^filename = "default_xtide.vhd"/filename = "cur.vhd"/; s/^#terminal_port = 0xE9/terminal_port = 0xE9/' \
+# MARTY_TURBO=1: turbo clock (4.77 -> 7.16 MHz on the XT)
+sed 's/^filename = "default_xtide.vhd"/filename = "cur.vhd"/; s/^#terminal_port = 0xE9/terminal_port = 0xE9/'"${MARTY_TURBO:+; s/^turbo = false/turbo = true/}" \
   "$INST/martypc.toml" > "$INST/cur.toml" && grep -q '^filename = "cur.vhd"' "$INST/cur.toml" \
   || { echo "run.sh: could not write $INST/cur.toml" >&2; exit 1; }
 : > "$LOGF" || { echo "run.sh: cannot write $LOGF" >&2; exit 1; }
