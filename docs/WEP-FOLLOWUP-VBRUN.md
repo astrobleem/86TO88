@@ -5,7 +5,7 @@ stated, XT-IDE, IBM CGA, Windows 3.0 real mode. **No real hardware was tested. N
 played through**; "played" means the brief inputs listed. "8088 core" is MartyPC's Intel 8088;
 V20 runs are diagnostics (they allow tracing) and are labelled V20.
 
-Runtime: `wip/vbrun100-realmode` at 4df6ab9, `vbrun/build.sh` from the supplied originals. Default
+Runtime: `wip/vbrun100-realmode` at 4df6ab9 (notes up to f521d4b), `vbrun/build.sh` from the supplied originals. Default
 VBRUN100.DLL / FIELD100.DLL / WEPUTIL.DLL are byte-identical to the builds tested before
 (298976 / 14992 / 20544 bytes). Game files: the supplied archives (Pack 2 JIGSAWED, RATTLER,
 RODENT identical to the copies tested earlier; Best of RODENT byte-identical to Pack 2's).
@@ -67,6 +67,18 @@ the shell. With the converted COMMDLG and the original CMDIALOG/THREED/GAUGE (V2
 VB still stops at load with "Custom control 'CommonDialog' not found", so the original
 controls cannot be compared at the point of the error.
 
+**Reference runs in DOSBox 0.74-3** (another emulator, 386 core, same Windows 3.0 disk
+image, MS-DOS Executive as shell; tictacdrop-dosbox-reference-*.png, top row then bottom):
+the original, unconverted Tic Tac Drop in standard mode shows the same "Invalid property
+value" on CGA and works on VGA and Hercules; the converted files in real mode show the error
+on CGA and work on Hercules; the original files in real mode cannot run (protected-only
+COMMDLG). So the CGA error belongs to the game on a 640x200 display, not to the conversion.
+What remains is MartyPC-specific: with Hercules the converted game stops at "Control array
+element '8224' does not exist" (8088, beside the Executive,
+tictacdrop-hercules-default-beside-executive-8088.png); with the 8088 VGA88 driver
+"Property or control 'OptPlayersSubMenu' not found" (tictacdrop-vga-default-beside-executive-8088.png),
+and with larger heaps "Can't create AutoRedraw image". Not yet explained.
+
 ## Chess
 
 Common: original CHESS.EXE, original WEP4UTIL.DLL, WM88X3.COM 3,991 bytes from PR #4, a
@@ -100,6 +112,15 @@ point (A0A2:D2CE, same registers, ~26M, before the Executive repaints), so marki
 segment FIXED breaks the start itself and says nothing about the stale return. Case B on the V20
 with `WM88X3 /V` (80186 code left native): hourglass, CPU at 4A00:8C75-8C76 from 26M to
 51M; not traced.
+
+**Chess reference runs in DOSBox 0.74-3** (386 core, no WM88X3 needed;
+chess-dosbox-reference-*.png): the original files in standard mode on CGA give the Chess
+board. In real mode, with the protected-only flag cleared in a test copy of COMMDLG (case B)
+the screen fills with fragments and the hourglass stays; with the converted COMMDLG (case C)
+only the hourglass. So Chess fails in Windows 3.0 real mode even on a 386 with no 8088
+rewriting and either COMMDLG: the failure is Chess in real mode, not the 8088 bridge and not
+COMMDLG. Which Chess construct fails is not established (the ENTER-prolog frames above remain
+the candidate).
 
 ## Tests
 
