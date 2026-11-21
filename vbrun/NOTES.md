@@ -62,7 +62,10 @@ in a switch case; the wider coverage is from that. A V20 run of Tic Tac Drop wit
 in segment 2). Their entries are now heuristic roots (`word_table_targets`); with the
 no-return set this adds exactly those 10 sites (2:489C..48F0), nothing else. VBRUN100.DLL
 changes for this (2984 sites; per-site differential test: 8937 runs, 0 failures); FIELD100
-and WEPUTIL are unchanged. Each site is replaced by code of the
+and WEPUTIL are unchanged. With the new VBRUN, 8088 beside MS-DOS Executive: Pack 2 JIGSAWED
+(About, Open, scramble), RATTLER and RODENT pass the exit sequence. Tic Tac Drop with
+Hercules beside the Executive gets past the earlier errors and ends in "System Error" at
+~800M with 43 KB free in pieces (largest 19 KB), module paths intact (not traced). Each site is replaced by code of the
 same length:
 
 | original | count (VBRUN/FIELD) | replacement |
