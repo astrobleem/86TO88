@@ -106,7 +106,7 @@ on the 8088 beside the Executive, Pack 2 Jigsawed (About, Open, scramble), Rattl
 Rodent pass the exit sequence again (pack2-*-exit-tables-8088.png). Tic Tac Drop with
 Hercules beside the Executive then gets past the point of the earlier errors and ends in
 "System Error" at ~800M with 43 KB free in pieces (largest 19 KB) and all module paths
-intact, i.e. a segment that no longer fits. Windows' global heap on this MartyPC setup spans 0F4C-A000 (~580 KB); in DOSBox
+intact; consistent with a segment that no longer fits, not traced. (The driver script had sent Alt+G/Esc at 701M before it was stopped.) Windows' global heap on this MartyPC setup spans 0F4C-A000 (~580 KB); in DOSBox
 (632 KB free) the converted game runs with Hercules, and fails with "System Error" when
 48 or 64 KB are taken away first (works at 16-44 and at 56), so it is close to the memory
 limit; that DOSBox failure was not traced.
