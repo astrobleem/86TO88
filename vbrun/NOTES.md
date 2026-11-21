@@ -65,7 +65,9 @@ changes for this (2984 sites; per-site differential test: 8937 runs, 0 failures)
 and WEPUTIL are unchanged. With the new VBRUN, 8088 beside MS-DOS Executive: Pack 2 JIGSAWED
 (About, Open, scramble), RATTLER and RODENT pass the exit sequence. Tic Tac Drop with
 Hercules beside the Executive gets past the earlier errors and ends in "System Error" at
-~800M with 43 KB free in pieces (largest 19 KB), module paths intact (not traced). Each site is replaced by code of the
+~800M with 43 KB free in pieces (largest 19 KB), module paths intact (not traced). As the
+shell (no Executive) the 8088 shows the game window with Hercules at ~450M and the Game menu
+opens; beside the Executive with BUFFERS=10 it still ends in "System Error". Each site is replaced by code of the
 same length:
 
 | original | count (VBRUN/FIELD) | replacement |
