@@ -108,6 +108,28 @@ def _lock():
 LOCK=_lock()
 NODISCARD=os.environ.get('NODISCARD')=='1'
 VB=True
+# Windows 3.0 real-mode KERNEL builds a module's in-memory table block with the file's path
+# (OFSTRUCT) at the end and allocates only up to the last path character: the terminating NUL
+# lands one byte past the block when the path ends on a paragraph boundary, i.e. in the next
+# arena header. When a discarded segment or a resource is reloaded later, OpenFile(OF_REOPEN)
+# gets the path plus that header's bytes, DOS answers "file not found" and KERNEL ends the
+# task ("System Error"). The block layout (traced): header 0x40, segment table 10*nseg,
+# resource and resident-name tables as in the file, module refs 2*nmod, 5*nseg+4 bytes,
+# imported names as in the file, entry table + 5 per movable entry + 1, then the OFSTRUCT
+# (8 bytes + path). pathpad returns how many bytes to append to the imported-names table so
+# that the NUL stays inside the block for the usual install paths (NEPATHS, ';'-separated
+# directories, default C:\WINDOWS\SYSTEM\ and C:\WINDOWS\).
+def pathpad(d,ne,eto,cbent,nmov,name):
+    dirs=os.environ.get('NEPATHS','C:\\WINDOWS\\SYSTEM\\;C:\\WINDOWS\\')
+    if not dirs: return 0
+    H=lambda o: struct.unpack_from('<H',d,ne+o)[0]
+    nseg,nmod=H(0x1c),H(0x1e)
+    ofs=0x40+10*nseg+(H(0x28)-H(0x24))+2*nmod+5*nseg+4+(eto-H(0x2a))+cbent+5*nmov+1
+    lens=[len(x)+len(name) for x in dirs.split(';') if x]
+    for p in range(16):
+        if all((ofs+p+8+L)%16 for L in lens): return p
+    return 0
+
 def conv(src, dst, report=True, vb=True):
     global VB,RETF_SEGS,TABS
     VB=vb
@@ -126,7 +148,7 @@ def conv(src, dst, report=True, vb=True):
     blobs=[]; newents=[]
     stats=collections.Counter()
     ords={}
-    ORD0=[101]; MOVCNT=[0]
+    ORD0=[101]; MOVCNT=[0]; OUTNAME=[dst]
     def ordn(seg,off):
         k=(seg,off)
         if k not in ords: ords[k]=ORD0[0]+len(ords)
@@ -406,7 +428,9 @@ def conv(src, dst, report=True, vb=True):
     et+=b'\0'
     MOVCNT[0]=sum(1 for e in L if e and e[0]=='M')
     nrs=struct.unpack_from('<I',d,ne+0x2c)[0]; nrsz=struct.unpack_from('<H',d,ne+0x20)[0]
-    head=bytearray(d[:ne+eto])+et
+    p=pathpad(d,ne,eto,len(et),MOVCNT[0],os.path.basename(OUTNAME[0]))
+    head=bytearray(d[:ne+eto])+b'\0'*p+et
+    if p: struct.pack_into('<H',head,ne+4,eto+p); stats['pathpad']=p
     if i186_info.get('entry'): struct.pack_into('<HH',head,ne+0x14,i186_info['entry'],i186_info['seg'])
     struct.pack_into('<H',head,ne+6,len(et))
     struct.pack_into('<I',head,ne+0x2c,len(head))

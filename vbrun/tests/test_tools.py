@@ -423,5 +423,35 @@ class OrdinalRefs(unittest.TestCase):
         self.assertTrue(any(r[0] == 3 and r[2] == 1 and r[3] == 0xff for r in recs), recs)
 
 
+class PathPad(unittest.TestCase):
+    """conv.pathpad: keep the NUL of the module's file path inside KERNEL's module block.
+    Numbers from the traced case: converted COMMDLG.DLL in C:\\WINDOWS\\SYSTEM, in-memory
+    OFSTRUCT at 0x60B, 37 bytes, block 0x630 long (NUL overwritten by the next arena)."""
+    def hdr(self):
+        import struct
+        ne = 0x40; d = bytearray(0x80)
+        for o, v in ((0x1c, 9), (0x1e, 4), (0x22, 0x40), (0x24, 0x88), (0x28, 0x2dd), (0x2a, 0x2e5)):
+            struct.pack_into('<H', d, ne + o, v)
+        return bytes(d), ne
+    def pad(self, dirs, name='COMMDLG.DLL'):
+        sys.path.insert(0, os.path.join(HERE, '..')); import conv
+        d, ne = self.hdr(); old = os.environ.get('NEPATHS')
+        os.environ['NEPATHS'] = dirs
+        try: return conv.pathpad(d, ne, 0x2ff, 0x18d, 63, name)
+        finally:
+            if old is None: del os.environ['NEPATHS']
+            else: os.environ['NEPATHS'] = old
+    def test_traced_case_needs_one_byte(self):
+        self.assertEqual(self.pad('C:\\WINDOWS\\SYSTEM\\'), 1)
+    def test_other_length_needs_none(self):
+        self.assertEqual(self.pad('C:\\WINDOWS\\SYSTEM\\', 'COMMDLG2.DLL'), 0)
+    def test_both_default_dirs_avoided(self):
+        p = self.pad('C:\\WINDOWS\\SYSTEM\\;C:\\WINDOWS\\')
+        for L in (29, 22):
+            self.assertNotEqual((0x60b + p + 8 + L) % 16, 0)
+    def test_disabled(self):
+        self.assertEqual(self.pad(''), 0)
+
+
 if __name__ == '__main__':
     unittest.main()

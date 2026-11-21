@@ -308,6 +308,26 @@ Beside MS-DOS Executive the outcome depends on the build, not on free memory:
 heaps JIGSAWED (About, Open, scramble), RATTLER and RODENT still pass the Executive exit
 sequence on the 8088 core.
 
+### Module path terminator (KERNEL, real mode) and NEPATHS padding
+
+Tic Tac Drop as the shell with Hercules (V20 and 8088) ended at ~13.8M with "System Error /
+Terminating current application". Ring trace: COMMDLG's thunk 182D:04EC raises INT 3F for
+segment 6 (discardable code, 0x200 bytes); KERNEL reopens C:\WINDOWS\SYSTEM\COMMDLG.DLL,
+DOS answers 2 (file not found), KERNEL calls SysErrorBox and ends the task. LOG21 showed the
+reopened name as "COMMDLG.DLL" followed by garbage: KERNEL had allocated COMMDLG's module
+block (0x630 bytes) up to the last path character, so the NUL fell on the next arena header
+(COMMDLG's data segment, first byte 0x10). Every module block in that dump ends exactly at
+its path or with slack; only COMMDLG's path ended on a paragraph boundary. The in-memory
+layout fits (traced on COMMDLG, CMDIALOG, VBRUN): 0x40 + 10*nseg + file resource/resident
+tables + 2*nmod + 5*nseg+4 + file imported names + entry table + 5 per movable entry + 1,
+then the 8-byte OFSTRUCT head and the path. conv.pathpad appends 0-15 bytes to the imported
+names table so the NUL stays inside the block for the install directories in `NEPATHS`
+(default C:\WINDOWS\SYSTEM\ and C:\WINDOWS\; empty disables). Default VBRUN100,
+FIELD100 and WEPUTIL need no padding and stay byte-identical; COMMDLG gets 1 byte, WEP4UTIL
+some. With it the same Hercules shell run shows COMMDLG's block 0x650 long, OFSTRUCT at
+0x60C and the NUL intact, and no System Error by 51M (V20). Another directory layout can
+still hit the KERNEL behaviour; the padding only covers the listed directories.
+
 ### Tic Tac Drop's "Invalid property value"
 
 Not an allocation failure: no LocalAlloc failure, four in-place GlobalReAlloc failures of
