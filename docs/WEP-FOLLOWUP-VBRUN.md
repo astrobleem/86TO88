@@ -103,7 +103,10 @@ code (`wip/vbrun100-realmode` 0507e8e); that adds exactly 10 sites (2:489C..48F0
 per-site differential test passes (2984 sites, 8937 runs, 0 failures), and **VBRUN100.DLL
 is no longer byte-identical to the earlier build** (FIELD100 and WEPUTIL are). With it,
 on the 8088 beside the Executive, Pack 2 Jigsawed (About, Open, scramble), RattleRace and
-Rodent pass the exit sequence again (pack2-*-exit-tables-8088.png). Tic Tac Drop with
+Rodent pass the exit sequence again (pack2-*-exit-tables-8088.png), Go Figure (default
+sizes) passes window, Game menu, F2 puzzle, Alt+F4, End Session, DOS, and Tic Tac Drop on
+CGA still shows the game's own "Invalid property value"
+(gofigure-default-exit-and-tictacdrop-cga-tables-8088.png). Tic Tac Drop with
 Hercules beside the Executive then gets past the point of the earlier errors and ends in
 "System Error" at ~800M with 43 KB free in pieces (largest 19 KB) and all module paths
 intact; consistent with a segment that no longer fits, not traced. (The driver script had sent Alt+G/Esc at 701M before it was stopped.) **As the shell (more free memory) the 8088 now shows the Tic Tac Drop game window with
