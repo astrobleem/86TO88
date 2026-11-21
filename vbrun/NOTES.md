@@ -321,6 +321,27 @@ from (e.g. a list count of -1) is not established. Beside MS-DOS Executive (defa
 CMDIALOG/THREED/GAUGE (V20) VB stops at load with "Custom control 'CommonDialog' not found",
 so the original controls cannot be compared at the error.
 
+Reference runs in DOSBox 0.74-3 (386 core, 4 MB, Windows 3.0 from the same disk image,
+mounted with imgmount, MS-DOS Executive as shell):
+
+| files | mode | display | Tic Tac Drop |
+| --- | --- | --- | --- |
+| original VBRUN/VBX/COMMDLG | standard (`win /s`) | CGA | "Invalid property value" |
+| original | standard | VGA | game window (Rows/Column/Win Pattern/Level combos filled) |
+| original | standard | Hercules | game window (Rows 6) |
+| original | real (`win /r`) | Hercules | "Cannot run" (protected-only COMMDLG) |
+| converted (default build) | real | CGA | "Invalid property value" |
+| converted (default build) | real | Hercules | game window |
+
+So the CGA error belongs to the game on a 640x200 display, not to the conversion. On CGA
+one toolbar combo box gets no items and the game then selects index -2, consistent with ListIndex-1 on an empty combo (V20
+trace: CB_GETCURSEL -1 then CB_SETCURSEL -2; GetDeviceCaps(NUMCOLORS) is 2). V20 trace to
+500M: no LocalAlloc or LocalReAlloc failure. On MartyPC with Hercules (`--video herc`,
+default build, 8088, beside the Executive) the converted game instead stops with "Control
+array element '8224' does not exist"; with VGA88 "Property or control 'OptPlayersSubMenu'
+not found", with VGA88 and the larger heaps "Can't create AutoRedraw image". As the shell
+with VGA88 or Hercules, Windows shows "System Error" before the game window.
+
 The default build keeps VBLHEAP88=0x400 and VBLHEAP71=0x3000 (byte-identical runtime);
 `VBLHEAP88` is now overridable like `VBLHEAP71`. The larger heaps cost ~7 KB of locked
 memory, which matters beside MS-DOS Executive (13-20 KB free with JIGSAWED).

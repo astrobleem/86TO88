@@ -4,8 +4,8 @@ Builds a MartyPC XT-IDE disk: the user's own installed Windows 3.0 image plus th
 Entertainment Pack 2 VB apps, with converted DLLs taken from DLLDIR (anything not
 in DLLDIR comes from the original set).
 
-  --video cga|vga      display driver (default cga; vga uses VGA88.DRV from
-                       windows-3-vga-8088)
+  --video cga|vga|herc|ega  display driver (default cga; vga uses VGA88.DRV from
+                       windows-3-vga-8088; herc/ega use Windows 3.0's HERCULES.DRV/EGA.DRV)
   --shell APP.EXE      SYSTEM.INI shell= (default: leave Program Manager)
   --win-args ARGS      text after 'WIN /R' (e.g. C:\\GAME\\JIGSAWED.EXE)
   --no-autowin         don't start Windows from AUTOEXEC.BAT
@@ -15,7 +15,9 @@ Inputs (never committed; supply your own copies):
   VBW_ORIG          dir with original VBRUN100.DLL FIELD100.DLL WEPUTIL.DLL
                     JIGSAWED.EXE RODENT.EXE RATTLER.EXE
   VBW_W30DRV        dir with expanded CGA.DRV CGASYS.FON CGAFIX.FON CGAOEM.FON CGA.GR2
-                    (and VGAOEM.FON VGAFIX.FON VGASYS.FON VGACOLOR.GR2 for --video vga)
+                    (and VGAOEM.FON VGAFIX.FON VGASYS.FON VGACOLOR.GR2 for --video vga;
+                    EGASYS.FON EGAFIX.FON EGAOEM.FON plus HERCULES.DRV HERCULES.GR2 or
+                    EGA.DRV EGACOLOR.GR2 for herc/ega)
   VBW_VGA88         path to VGA88.DRV (only for --video vga)
   VBW_VHD_TEMPLATE  MartyPC install/media/hdds/default_xtide.vhd (footer template)
 """
@@ -27,7 +29,7 @@ import vhd
 
 ap = argparse.ArgumentParser()
 ap.add_argument('out'); ap.add_argument('dlldir')
-ap.add_argument('--video', default='cga', choices=('cga', 'vga'))
+ap.add_argument('--video', default='cga', choices=('cga', 'vga', 'herc', 'ega'))
 ap.add_argument('--shell'); ap.add_argument('--win-args', default='')
 ap.add_argument('--no-autowin', action='store_true')
 ap.add_argument('--pre', action='append', default=[], help='AUTOEXEC.BAT line before WIN (e.g. a TSR)')
@@ -57,6 +59,11 @@ if a.video == 'cga':
     kv = [('display.drv', 'CGA.DRV'), ('oemfonts.fon', 'cgaoem.fon'), ('fixedfon.fon', 'cgafix.fon'),
           ('fonts.fon', 'cgasys.fon'), ('286grabber', 'cga.gr2')]
     drv = ['CGA.DRV', 'CGASYS.FON', 'CGAFIX.FON', 'CGAOEM.FON', 'CGA.GR2']
+elif a.video in ('herc', 'ega'):
+    d, g = ('HERCULES.DRV', 'HERCULES.GR2') if a.video == 'herc' else ('EGA.DRV', 'EGACOLOR.GR2')
+    kv = [('display.drv', d.lower()), ('oemfonts.fon', 'egaoem.fon'), ('fixedfon.fon', 'egafix.fon'),
+          ('fonts.fon', 'egasys.fon'), ('286grabber', g.lower())]
+    drv = [d, g, 'EGASYS.FON', 'EGAFIX.FON', 'EGAOEM.FON']
 else:
     kv = [('display.drv', 'VGA88.DRV'), ('oemfonts.fon', 'vgaoem.fon'), ('fixedfon.fon', 'vgafix.fon'),
           ('fonts.fon', 'vgasys.fon'), ('286grabber', 'vgacolor.gr2')]
