@@ -485,6 +485,15 @@ fill_lists:
         push    ax
         PUSHD   patbuf
         API     USER, 92                ; SetDlgItemText(edt1, pattern)
+        push    word [hdlg]             ; selected, so typing replaces it
+        PUSHI   edt1
+        PUSHI   EM_SETSEL
+        xor     ax, ax
+        push    ax
+        PUSHI   7FFFh                   ; lParam = MAKELONG(0, 7FFFh): all
+        xor     ax, ax
+        push    ax
+        API     USER, 101               ; SendDlgItemMessage
 .k:     clc
         ret
 

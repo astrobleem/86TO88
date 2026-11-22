@@ -428,4 +428,17 @@ In DOSBox standard mode one Save As result came back on drive D: (current drive 
 scripted keys; `rig/coverage.py` maps every executed 80186 opcode back to module:segment:offset
 (by the reported bytes at that offset) and fails when one lies in a converted module. With the
 current build: JIGSAWED (About, Open, scramble, Fast Solve, Game/Options/Help menus) and
-GOFIGURE (Game menu, New Game, Options, Skill, Help menus) executed no 80186 opcode at all.
+GOFIGURE (Game menu, New Game, Options, Skill, Help menus) executed no 80186 opcode at all. Neither did
+TICTACDP (Game, Options and Help menus, New Game; Hercules), RATTLER (start, play, menus) or
+RODENT (start, arrow keys, menus), nor CDTEST.EXE with the replacement COMMDLG (Open with directory
+changes c:\ -> c:\windows\system -> c:\windows, Color, Font, Print, Save As). These runs cover
+only the scripted steps, not whole games.
+
+The file dialog's directory line: in DOSBox, after a directory change it grew to
+`c:\windows\*.*\*.*...`. That is DOSBox's DOS, not the DLL: DOSBox accepts `CD *.*` on a FAT
+image and then reports `C:\WINDOWS\*.*` as the current directory (checked at the DOSBox prompt),
+and USER's DlgDirList tries a change to its spec first. MS-DOS refuses the change; on MartyPC the
+line reads c:\windows\system, then c:\windows. Directory navigation is therefore tested on
+MartyPC, not DOSBox. After a directory change the file name box now gets its pattern selected
+(EM_SETSEL), so typing replaces it; before, typed text went in front of the pattern
+(`SYSTEM*.TXT`), on DOSBox and MartyPC alike.
