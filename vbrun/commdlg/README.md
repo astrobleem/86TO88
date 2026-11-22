@@ -2,7 +2,7 @@
 
 A replacement for the Windows 3.1 common dialog library, written for Windows 3.0 real mode
 and the 8086 instruction set. Microsoft's COMMDLG.DLL is marked protected-mode only, has
-80186 code and about 70 KB of code in six segments; games that use it (Entertainment Pack 4's
+80186 code and 64 KB of code in eight segments; games that use it (Entertainment Pack 4's
 Chess directly, Tic Tac Drop through CMDIALOG.VBX) cannot load it in real mode unconverted.
 
 | | |

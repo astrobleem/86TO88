@@ -407,8 +407,8 @@ Tic Tac Drop's error box is raised from VBRUN seg 21 as well (V20, i476M).
 
 `commdlg/` is an 8086 COMMDLG.DLL for Windows 3.0 real mode (nasm source, linked by
 `commdlg/mkne.py`; see commdlg/README.md): about 8.4 KB on disk, one fixed 5 KB code segment
-and 2 KB of data plus a 2 KB local heap, instead of the converted Microsoft DLL (about 70 KB of
-code). build.sh now builds it whenever a COMMDLG.DLL is among the inputs (`COMMDLG=convert`
+and 2 KB of data plus a 2 KB local heap, instead of the converted Microsoft DLL (64 KB of
+code in eight discardable segments). build.sh now builds it whenever a COMMDLG.DLL is among the inputs (`COMMDLG=convert`
 converts Microsoft's as before). First real-mode load hung in KERNEL's fixup-chain walk: the
 exported entries began with a relocated `mov ax, imm16`, which real-mode KERNEL also patches
 (to load the data segment) before applying relocations, so the chain's 0FFFFh end marker was
@@ -439,6 +439,14 @@ The file dialog's directory line: in DOSBox, after a directory change it grew to
 image and then reports `C:\WINDOWS\*.*` as the current directory (checked at the DOSBox prompt),
 and USER's DlgDirList tries a change to its spec first. MS-DOS refuses the change; on MartyPC the
 line reads c:\windows\system, then c:\windows. Directory navigation is therefore tested on
-MartyPC, not DOSBox. After a directory change the file name box now gets its pattern selected
+MartyPC, not DOSBox.
+
+Tic Tac Drop as shell, Hercules, 8088 core, same disk except COMMDLG: Game > Save As shows the
+replacement's dialog within 60M instructions of the key; with the converted COMMDLG no dialog
+was on screen at that point. With the game idle the replacement holds 9.3 KB (fixed code and
+data), the converted one 4.4 KB (data only, code discarded), so about 5 KB more while no dialog
+is open; the converted DLL's use while a dialog is open was not measured. After Escape the game
+minimizes itself; the original files in standard mode do the same. Chess in DOSBox real mode
+with the replacement: hourglass only, as with the converted COMMDLG. After a directory change the file name box now gets its pattern selected
 (EM_SETSEL), so typing replaces it; before, typed text went in front of the pattern
 (`SYSTEM*.TXT`), on DOSBox and MartyPC alike.
