@@ -245,9 +245,10 @@ print_init:
         or      ax, ax
         jnz     .cp
         inc     ax
-.cp:    push    word [hdlg]
+.cp:    mov     cx, ax
+        push    word [hdlg]
         PUSHI   edt1
-        push    ax
+        push    cx
         xor     ax, ax
         push    ax
         API     USER, 94                ; SetDlgItemInt(copies)

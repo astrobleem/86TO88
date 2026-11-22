@@ -17,9 +17,15 @@
 
 ; FARPROC name: exported FAR PASCAL entry; real-mode frame (odd BP marks a far frame for
 ; KERNEL's stack walk), DS = our data segment, SI/DI saved. Arguments at [bp+6] upwards.
+; The entry starts with the standard 'push ds / pop ax / nop', which KERNEL rewrites to
+; 'mov ax, DGROUP' for exported entries flagged as using the shared data segment. (A
+; relocated 'mov ax, imm16' does not work: real-mode KERNEL patches that form too, before
+; the relocations run, and breaks their fixup chain.)
 %macro FARPROC 1
 %1:
-  MOVDSSEL
+  push ds
+  pop ax
+  nop
   inc bp
   push bp
   mov bp, sp

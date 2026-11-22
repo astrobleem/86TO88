@@ -12,7 +12,8 @@ Usage: mkne.py BIN MAP OUT.DLL SPEC.json
 SPEC: {"name": "COMMDLG", "description": "...", "heap": 1024, "entry": "LibEntry",
        "imports": ["USER", "KERNEL", "GDI"],
        "exports": [[ordinal, "NAME", "label", resident(bool)], ...],
-       "code_flags": "fixed" | "moveable"}
+       "code_flags": "fixed" | "moveable",
+       "type": "dll" (default) | "exe", "stack": bytes (exe)}
 Code is segment 1, data (the automatic data segment, fixed) segment 2."""
 import json, re, struct, sys
 
@@ -104,10 +105,16 @@ def build(binp, mapp, out, spec):
     cmov = len(exports) if moveable else 0
     h = bytearray(0x40); h[0:2] = b'NE'; h[2] = 5; h[3] = 10
     struct.pack_into('<HH', h, 4, ent_off, len(ent))
-    struct.pack_into('<H', h, 0x0C, 0x8301 if data else 0x8300)       # library, single data, windows API
-    struct.pack_into('<HHH', h, 0x0E, 2 if data else 0, spec.get('heap', 0), 0)
+    exe = spec.get('type') == 'exe'
+    if exe:   # application: multiple data, windows API; SS = automatic data segment, SP from the loader
+        struct.pack_into('<H', h, 0x0C, 0x0302)
+        struct.pack_into('<HHH', h, 0x0E, 2, spec.get('heap', 0), spec.get('stack', 4096))
+        struct.pack_into('<HH', h, 0x18, 0, 2)
+    else:     # library, single data, windows API
+        struct.pack_into('<H', h, 0x0C, 0x8301 if data else 0x8300)
+        struct.pack_into('<HHH', h, 0x0E, 2 if data else 0, spec.get('heap', 0), 0)
+        struct.pack_into('<HH', h, 0x18, 0, 0)
     struct.pack_into('<HH', h, 0x14, entry_lab[1], 1)
-    struct.pack_into('<HH', h, 0x18, 0, 0)
     struct.pack_into('<HHH', h, 0x1C, nseg, len(mods), len(nres))
     struct.pack_into('<HHHHH', h, 0x22, segtab_off, rsrc_off, res_off, mod_off, imp_off)
     struct.pack_into('<IHHH', h, 0x2C, nres_file, cmov, SH, 0)
