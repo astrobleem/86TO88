@@ -160,6 +160,51 @@ rewriting and either COMMDLG: the failure is Chess in real mode, not the 8088 br
 COMMDLG. Which Chess construct fails is not established (the ENTER-prolog frames above remain
 the candidate).
 
+## Replacement COMMDLG.DLL and 80186 coverage runs
+
+Runtime for this section: `wip/vbrun100-realmode` at 1e039f6 (notes 86bfb13). The Tic Tac Drop
+8088 runs used the COMMDLG of 1d937b0 with a since-dropped 70-byte directory buffer (8441
+bytes; 1e039f6 builds 8403 bytes and adds selecting the name box after a directory change).
+
+`wip/vbrun100-realmode` now has `vbrun/commdlg/`: a COMMDLG.DLL written for Windows 3.0 real
+mode in 8086 assembly (nasm `cpu 8086`), about 8.4 KB on disk (one fixed 5 KB code segment, 2 KB
+data, 2 KB local heap), in place of the converted Microsoft DLL (89 KB, 64 KB of code in eight
+discardable segments). It covers GetOpenFileName/GetSaveFileName, ChooseColor (16 basic
+colours), ChooseFont, PrintDlg (printer from WIN.INI, copies, DEVNAMES, DC/IC),
+CommDlgExtendedError, GetFileTitle and hooks; FindText/ReplaceText return failure; no custom
+templates, custom colours, DEVMODE or page ranges. `vbrun/build.sh` uses it unless
+`COMMDLG=convert`. Microsoft's file is not modified or shipped.
+
+| run | result | screenshots |
+| --- | --- | --- |
+| CDTEST.EXE (test program, opens every dialog), V20, real mode, CGA | Open: c:\ -> windows\system -> c:\windows typed into the name box; Color (result 00008000), Font (Helv, Bold, 20 pt, lfHeight -13, weight 700), PrintDlg with no printer: FALSE, error 1008; Save As | commdlg-replacement-cdtest-v20.png |
+| Tic Tac Drop as shell, Hercules, **8088** | Game > Save As shows the dialog with the game's file type; Escape | tictacdrop-hercules-shell-saveas-replacement-top-converted-bottom-8088.png (top) |
+| same with the converted COMMDLG, 8088 | 60M instructions after the key no dialog on screen yet; after the Escape the game is minimized | same file (bottom) |
+| original files, DOSBox standard mode, Hercules | Save As, Escape: the game minimizes itself, so the minimized window above is the game's own reaction to Cancel | tictacdrop-dosbox-reference-original-std-herc-saveas-cancel.png |
+
+Memory on the 8088 run (global arena walked in 1 MB dumps; same disk except COMMDLG):
+game window idle, the replacement holds 9.3 KB (code and data, both fixed); the converted
+COMMDLG holds 4.4 KB (its data segment; all code discarded). So while no dialog is open the
+replacement costs about 5 KB more. While a dialog is open the converted DLL must bring in
+discardable code segments of 2.9 to 23 KB each; that was not measured (its dialog had not
+appeared at the dump). Free memory at the dumps (14 to 50 KB) moves with VBRUN's discardable
+segments and does not compare the two.
+
+Chess in DOSBox real mode with the replacement: hourglass only, as with the converted COMMDLG
+(Chess section above); the Chess failure is unchanged.
+
+`vbrun/rig/coverage.sh` runs a game as the shell on the V20 core with every executed 80186
+opcode reported (`MARTY_W186=1`) and maps each to module:segment:offset. With the current
+build, Jigsawed (About, Open, scramble, Fast Solve, menus), Go Figure (menus, New Game, Options,
+Skill), Tic Tac Drop (Hercules; menus, New Game), RattleRace (start, play, menus), Rodent's
+Revenge (start, arrow keys, menus) and CDTEST with the replacement executed none. These cover
+the scripted steps only, not whole games.
+
+DOSBox note: DOSBox's DOS accepts `CD *.*` on a FAT image (checked at its prompt) and USER's
+DlgDirList tries such a change, so in DOSBox the file dialogs' directory line grows
+(`c:\windows\*.*\*.*`). MS-DOS on MartyPC refuses it and the line stays right. Directory
+navigation was therefore checked on MartyPC.
+
 ## Tests
 
 `python3 -m pytest vbrun/tests`: 107 passed; `python3 vbrun/tests/stubtest.py`: 69 passed, including three `CtxMirror` tests. `python3 vbrun/tests/test_tools.py`: 91 tests
