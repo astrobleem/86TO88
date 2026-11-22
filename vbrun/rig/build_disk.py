@@ -33,6 +33,7 @@ ap.add_argument('--video', default='cga', choices=('cga', 'vga', 'herc', 'ega'))
 ap.add_argument('--shell'); ap.add_argument('--win-args', default='')
 ap.add_argument('--no-autowin', action='store_true')
 ap.add_argument('--buffers', type=int, default=30, help='CONFIG.SYS BUFFERS= (default 30)')
+ap.add_argument('--ini', action='append', default=[], help='FILE:section:key=value set in WINDOWS\\FILE (e.g. WIN.INI:windows:device=...)')
 ap.add_argument('--pre', action='append', default=[], help='AUTOEXEC.BAT line before WIN (e.g. a TSR)')
 ap.add_argument('extra', nargs='*')
 a = ap.parse_args()
@@ -79,7 +80,12 @@ for src, dst in files:
     im.put(src, dst)
 def put_text(name, data):
     p = os.path.join(td, 'x'); open(p, 'wb').write(data); im.put(p, name)
-put_text('WINDOWS/SYSTEM.INI', ini)
+inis = {'SYSTEM.INI': ini}
+for x in a.ini:
+    f, sec, kv_ = x.split(':', 2); k, v = kv_.split('=', 1); f = f.upper()
+    if f not in inis: inis[f] = im.get('WINDOWS/' + f)
+    inis[f] = set_ini(inis[f], sec, k, v)
+for f, data in inis.items(): put_text('WINDOWS/' + f, data)
 put_text('CONFIG.SYS', b'files = 30\r\nbuffers = %d\r\n' % a.buffers)
 ae = 'PATH C:\\;C:\\WINDOWS;C:\\GAME\nSET TEMP=C:\\WINDOWS\\TEMP\nLOG21\n'
 ae += ''.join(l + '\n' for l in a.pre)
