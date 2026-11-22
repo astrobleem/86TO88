@@ -402,3 +402,30 @@ Tic Tac Drop's error box is raised from VBRUN seg 21 as well (V20, i476M).
 * JIGSAWED as the Windows shell: exit is a UAE in stock protected mode too (not pursued).
 * Not taken: allocfixed with no seg-4 headroom (grow2 moves fixed blocks; a holder of the
   old segment made JIGSAWED spin at start).
+
+### Replacement COMMDLG.DLL and 80186 coverage runs
+
+`commdlg/` is an 8086 COMMDLG.DLL for Windows 3.0 real mode (nasm source, linked by
+`commdlg/mkne.py`; see commdlg/README.md): about 8.4 KB on disk, one fixed 5 KB code segment
+and 2 KB of data plus a 2 KB local heap, instead of the converted Microsoft DLL (about 70 KB of
+code). build.sh now builds it whenever a COMMDLG.DLL is among the inputs (`COMMDLG=convert`
+converts Microsoft's as before). First real-mode load hung in KERNEL's fixup-chain walk: the
+exported entries began with a relocated `mov ax, imm16`, which real-mode KERNEL also patches
+(to load the data segment) before applying relocations, so the chain's 0FFFFh end marker was
+gone. They now use the standard `push ds / pop ax / nop` prologue. Tested:
+- DOSBox, Windows 3.0 standard mode, original Chess: Open, Save As (default extension added),
+  reopen the saved game, Print (a printer DC came back; Print Manager then cannot reach LPT1).
+- CDTEST.EXE (opens every dialog in turn), standard mode in DOSBox and real mode on the V20:
+  Open (C:\WINDOWS\WIN.INI, name offset 0Bh), Color, Font (Helv bold, 20 pt from lfHeight -13
+  on CGA, LOGFONT filled), Save As (C:\NEW.TXT); PrintDlg with no printer configured returns
+  FALSE with PDERR_NODEFAULTPRN, and with Generic / Text Only configured returns a DC.
+- Tic Tac Drop through CMDIALOG.VBX, DOSBox real mode with Hercules: game window, Game > Open
+  shows the dialog with the game's file type (*.BRD).
+In DOSBox standard mode one Save As result came back on drive D: (current drive from INT 21h
+19h); not seen in real mode, not explained.
+
+`rig/coverage.sh` runs a game as the shell on MartyPC's V20 core with `MARTY_W186=1` and
+scripted keys; `rig/coverage.py` maps every executed 80186 opcode back to module:segment:offset
+(by the reported bytes at that offset) and fails when one lies in a converted module. With the
+current build: JIGSAWED (About, Open, scramble, Fast Solve, Game/Options/Help menus) and
+GOFIGURE (Game menu, New Game, Options, Skill, Help menus) executed no 80186 opcode at all.

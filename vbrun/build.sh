@@ -29,9 +29,14 @@ done
 # FIELD100), selector/offset references made through their own movable entries resolved
 # (ORDSEL), no far-pointer table segment. They rely on VBRUN's INT 3 handler, like FIELD100.
 # (names matched case-insensitively; outputs are upper case; one source per output name)
+# COMMDLG.DLL: by default the 8086 replacement in commdlg/ is built instead of converting
+# Microsoft's (COMMDLG=convert converts the supplied one like a control).
 CTL=""; CTLSRC=()
 while IFS= read -r p; do
   f=$(basename "$p" | tr a-z A-Z); case " $CTL " in *" $f "*) continue;; esac
+  if [ "$f" = COMMDLG.DLL ] && [ "${COMMDLG:-replace}" != convert ]; then
+    CTL="$CTL $f"; "$HERE/commdlg/build.sh" "$OUT" >/dev/null; continue
+  fi
   CTL="$CTL $f"; CTLSRC+=("$p")
   ds=$(python3 -c 'import struct,sys
 d=open(sys.argv[1],"rb").read(); ne=struct.unpack_from("<I",d,0x3c)[0]; st,=struct.unpack_from("<H",d,ne+0x22); n,=struct.unpack_from("<H",d,ne+0x1c)

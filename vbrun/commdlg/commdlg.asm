@@ -233,6 +233,13 @@ file_init:
         mov     ax, [es:bx+44]
         or      ax, [es:bx+46]
         jz      .deftitle
+        push    es
+        push    bx
+        les     bx, [es:bx+44]
+        cmp     byte [es:bx], 0         ; an empty title also means the default one
+        pop     bx
+        pop     es
+        je      .deftitle
         push    word [hdlg]
         push    word [es:bx+46]
         push    word [es:bx+44]
@@ -470,6 +477,7 @@ fill_lists:
         mov     ax, 0C010h              ; DDL_EXCLUSIVE | DDL_DRIVES | DDL_DIRECTORY
         push    ax
         API     USER, 100
+        call    show_dir
         cmp     byte [keepname], 0
         jne     .k
         push    word [hdlg]
@@ -478,6 +486,34 @@ fill_lists:
         PUSHD   patbuf
         API     USER, 92                ; SetDlgItemText(edt1, pattern)
 .k:     clc
+        ret
+
+; show_dir: stc1 = current drive and directory, lower case (as Windows 3.1 shows it)
+show_dir:
+        mov     ah, 19h
+        int     21h
+        add     al, 'a'
+        mov     [spec], al
+        mov     word [spec+1], 5C3Ah            ; ':\'
+        mov     si, spec+3
+        mov     dl, 0
+        mov     ah, 47h
+        int     21h
+        mov     si, spec
+.lc:    mov     al, [si]
+        or      al, al
+        jz      .set
+        cmp     al, 'A'
+        jb      .n
+        cmp     al, 'Z'
+        ja      .n
+        add     byte [si], 20h
+.n:     inc     si
+        jmp     .lc
+.set:   push    word [hdlg]
+        PUSHI   stc1
+        PUSHD   spec
+        API     USER, 92                ; SetDlgItemText(stc1)
         ret
 
 ; file_command: WM_COMMAND in the file dialog; returns AX
