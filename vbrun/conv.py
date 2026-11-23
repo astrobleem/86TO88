@@ -119,6 +119,21 @@ VB=True
 # (8 bytes + path). pathpad returns how many bytes to append to the imported-names table so
 # that the NUL stays inside the block for the usual install paths (NEPATHS, ';'-separated
 # directories, default C:\WINDOWS\SYSTEM\ and C:\WINDOWS\).
+def kernel_imports(d,ne):
+    # KERNEL ordinals imported by any relocation of the (original) module
+    H=lambda o: struct.unpack_from('<H',d,ne+o)[0]
+    st,sh,n,mo,io=H(0x22),H(0x32),H(0x1c),H(0x28),H(0x2a)
+    names=[bytes(d[ne+io+H(mo+2*k)+1:ne+io+H(mo+2*k)+1+d[ne+io+H(mo+2*k)]]).upper() for k in range(H(0x1e))]
+    out=set()
+    for i in range(n):
+        o,l,f,_=struct.unpack_from('<HHHH',d,ne+st+8*i)
+        if not (o and f&0x100): continue
+        p=(o<<sh)+(l or 0x10000)
+        for j in range(struct.unpack_from('<H',d,p)[0]):
+            t,fl,off,a,b=struct.unpack_from('<BBHHH',d,p+2+8*j)
+            if fl&3==1 and names[a-1]==b'KERNEL': out.add(b)
+    return out
+
 def pathpad(d,ne,eto,cbent,nmov,name):
     dirs=os.environ.get('NEPATHS','C:\\WINDOWS\\SYSTEM\\;C:\\WINDOWS\\')
     if not dirs: return 0
@@ -477,6 +492,14 @@ def conv(src, dst, report=True, vb=True):
         struct.pack_into('<HH',out,ne+0x38,g0,g1-g0)
     # 0x0008 = protected-mode-only: the real-mode loader refuses such modules
     struct.pack_into('<H',out,ne+0xc,struct.unpack_from('<H',out,ne+0xc)[0]&~0x0008)
+    # HEAPTRIM=1: a library that imports no local-heap function (KERNEL 4-14) never has a
+    # local heap (the real-mode loader does not call LocalInit for it: CMDIALOG's DS:6 stays 0
+    # and its 16 KB heap area stays zero), so its heap size only adds dead bytes to a FIXED
+    # data segment.
+    if os.environ.get('HEAPTRIM')=='1' and struct.unpack_from('<H',d,ne+0xc)[0]&0x8000:
+        h0=struct.unpack_from('<H',d,ne+0x10)[0]
+        if h0 and not kernel_imports(d,ne)&set(range(4,15)):
+            struct.pack_into('<H',out,ne+0x10,0); stats['heaptrim']=h0
     open(dst,'wb').write(out)
     if report: print(dict(stats),'size',len(d),'->',len(out),'nres',nres,'tail',len(tail))
 def fsw_pass(blobs,stats):

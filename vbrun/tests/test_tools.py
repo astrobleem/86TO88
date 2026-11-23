@@ -453,5 +453,48 @@ class PathPad(unittest.TestCase):
         self.assertEqual(self.pad(''), 0)
 
 
+@unittest.skipUnless(subprocess.run(['which', 'nasm'], capture_output=True).returncode == 0, 'nasm missing')
+class CommdlgLink(unittest.TestCase):
+    """The replacement COMMDLG.DLL as linked by commdlg/mkne.py: moveable discardable code,
+    path padding for the install directories, and conv.kernel_imports on it."""
+    @classmethod
+    def setUpClass(cls):
+        import struct
+        sys.path.insert(0, os.path.join(HERE, '..')); import conv
+        cls.conv = conv; cls.td = tempfile.TemporaryDirectory(); cls.files = {}
+        for tag, dirs in (('default', None), ('other', 'C:\\WIN\\SYSTEM\\;D:\\W30\\')):
+            env = dict(os.environ); env.pop('NEPATHS', None)
+            if dirs: env['NEPATHS'] = dirs
+            out = os.path.join(cls.td.name, tag)
+            subprocess.run([os.path.join(HERE, '..', 'commdlg', 'build.sh'), out], env=env, check=True, capture_output=True)
+            cls.files[tag] = (open(os.path.join(out, 'COMMDLG.DLL'), 'rb').read(), dirs)
+    @classmethod
+    def tearDownClass(cls): cls.td.cleanup()
+    def hdr(self, d):
+        import struct
+        ne = struct.unpack_from('<H', d, 0x3c)[0]
+        return ne, (lambda o: struct.unpack_from('<H', d, ne + o)[0])
+    def test_code_moveable_discardable(self):
+        import struct
+        d, _ = self.files['default']; ne, H = self.hdr(d)
+        fl = struct.unpack_from('<H', d, ne + H(0x22) + 4)[0]
+        self.assertEqual(fl & 0x1010, 0x1010)
+        self.assertEqual(H(0x30), 17)            # one moveable entry per export
+    def test_path_nul_inside_block(self):
+        for tag, (d, dirs) in self.files.items():
+            ne, H = self.hdr(d); old = os.environ.get('NEPATHS')
+            if dirs: os.environ['NEPATHS'] = dirs
+            else: os.environ.pop('NEPATHS', None)
+            try: self.assertEqual(self.conv.pathpad(d, ne, H(4), H(6), H(0x30), 'COMMDLG.DLL'), 0, tag)
+            finally:
+                if old is None: os.environ.pop('NEPATHS', None)
+                else: os.environ['NEPATHS'] = old
+    def test_kernel_imports(self):
+        d, _ = self.files['default']; ne, H = self.hdr(d)
+        k = self.conv.kernel_imports(d, ne)
+        self.assertIn(4, k)                       # LocalInit: HEAPTRIM leaves such a heap alone
+        self.assertTrue({15, 17, 18, 19, 50} <= k)
+
+
 if __name__ == '__main__':
     unittest.main()

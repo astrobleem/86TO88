@@ -1,5 +1,5 @@
-{"name": "COMMDLG", "description": "Common dialogs for Windows 3.0 real mode (8086)", "heap": 2048,
- "entry": "LibEntry", "imports": ["USER", "KERNEL", "GDI"], "code_flags": "fixed",
+{"name": "COMMDLG", "description": "Common dialogs for Windows 3.0 real mode (8086)", "heap": 512,
+ "entry": "LibEntry", "imports": ["USER", "KERNEL", "GDI"], "code_flags": "moveable",
  "exports": [[1, "GETOPENFILENAME", "GetOpenFileName", true],
              [2, "GETSAVEFILENAME", "GetSaveFileName", true],
              [5, "CHOOSECOLOR", "ChooseColor", true],

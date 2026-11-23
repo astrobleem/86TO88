@@ -15,7 +15,7 @@ SPEC: {"name": "COMMDLG", "description": "...", "heap": 1024, "entry": "LibEntry
        "code_flags": "fixed" | "moveable",
        "type": "dll" (default) | "exe", "stack": bytes (exe)}
 Code is segment 1, data (the automatic data segment, fixed) segment 2."""
-import json, re, struct, sys
+import json, os, re, struct, sys
 
 def pstr(s): b = s.encode('latin1'); return bytes([len(b)]) + b
 
@@ -80,6 +80,15 @@ def build(binp, mapp, out, spec):
         i += len(run); nxt = run[-1] + 1
     ent += b'\0'
 
+    # Real-mode KERNEL sizes the module block up to the last character of the file's path;
+    # pad the imported-names table so the path's NUL stays inside it for the usual install
+    # directories (as conv.pathpad), which matters once a discardable segment is reloaded.
+    if not spec.get('type') == 'exe':
+        nseg_ = 2 if data else 1; nmov_ = len(exports) if moveable else 0
+        ofs = 0x40 + 10 * nseg_ + len(res) + 2 * len(mods) + 5 * nseg_ + 4 + len(imp) + len(ent) + 5 * nmov_ + 1
+        fname = spec['name'].upper() + '.DLL'
+        lens = [len(x) + len(fname) for x in os.environ.get('NEPATHS', 'C:\\WINDOWS\\SYSTEM\\;C:\\WINDOWS\\').split(';') if x]
+        imp += b'\0' * next((p for p in range(16) if all((ofs + p + 8 + L) % 16 for L in lens)), 0)
     # ---- layout: MZ stub, NE header, segment table, (no resources), names, modules, imports, entries, nres
     stubcode = bytes.fromhex('0e1fba0e00b409cd21b8014ccd21') + b'This program requires Microsoft Windows.\r\n$'
     mz = bytearray(64); mz[0:2] = b'MZ'

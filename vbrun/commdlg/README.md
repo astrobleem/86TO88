@@ -8,8 +8,8 @@ Chess directly, Tic Tac Drop through CMDIALOG.VBX) cannot load it in real mode u
 | | |
 | --- | --- |
 | file | about 8.4 KB |
-| code | one fixed segment, about 5 KB, 8086 only (`cpu 8086` in nasm) |
-| data | one fixed segment, about 2 KB, plus a 2 KB local heap (edit controls keep their text there) |
+| code | one moveable, discardable segment, about 5 KB, 8086 only (`cpu 8086` in nasm); only resident while a dialog runs or it is needed again |
+| data | one fixed segment, about 2 KB, plus a 512-byte local heap |
 
 ## Entry points
 
@@ -37,4 +37,7 @@ Windows 3.0's own dialogs) rather than a separate drives combo box.
 `mkne.py` links nasm's flat output into an NE file: relocations are labels the source macros
 emit (`API MODULE, ordinal` far calls). Exported functions use the standard
 `push ds / pop ax / nop` prologue that KERNEL rewrites to load the data segment, and a real-mode
-far frame (`inc bp`), so KERNEL's stack walk can follow them.
+far frame (`inc bp`), so KERNEL's stack walk can follow them when it moves or discards the code
+segment. `mkne.py` pads the imported-names table like `conv.pathpad` so the file path's NUL
+stays inside KERNEL's module block for the `NEPATHS` directories (a discarded segment is
+reloaded from that path).

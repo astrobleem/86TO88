@@ -383,6 +383,36 @@ started a game, played, closed with Alt+F4 back to the Executive, End Session to
 JIGSAWED the same after About, Game>Open of C:\PUZ.BMP and the scrambled puzzle.
 Tic Tac Drop's error box is raised from VBRUN seg 21 as well (V20, i476M).
 
+### Tic Tac Drop beside MS-DOS Executive: memory (HEAPTRIM, discardable COMMDLG)
+
+Hercules, game started with `WIN /R` beside MS-DOS Executive, build of 86bfb13:
+* V20: "Property or control 'Label2' not found" during the splash (MessageBox at 52.74M,
+  deterministic without input). 8088: first launch shows the game window (~500M), Game menu,
+  Alt+F4 back to the Executive; started again from File > Run, the same "Label2" error.
+* PC samples every 2000 instructions from the last name lookup (49.3M) to the MessageBox:
+  almost all KERNEL heap code (compaction, segment loading) and disk reads, very little VB
+  code: the system is thrashing. At the MessageBox 10 KB were free, largest block 6.3 KB.
+  The exact failing allocation was not traced.
+* `CTXMIRROR=1` also passed the V20 first launch, but traced, its store fired once (15.40M)
+  and wrote the value [2E28] already held (VB's own copy in seg 5 had run just before); the
+  name lookups returned the same segment in both builds. So that pass was a layout
+  difference, not the 2E28 mechanism; CTXMIRROR stays opt-in.
+* CMDIALOG.VBX declares a 16 KB local heap, which KERNEL adds to its (FIXED after
+  conversion) data segment, but it imports no local-heap function and nothing calls
+  LocalInit for it: DS:6 stays 0 and the 16 KB stay zero in every dump, including one with
+  Save As open. GAUGE and THREED declare 1 KB the same way. `HEAPTRIM=1` (build.sh default for
+  controls) sets the heap size to 0 for a library that imports none of KERNEL 4-14
+  (conv.kernel_imports); FIELD100 imports LocalAlloc and is not changed (built without it
+  anyway), VBRUN/WEPUTIL have no heap.
+* The replacement COMMDLG's code segment is now moveable and discardable, its heap 512
+  bytes; mkne pads the imported-names table like conv.pathpad, since a discarded segment is
+  reloaded from the module path. Resident while idle: 2.7 KB (was 9.3 KB); CMDIALOG 3.2 KB
+  (was 19.6 KB). About 23 KB more of the heap can hold discardable code.
+* With both (default build): V20 first launch shows the game window by 300M; 8088 first
+  launch, Alt+F4, File > Run again: window and Game menu on the second launch (5.9 KB free
+  at that point). CDTEST with the discardable COMMDLG (V20, CGA): directory changes, Color,
+  Font, Print (no printer), Save As as before, no 80186 opcode executed.
+
 ## Open items / limits
 
 * No real hardware tested. All results are MartyPC (V20 and 8088 cores, 640K, IBM CGA).

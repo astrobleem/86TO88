@@ -41,7 +41,7 @@ while IFS= read -r p; do
   ds=$(python3 -c 'import struct,sys
 d=open(sys.argv[1],"rb").read(); ne=struct.unpack_from("<I",d,0x3c)[0]; st,=struct.unpack_from("<H",d,ne+0x22); n,=struct.unpack_from("<H",d,ne+0x1c)
 print(",".join(str(i+1) for i in range(n) if struct.unpack_from("<H",d,ne+st+8*i+4)[0]&1))' "$p")
-  env -u WRAP -u WRAPSTATS FIXSEGS=$ds ORDSEL=1 TABSEGS= I186=${I186:-1} python3 "$HERE/conv.py" "$p" "$OUT/$f" novb
+  env -u WRAP -u WRAPSTATS FIXSEGS=$ds ORDSEL=1 TABSEGS= HEAPTRIM=${HEAPTRIM-1} I186=${I186:-1} python3 "$HERE/conv.py" "$p" "$OUT/$f" novb
   r=$(python3 "$HERE/nevalid.py" "$OUT/$f" | tail -1); case "$r" in OK*) ;; *) echo "$f: $r" >&2; exit 1;; esac
 done < <(find "$VBW_ORIG" -maxdepth 1 -type f \( -iname '*.vbx' -o -iname 'commdlg.dll' \) | sort)
 # 8088: no 80186 instruction left in reachable code (I186=0 builds a V20/80186-only pair)
