@@ -205,6 +205,38 @@ DlgDirList tries such a change, so in DOSBox the file dialogs' directory line gr
 (`c:\windows\*.*\*.*`). MS-DOS on MartyPC refuses it and the line stays right. Directory
 navigation was therefore checked on MartyPC.
 
+## Tic Tac Drop beside MS-DOS Executive (memory)
+
+Runtime: `wip/vbrun100-realmode` 13fd86d (notes 4a85196) against 86bfb13. Hercules, game started with
+`WIN /R C:\GAME\TICTACDP.EXE` beside MS-DOS Executive. MartyPC only.
+
+| run | 86bfb13 | 13fd86d |
+| --- | --- | --- |
+| V20, first launch (no input; same result each run) | "Property or control 'Label2' not found" at 52.7M | game window by 300M |
+| 8088: first launch, Alt+F4, File > Run the game again | first launch fine; second launch "Label2" error | second launch: window, Game menu |
+
+Screenshot: tictacdrop-beside-executive-herc-before-left-after-right.png (top V20, bottom
+8088 second launch; left 86bfb13, right 13fd86d).
+
+Cause, as far as traced: memory. Between the last name lookup and the error the PC samples
+(every 2000 instructions) are almost all KERNEL heap code and disk reads, i.e. segments being
+discarded and reloaded; 10 KB free at the error, largest block 6.3 KB. The failing allocation
+itself was not identified. An opt-in pass (CTXMIRROR) also made the V20 run pass, but the trace
+showed its store wrote a value already there, so that was a layout difference and it was not
+adopted.
+
+Change: CMDIALOG.VBX declares a 16 KB local heap that KERNEL adds to its data segment (FIXED
+after conversion), but it imports no local-heap function and its heap is never initialized
+(DS:6 stays 0; the 16 KB stay zero in every dump, also with Save As open). The converter now
+drops such heaps (`HEAPTRIM`, default for controls: CMDIALOG 16 KB, GAUGE and THREED 1 KB each).
+The replacement COMMDLG's code is now discardable (heap 512 bytes). Resident with the game
+idle: CMDIALOG 3.2 KB (was 19.6 KB), COMMDLG 2.7 KB (was 9.3 KB).
+
+Checked with 13fd86d: Tic Tac Drop Save and Open in DOSBox real mode (file saved and listed);
+CDTEST on V20 with the discardable COMMDLG (all dialogs, no 80186 opcode executed); Go Figure!
+beside the Executive (uses GAUGE and THREED): 8088, Game menu, F2 deals a puzzle (digits, target, timer and level gauge running),
+Alt+F4, End Session to the DOS prompt (gofigure-beside-executive-heaptrim-8088.png).
+
 ## Tests
 
 `python3 -m pytest vbrun/tests`: 107 passed; `python3 vbrun/tests/stubtest.py`: 69 passed, including three `CtxMirror` tests. `python3 vbrun/tests/test_tools.py`: 91 tests
