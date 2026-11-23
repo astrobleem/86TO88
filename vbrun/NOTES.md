@@ -412,6 +412,9 @@ Hercules, game started with `WIN /R` beside MS-DOS Executive, build of 86bfb13:
   launch, Alt+F4, File > Run again: window and Game menu on the second launch (5.9 KB free
   at that point). CDTEST with the discardable COMMDLG (V20, CGA): directory changes, Color,
   Font, Print (no printer), Save As as before, no 80186 opcode executed.
+* Also with 13fd86d: Tic Tac Drop Save then Open in DOSBox real mode (the file is saved and
+  listed); Go Figure beside the Executive on the 8088 (CGA; uses GAUGE and THREED): Game
+  menu, F2 deals a puzzle with the timer and level gauge running, Alt+F4, End Session.
 
 ## Open items / limits
 
