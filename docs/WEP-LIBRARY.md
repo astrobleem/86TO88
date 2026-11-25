@@ -49,7 +49,7 @@ direct flow (this removed a false `shr cl,0` inside a `mov ax,imm` in one game).
 | 5 / 6 | calling-convention push / leave | `INT 3` key, ctx-aware |
 | 7 | `imul reg,[ea],imm8` | |
 | 9 | `imul reg,[ea],imm16` | the immediate is read from the code stream by the handler |
-| 10 | `ENTER imm16,0` | experimental zero-nesting frame setup; requires the updated 3,991-byte bridge |
+| 10 | `ENTER imm16,0` | experimental zero-nesting frame setup; requires the bridge from PR #4 on (3,991 bytes; 4,069 with CPU auto-detection) |
 | 8 | static byte patch | never trapped; used for the version stamp and similar |
 
 Immediates that are covered by a relocation fix-up are resolved by the generator rather
@@ -129,6 +129,11 @@ These are real-mode limits, not bridge faults. Each was checked on a V20 with no
    (Stones) need `w8lib.py add LIB FILE 1` for each DLL.
 3. Copy `LIB` into the guest and add `WM88X3.COM <libdir>` to `AUTOEXEC.BAT` before starting Windows
    (`artifacts/WM88X3.COM`, built by `src/build_tsr3.py`).
+   Command line: `WM88X3 [/V|/8] [libdir]`. At install it tells an NEC V20/V30 from an Intel
+   8088/8086 with `AAD 10h` (NEC ignores the operand). On a V20/V30 it leaves 80186 code native
+   and applies only the static byte patches; on an 8088 it rewrites as described above. `/8`
+   forces the 8088 rewriting, `/V` forces native. Checked with `unittest_install3.py` and by
+   reading the flag back after install on MartyPC's V20 (set) and 8088 (clear) models.
 
 The test-disk and emulator-runner scripts are not included: they are tied to a local
 MartyPC setup. MartyPC's CGA card crashes with turbo on; use normal speed.
