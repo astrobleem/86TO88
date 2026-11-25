@@ -256,3 +256,8 @@ are not 8088 results.
 All in [evidence/pr4-followup](../evidence/pr4-followup/). Heap-variant regressions:
 pack2-jigsawed-exit-heapvariant-8088.png, pack2-rattler-exit-heapvariant-8088.png,
 pack2-rodent-exit-heapvariant-8088.png. Each image is a grid of the frames in run order.
+
+## Tandy colour screenshots
+
+The games above and the WM88X3 titles on the Windows XT Tandy drivers (DOSBox-X Tandy machine,
+HPXY 640x256 panning and fixed 320x200): [TANDY-COLOR-SCREENSHOTS.md](TANDY-COLOR-SCREENSHOTS.md).
