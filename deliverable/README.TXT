@@ -1,6 +1,6 @@
 WM88 BRIDGE - run the ORIGINAL Windows 3.1 WINMINE.EXE on Windows 3.0
 =====================================================================
-Meta Global AI Developer Hackathon - engineering-agent brief solution.
+Part of 86TO88: https://github.com/astrobleem/86TO88
 The original, unmodified WINMINE.EXE runs and plays on Windows 3.0 in
 real mode. WINMINE.EXE itself is never changed - not on disk, not in
 the copy you supply. All adaptation happens around it.
