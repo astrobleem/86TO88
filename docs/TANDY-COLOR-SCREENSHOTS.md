@@ -103,7 +103,8 @@ in DOSBox-X; this says nothing about how either looks or performs on a real EX/H
    "Please obtain a newer version of WepUtil.DLL". Seen in DOSBox-X and on MartyPC's 8088 core,
    and reproduced in `unittest_io3.py` by changing its directory: `C:\GAME\` 625 unpatched bytes,
    `C:\WEPGAMES\` and `C:\WINDOWS\` none. The tests always use `C:\WINDOWS\`, which is long
-   enough. Games here were put in `C:\WEPGAMES`. Not fixed.
+   enough. Games here were put in `C:\WEPGAMES`. Fixed afterwards in PR #5 (merged into `main`
+   as 6cb05ef); TetraVex then runs from `C:\GAME` on MartyPC's 8088 core and in DOSBox-X.
 3. **VB games and memory with HPXY.** With HPXY and PAN/TGCLIP loaded: RattleRace stopped the
    emulated machine (DOSBox-X printed "IBM ROM BASIC NOT IMPLEMENTED", i.e. INT 18h was reached);
    Jigsawed showed an empty message box in one run and stopped the machine the same way in a
