@@ -74,6 +74,8 @@ A pack's library is a handful of modules, 7-17 KB of images in total (Pack 1: 16
   Unicorn (tens of thousands of executions per module set: zero differences for
   `WINMINE`, `TETRAVEX` + `WEPUTIL`, and `VBRUN100`).
 * `tools/wep/unittest_io3.py` exercises the file-read patching, including conflict eviction.
+  It opens the files as `C:\WINDOWS\...`; set `W8DIR` to open them from another directory
+  (`W8DIR='C:\G\'`, or `W8DIR=` for a bare name). It exits 1 on any mismatch.
 * End to end in MartyPC, below.
 
 Dependencies: Python 3, `capstone`, `unicorn`. The tools take the original files as input;
@@ -129,3 +131,12 @@ Idlewild contains two `imul reg,[bp-4],imm16` instructions (opcode `69`). The fi
 handled the `6B` (imm8) form, so those two ran unpatched on the 8088 and Idlewild hung on the hourglass.
 Type 9 fixes that; its differential test passes. Running a game on a V20 with no bridge, as a reference, is what
 separated bridge faults from real-mode limits.
+
+A second loader bug, found later: when it built the module file name (`BASE.W8x`) from the
+opened path, it used the length of the directory part as the length of the file name. A game
+opened from a directory path shorter than its own name plus two characters (`C:\GAME\TETRAVEX.EXE`,
+or a bare name) got a truncated module name, so no module loaded and the game ran unpatched;
+TetraVex then stops with "Please obtain a newer version of WepUtil.DLL". Games under `C:\WINDOWS`
+were long enough to hide it. Fixed in `build_lpath`; `unittest_io3.py` with `W8DIR='C:\G\'`
+shows 625 unpatched bytes in TetraVex before the fix and none after. Checked end to end with
+TetraVex in `C:\GAME` on MartyPC's 8088 core (CGA) and in DOSBox-X's Tandy machine (8086).

@@ -773,6 +773,9 @@ bl_back:
  DEC CX
  JMP bl_back
 bl_start:
+ MOV AX, CS:[o_len]
+ SUB AX, CX
+ MOV CX, AX
  MOV DI, CS:[libend]
  XOR BX, BX
 bl_copy:
