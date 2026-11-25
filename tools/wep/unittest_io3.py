@@ -66,11 +66,12 @@ def call21(regs, ds_data=None):
     if not getattr(call21, 'hooked', False): mu.hook_add(UC_HOOK_INTR, intr); call21.hooked = True
     mu.emu_start(0, 0x3000*16+2, count=200000)
     return mu.reg_read(UC_X86_REG_AX), mu.reg_read(UC_X86_REG_EFLAGS) & 1
-bad = 0
 for mi, (d, path) in enumerate(specs):
     name = path.split('/')[-1]
-    W8DIR = os.environ.get('W8DIR')   # directory prefix as opened, e.g. 'C:\\G\\' or '' (bare name)
-    full = ((W8DIR if W8DIR is not None else 'C:\\WINDOWS\\' + ('SYSTEM\\' if d else '')) + name).encode() + b'\0'
+    prefix = os.environ.get('OPEN_PREFIX')
+    if prefix is None:
+        prefix = 'C:\\WINDOWS' + ('\\SYSTEM' if d else '')
+    full = ((prefix.rstrip('\\') + '\\' if prefix else '') + name).encode() + b'\0'
     mu.mem_write(DSEG*16+0x100, full)
     ax, cf = call21({'AX': 0x3d00, 'DX': 0x100, 'DS': DSEG})
     print(name, 'open ax', ax, 'cf', cf, 'handles[0]', bytes(mu.mem_read(TS*16+L['handles'], 8)).hex())
@@ -104,7 +105,6 @@ for mi, (d, path) in enumerate(specs):
             elif typ in (5, 6): exp[o] = 0xCC
             else: exp[o] = 0xCD; exp[o+1] = 0xF8 + (mv & 7)
         print('  seg', s['n'], 'len', s['ln'], 'read', ax, 'match' if got == bytes(exp) else 'MISMATCH', sum(1 for a, b in zip(got, exp) if a != b))
-        bad += got != bytes(exp)
+        assert got == bytes(exp), (name, s['n'], full, 'loader read was not patched as expected')
     call21({'AX': 0x3e00, 'BX': h, 'DS': DSEG})
 print('slots', struct.unpack('<6H', bytes(mu.mem_read(TS*16+L['slots'], 12))), 'arena_top', hex(struct.unpack('<H', bytes(mu.mem_read(TS*16+L['arena_top'], 2)))[0]))
-sys.exit(1 if bad else 0)

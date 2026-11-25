@@ -1,0 +1,9 @@
+TETRAVEX.EXE open ax 5 cf 0 handles[0] 0500000000003412
+  seg hdr len 192 read 192 match 0
+  seg 1 len 15016 read 15016 match 0
+  seg 2 len 1318 read 1318 match 0
+WEPUTIL.DLL open ax 5 cf 0 handles[0] 0500000000013412
+  seg hdr len 192 read 192 match 0
+  seg 1 len 6660 read 6660 match 0
+  seg 3 len 384 read 384 match 0
+slots (3613, 7603, 0, 0, 0, 0) arena_top 0x2869

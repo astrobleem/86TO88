@@ -1,0 +1,28 @@
+Manually transcribed diagnostic state; not a raw execution log.
+MartyPC stock Intel8088, Windows 3.0 real mode, 640 KiB.
+
+Original Pack 4 CHESS.EXE, COMMDLG metadata patch included:
+After 891085246 cycles / 59424803 instructions:
+CS=CA00 IP=0097 BP=FFFF SS=7A00; displayed framebuffer still Executive.
+No usable chess window/move verified. Alt+F4 and 70 million additional cycles
+were attempted; no clean recovery demonstrated. error=None is not a pass.
+
+RATTLER as shell/VGA: started game, held direction-key input, close attempt.
+After 2720314782 cycles / 140495797 instructions:
+CS=0FA7 IP=56CF, gray Windows screen; no DOS/Executive recovery confirmed.
+Separate Executive launch: halted=true, CS=4624 DS=C736 SS=5DE5 after
+2217125981 cycles / 47744918 instructions. Not an interaction/exit pass.
+
+RODENT Pack 2 as shell/VGA:
+After F2 and held keypad6: visible horizontal block push.
+After close and 2940338008 cycles / 158221857 instructions:
+gray Windows screen; CS=1BF9 IP=03C3. No verified DOS/Executive recovery.
+
+RODENT Best of as shell/VGA, independent launch:
+After F2 and held keypad6: visible horizontal block push.
+After close and 2940335380 cycles / 157236623 instructions:
+gray Windows screen; CS=1BF9 IP=0355. No verified DOS/Executive recovery.
+
+Go Figure and Tic Tac Drop with privately converted controls:
+startup/compaction behavior described in docs/WEP-RESUMED-8088.md.
+Private memory dumps are excluded from the repository.

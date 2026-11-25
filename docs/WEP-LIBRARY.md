@@ -1,6 +1,12 @@
 # Entertainment Pack games on a stock 8088: the module library
 
+**Latest 8088 follow-up:** [Clean interaction tests and short-path module lookup fix](WEP-CLEAN-8088.md). The inventory and historical results below are retained as an earlier record.
+
 Technical notes. The README links here; nothing in it depends on this file.
+
+**Fresh follow-up:** [DOSBox-X 8086-prefetch diagnostics](WEP-FRESH-DOSBOXX.md) are available separately; they are incomplete and are not MartyPC 8088 or physical-hardware results.
+
+
 
 **Historical test record, not a current all-pack pass claim.** This report describes
 the earlier `WM88X3` module-library tests. Since then, the separate `vbrun/`
@@ -43,6 +49,7 @@ direct flow (this removed a false `shr cl,0` inside a `mov ax,imm` in one game).
 | 5 / 6 | calling-convention push / leave | `INT 3` key, ctx-aware |
 | 7 | `imul reg,[ea],imm8` | |
 | 9 | `imul reg,[ea],imm16` | the immediate is read from the code stream by the handler |
+| 10 | `ENTER imm16,0` | experimental zero-nesting frame setup; requires the updated 3,991-byte bridge |
 | 8 | static byte patch | never trapped; used for the version stamp and similar |
 
 Immediates that are covered by a relocation fix-up are resolved by the generator rather
@@ -74,8 +81,9 @@ A pack's library is a handful of modules, 7-17 KB of images in total (Pack 1: 16
   Unicorn (tens of thousands of executions per module set: zero differences for
   `WINMINE`, `TETRAVEX` + `WEPUTIL`, and `VBRUN100`).
 * `tools/wep/unittest_io3.py` exercises the file-read patching, including conflict eviction.
-  It opens the files as `C:\WINDOWS\...`; set `W8DIR` to open them from another directory
-  (`W8DIR='C:\G\'`, or `W8DIR=` for a bare name). It exits 1 on any mismatch.
+  It opens the files as `C:\WINDOWS\...`; set `OPEN_PREFIX` to open them from another directory
+  (`OPEN_PREFIX='C:\G'`, or `OPEN_PREFIX=` for a bare name), and it stops on any mismatch.
+  `tools/wep/unittest_paths3.py` runs it over several prefixes.
 * End to end in MartyPC, below.
 
 Dependencies: Python 3, `capstone`, `unicorn`. The tools take the original files as input;
@@ -137,6 +145,7 @@ opened path, it used the length of the directory part as the length of the file 
 opened from a directory path shorter than its own name plus two characters (`C:\GAME\TETRAVEX.EXE`,
 or a bare name) got a truncated module name, so no module loaded and the game ran unpatched;
 TetraVex then stops with "Please obtain a newer version of WepUtil.DLL". Games under `C:\WINDOWS`
-were long enough to hide it. Fixed in `build_lpath`; `unittest_io3.py` with `W8DIR='C:\G\'`
-shows 625 unpatched bytes in TetraVex before the fix and none after. Checked end to end with
+were long enough to hide it. Fixed in `build_lpath` (found and fixed independently in PR #4 and PR #5, same three
+instructions); `unittest_io3.py` with `OPEN_PREFIX='C:\G'` shows 625 unpatched bytes in TetraVex
+before the fix and none after. Checked end to end with
 TetraVex in `C:\GAME` on MartyPC's 8088 core (CGA) and in DOSBox-X's Tandy machine (8086).

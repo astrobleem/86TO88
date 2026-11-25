@@ -54,6 +54,7 @@ def run(mu, ip, st, flags, until=0):
 res = collections = None
 import collections
 fails = collections.Counter(); total = collections.Counter(); samples = []
+stack_overlap = 0
 random.seed(1)
 entries = []
 for mi_, img in images:
@@ -89,12 +90,41 @@ for e in entries:
         st['BP'] = random.choice([sp + random.randrange(0, 200) * 2, random.getrandbits(16)])
         if e['type'] == 6: st['BP'] = sp + random.randrange(0, 40) * 2 + 2
         flags = random.getrandbits(16) & 0x0CD5 | 0x200
+        if e['type'] in (7, 9):
+            ea = e['len'] >> 4
+            bases = [('BX', 'SI'), ('BX', 'DI'), ('BP', 'SI'), ('BP', 'DI'),
+                     ('SI',), ('DI',), ('BP',), ('BX',), ()]
+            addr = (sum(st[k] for k in bases[ea]) + e['imm']) & 0xFFFF
+            # INT plus the handler/lookup calls overwrite 30 bytes below SP.
+            # Reading an unallocated local there cannot be emulated by a trap;
+            # Win16 stack frames must allocate their locals before using them.
+            occupied = {(sp - i) & 0xFFFF for i in range(1, 31)}
+            if ea in (2, 3, 6) and ({addr, (addr + 1) & 0xFFFF} & occupied):
+                stack_overlap += 1
+                continue
+        if e['type'] == 10:
+            # Zero/odd allocations overlap saved handler slots; also exercise
+            # the original allocation and a larger frame on every ENTER site.
+            enter_alloc = [e['imm'], 0, 1, 0x1000][trial % 4]
+            struct.pack_into('<H', nat, off + 1, enter_alloc)
         mus = []
         for patched, img in ((False, nat), (True, pat)):
             mu = mkemu(bytes(img), patched)
+            if patched and e['type'] == 10:
+                top = L['arena']
+                for mi_, module in images:
+                    if mi_ == e['mod']:
+                        for i in range(struct.unpack_from('<H', module, 4)[0]):
+                            at = 66 + 12 * i
+                            if (struct.unpack_from('<H', module, at)[0] == off
+                                    and module[at + 2] == 10
+                                    and module[at + 11] & 7 == e['vec']):
+                                mu.mem_write(TSR_SEG * 16 + top + at + 4,
+                                             struct.pack('<H', enter_alloc))
+                    top += len(module)
             rnd = random.Random(trial * 977 + off)
-            mu.mem_write(DS_SEG * 16, bytes(rnd.getrandbits(8) for _ in range(0x10000)))
-            mu.mem_write(SS_SEG * 16, bytes(rnd.getrandbits(8) for _ in range(0x10000)))
+            mu.mem_write(DS_SEG * 16, rnd.randbytes(0x10000))
+            mu.mem_write(SS_SEG * 16, rnd.randbytes(0x10000))
             run(mu, off, st, flags, off + ln)
             mus.append(mu)
         a, b = mus
@@ -108,6 +138,9 @@ for e in entries:
         # stack contents compare around SP
         sa = a.mem_read(SS_SEG * 16 + ra['SP'], 16)
         sb = b.mem_read(SS_SEG * 16 + rb['SP'], 16)
+        if e['type'] == 10:
+            sa = a.mem_read(SS_SEG * 16 + ra['BP'], 2)
+            sb = b.mem_read(SS_SEG * 16 + rb['BP'], 2)
         ok = ra == rb and (fa & mask) == (fb & mask) and (e['type'] in (1, 2, 3, 4, 7, 9) or bytes(sa) == bytes(sb) or e['type'] == 6)
         # for LEAVE the stack garbage below the new SP differs (handler frame) - registers decide
         total[e['type']] += 1
@@ -115,5 +148,7 @@ for e in entries:
             fails[e['type']] += 1
             if len(samples) < 1: samples.append((e, ra, rb, hex(fa & mask), hex(fb & mask)))
 print('errcnt', struct.unpack('<H', bytes(b.mem_read(TSR_SEG*16+L['errcnt'],2)))[0], 'vecidx', b.mem_read(TSR_SEG*16+L['vecidx'],1)[0], 'site_off', struct.unpack('<H', bytes(b.mem_read(TSR_SEG*16+L['site_off'],2)))[0], 'ip',hex(b.reg_read(UC_X86_REG_IP)))
-print('total', dict(total)); print('FAIL', dict(fails))
+print('total', dict(total)); print('excluded unallocated-stack operand overlaps', stack_overlap); print('FAIL', dict(fails))
 for s in samples: print(s)
+
+assert not fails, dict(fails)

@@ -1,0 +1,4 @@
+errcnt 0 vecidx 7 site_off 41557 ip 0xa256
+total {0: 11860, 1: 770, 10: 800, 4: 450, 7: 558, 2: 150, 9: 40, 3: 70, 6: 2150, 5: 130}
+excluded unallocated-stack operand overlaps 2
+FAIL {}

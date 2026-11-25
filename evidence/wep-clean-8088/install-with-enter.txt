@@ -1,0 +1,7 @@
+ok   tail=''           v20=0 exit=(49, 0) lpath='C:\\W8X\\' err=None
+ok   tail=' /V'        v20=1 exit=(49, 0) lpath='C:\\W8X\\' err=None
+ok   tail=' /v'        v20=1 exit=(49, 0) lpath='C:\\W8X\\' err=None
+ok   tail=' /V D:\\LIB' v20=1 exit=(49, 0) lpath='D:\\LIB\\' err=None
+ok   tail=' D:\\LIB'   v20=0 exit=(49, 0) lpath='D:\\LIB\\' err=None
+ok   tail=' /X'        v20=0 exit=(76, 2) lpath='' err=None
+OK
