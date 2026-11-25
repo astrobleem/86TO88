@@ -10,6 +10,7 @@ Covers:
   growkeep - grow requests that fit the block keep it (no GlobalReAlloc), others realloc
   fshrink  - FORM and SYS hooks shrink the heap of the object just built, for consecutive
              objects, and leave the previous container alone
+  ctxmirror- conv.CTXMIRROR_FIX updates the DGROUP mirrors of a moved context block
   appdslock- conv.appdslock_pass: the VB program entry locks the application's DGROUP (SS)
              after growing it, and still takes the failure branch when the grow fails
 """
@@ -504,6 +505,32 @@ class AppDSLock(unittest.TestCase):
     def test_unpatched_entry_does_not_lock(self):           # the regression this guards
         m = self.run_entry(True, patched=False)
         self.assertNotIn('LockSegment', [n for n, a in m.calls])
+
+# --------------------------------------------------------------------------- ctxmirror
+class CtxMirror(unittest.TestCase):
+    """conv.CTXMIRROR_FIX: when grow2 moved a context block, VB's DGROUP mirrors of the old
+    segment (2E28 from 2E6C, 2E2A from 2E5C) follow the record's [di+2]."""
+    DS, CS = 0x4087, 0x5000
+    def run_fix(self, rec, m28, m2a, new, ax=0x1234):
+        import conv
+        m = M(); m.w(self.CS, 0, conv.CTXMIRROR_FIX + bytes.fromhex('895502') + b'\x90')
+        m.reg(UC_X86_REG_DS, self.DS); m.stack(0x1000, 0xF000)
+        m.ww(self.DS, 0x2E6C, rec); m.ww(self.DS, 0x2E28, m28); m.ww(self.DS, 0x2E2A, m2a)
+        m.reg(UC_X86_REG_DI, 0x2E6A); m.reg(UC_X86_REG_DX, new); m.reg(UC_X86_REG_AX, ax)
+        m.run(self.CS, 0, self.CS, len(conv.CTXMIRROR_FIX) + 3)
+        return m
+    def test_moved_block_updates_matching_mirror(self):
+        m = self.run_fix(0x5803, 0x5803, 0x552B, 0x59CB)
+        self.assertEqual(m.rw(self.DS, 0x2E6C), 0x59CB)
+        self.assertEqual(m.rw(self.DS, 0x2E28), 0x59CB)
+        self.assertEqual(m.rw(self.DS, 0x2E2A), 0x552B, 'mirror of another block untouched')
+        self.assertEqual(m.reg(UC_X86_REG_AX), 0x1234); self.assertEqual(m.reg(UC_X86_REG_SP), 0xF000)
+    def test_second_mirror(self):
+        m = self.run_fix(0x5803, 0x1111, 0x5803, 0x59CB)
+        self.assertEqual((m.rw(self.DS, 0x2E28), m.rw(self.DS, 0x2E2A)), (0x1111, 0x59CB))
+    def test_in_place_grow_changes_nothing(self):
+        m = self.run_fix(0x5803, 0x5803, 0x552B, 0x5803)
+        self.assertEqual((m.rw(self.DS, 0x2E6C), m.rw(self.DS, 0x2E28), m.rw(self.DS, 0x2E2A)), (0x5803, 0x5803, 0x552B))
 
 if __name__ == '__main__':
     unittest.main()

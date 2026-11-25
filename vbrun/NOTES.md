@@ -55,7 +55,19 @@ follows an unconditional jump and a descriptor word. Calls into the error entrie
 the p-code escape dispatchers (2:48F9..4938, which pop their return address and read
 operand bytes behind it) are treated as not returning, so their inline bytes are not
 taken for code. The first 8088 run (descent only) hit an unconverted PUSH imm8 at 83:0DDD
-in a switch case; the wider coverage is from that. Each site is replaced by code of the
+in a switch case; the wider coverage is from that. A V20 run of Tic Tac Drop with
+`MARTY_W186=1` then showed PUSH 0 executing at 2:489C/489E in a code block that moves
+(46 hits by 526M): p-code escape handlers reached only through the runtime's word tables
+(MOV BX,table / JMP 2:3B9D, or MOV BX,table / ADD BX,AX twice / JMP CS:[BX-2]; 19 tables
+in segment 2). Their entries are now heuristic roots (`word_table_targets`); with the
+no-return set this adds exactly those 10 sites (2:489C..48F0), nothing else. VBRUN100.DLL
+changes for this (2984 sites; per-site differential test: 8937 runs, 0 failures); FIELD100
+and WEPUTIL are unchanged. With the new VBRUN, 8088 beside MS-DOS Executive: Pack 2 JIGSAWED
+(About, Open, scramble), RATTLER and RODENT pass the exit sequence. Tic Tac Drop with
+Hercules beside the Executive gets past the earlier errors and ends in "System Error" at
+~800M with 43 KB free in pieces (largest 19 KB), module paths intact (not traced). As the
+shell (no Executive) the 8088 shows the game window with Hercules at ~450M and the Game menu
+opens; beside the Executive with BUFFERS=10 it still ends in "System Error". Each site is replaced by code of the
 same length:
 
 | original | count (VBRUN/FIELD) | replacement |
@@ -217,6 +229,193 @@ puzzle. The locked 35 KB DGROUP sits in the middle of the movable area (7A33 as 
 and every compaction has to work around it. Placing it low first (GlobalWire) was tried
 in an earlier session and crashed on close; not retried.
 
+## Entertainment Pack 4 controls (Go Figure!, Tic Tac Drop)
+
+`build.sh` now also converts any supplied `*.VBX` and `COMMDLG.DLL` (every data segment
+fixed, `ORDSEL=1`, `TABSEGS=` empty) and `WEP4UTIL.DLL` (WEPUTIL recipe).
+
+* The controls take selectors and offsets of their own procedures and data segments through
+  their movable entry ordinals (THREED 7 push pairs and 2 stores, GAUGE 2, CMDIALOG 3,
+  COMMDLG 21 `mov ax,off / mov dx,seg` pairs). `ORDSEL` resolves such fixups to the entry's
+  segment/offset so the existing far-pointer patterns apply; before, GAUGE raised an
+  IndexError and THREED got an entry with segment 0xFF.
+* `TABSEGS`: FIELD100's far-pointer table segment 4 was assumed for every non-VB module;
+  in the controls seg 4 is code (a `mov [bp-18h],seg` there became a bogus entry).
+* A far call into a segment that is FIXED in the original (CMDIALOG seg 1) is no longer
+  turned into a movable entry.
+* 80186 differential test: GAUGE 112 sites, THREED 742, CMDIALOG 98, no difference.
+  COMMDLG has no 80186 instruction; all its KERNEL/USER/GDI/KEYBOARD imports exist in the
+  real-mode 3.0 modules; its LibEntry only looks at bit 15 of __WINFLAGS.
+
+Runs (as shell, CGA; V20 = diagnostic only):
+
+| app | controls | result |
+| --- | --- | --- |
+| Tic Tac Drop | original (V20) | "Custom control 'CommonDialog' not found" |
+| Tic Tac Drop | converted (8088 core) | splash and credits from ~175M instructions; "Invalid property value" at ~460M |
+| Go Figure! | original (V20) | "Custom control 'SSPanel' not found" |
+| Go Figure! | converted (8088 core; V20 the same at 176M) | blank until ~176-200M, then "Property or control 'uGameNewMatch' not found" (raised from VBRUN seg 21) |
+
+Both start very slowly: as shell the heap holds ~100 KB free in pieces but KERNEL keeps
+discarding and reloading code segments (about 8 loads per million instructions, VBRUN
+segments 49-100, THREED, CGA.DRV, USER/GDI). A GlobalAlloc of 0x13D4 bytes repeating every
+cycle was traced to a system module's bitmap path (386 branch next to it), not a control.
+
+### Go Figure's missing control: a VB local heap that cannot grow in place
+
+Traced on the V20 (diagnostic; the same error and timing class as the 8088 core) with
+GlobalAlloc, GlobalReAlloc, LocalAlloc, LocalReAlloc and MessageBox watched, as shell:
+
+* Up to the error at 176M there are 44 failed LocalAlloc calls, all between 16.67M and
+  17.07M, all from VBRUN seg 78:0025 (VB's "allocate in local heap X" helper, sizes
+  0x11-0x1C, LMEM_MOVEABLE|ZEROINIT) in the heap at 474B (handle 0532). No GlobalAlloc
+  failed in the run.
+* That heap was created at 15.46M by seg 88:0013 through seg 77 (GlobalAlloc 0x42 of
+  0x400+0x210 bytes, locked, LocalInit). At 16.32M KERNEL's LocalGrow asked
+  GlobalReAlloc(0532, 0x840, 0) - in place, the block is locked - and it failed after
+  ~350k instructions of compaction. Every later allocation in that heap failed.
+* Then VB could not find a control by name: 'uGameNewMatch' at 640 KB. With 576 KB
+  (machine xt_win576, 8088 core) the error comes at the same point with a different name,
+  'uLevelBeginner'. So the failure is where the locked heap sits, not the total free memory
+  (~100 KB free, largest block ~95 KB at the error).
+* `VBLHEAP88=0x1000` (seg 88 heap created with 0x1000+0x210): no LocalAlloc failure; the
+  next failure is the seg 71 heap (handle 06CA) growing to 0x3324 in place, followed by a VB
+  error box with an empty message at 38.8M. `VBLHEAP71=0x4000` as well: no allocation
+  failure, and the game window with its menu and controls appears (V20 76M, 8088 core
+  ~200M). In the default build the seg 71 heap reached 0x38A4 and the seg 88 heap 0xA8C
+  (Tic Tac Drop).
+
+On the 8088 core with both larger heaps, as shell: the window appears at ~200M and the Game
+menu opens and closes (no puzzle played).
+
+Beside MS-DOS Executive the outcome depends on the build, not on free memory:
+
+* Default build (8088): the window appears (~330M), Game menu, F2 starts a puzzle (digits
+  dealt, score and timer running), Alt+F4 returns to the Executive, End Session to DOS.
+* Larger heaps (8088 and V20): hang. This is memory corruption, not exhaustion (an earlier
+  reading of "160 bytes free" came from a broken arena chain). V20 write watch on the
+  overwritten arena: VBRUN seg 73:00C5-00FA copies a counted string into a 64-byte stack
+  buffer. The string pointer came from seg 4:0DCD (name lookup through the module-context
+  table in [2E04]) and pointed into a block that now holds p-code (5803:00DE, "length"
+  0xDD sign-extended by CBW), so the loop copied ~64 KB over the stack segment and the
+  next arenas; seg 4:0E2B then loops on the damaged list.
+* Larger heaps with `CTXGROW=` (no moving grow2 for seg-4 context blocks, V20): the window
+  appears. So a context block moved by CTXGROW's grow2 leaves another holder of its old
+  segment; only [di+2] is updated.
+* The holder: DGROUP word 2E28. Seg 5:0144-0150 copies the main context records' segments
+  into 2E2A (from 2E5C) and 2E28 (from 2E6C) when byte [2F] is 0, and seg 4:1609 returns
+  DX=[2E28] as the segment of the name strings that 4:0DCD hands to seg 73. V20 grow2 trace:
+  the first moving grow (15.74M) moved 5803 to 59CB and updated [2E6C]; [2E28] kept 5803
+  (dump at 36.56M), the segment of the 5803:00DE pointer seg 73 copied from. Other words still
+  holding 5803 in that dump (DGROUP 2128, 2148, context table entry 0F18+0x10) were not on
+  the failing path and are not changed.
+* `CTXMIRROR=1` (opt-in): the two ctxgrow stubs compare the record's old segment with 2E28
+  and 2E2A and store the new segment into the one that matches (conv.CTXMIRROR_FIX; stub
+  test `CtxMirror`). 8088, beside the Executive, Go Figure with the larger heaps: window,
+  Game menu, F2 starts a puzzle, Alt+F4, End Session, DOS prompt. The default sizes with
+  `CTXMIRROR=1` pass the same sequence, and so do Pack 2 JIGSAWED (About, Open, scramble),
+  RATTLER and RODENT (8088, Executive exit sequence). Without the switch the runtime is
+  byte-identical to the earlier default.
+* `TABGROW` and `CTXGROW` are overridable; defaults unchanged. With the larger
+heaps JIGSAWED (About, Open, scramble), RATTLER and RODENT still pass the Executive exit
+sequence on the 8088 core.
+
+### Module path terminator (KERNEL, real mode) and NEPATHS padding
+
+Tic Tac Drop as the shell with Hercules (V20 and 8088) ended at ~13.8M with "System Error /
+Terminating current application". Ring trace: COMMDLG's thunk 182D:04EC raises INT 3F for
+segment 6 (discardable code, 0x200 bytes); KERNEL reopens C:\WINDOWS\SYSTEM\COMMDLG.DLL,
+DOS answers 2 (file not found), KERNEL calls SysErrorBox and ends the task. LOG21 showed the
+reopened name as "COMMDLG.DLL" followed by garbage: KERNEL had allocated COMMDLG's module
+block (0x630 bytes) up to the last path character, so the NUL fell on the next arena header
+(COMMDLG's data segment, first byte 0x10). Every module block in that dump ends exactly at
+its path or with slack; only COMMDLG's path ended on a paragraph boundary. The in-memory
+layout fits (traced on COMMDLG, CMDIALOG, VBRUN): 0x40 + 10*nseg + file resource/resident
+tables + 2*nmod + 5*nseg+4 + file imported names + entry table + 5 per movable entry + 1,
+then the 8-byte OFSTRUCT head and the path. conv.pathpad appends 0-15 bytes to the imported
+names table so the NUL stays inside the block for the install directories in `NEPATHS`
+(default C:\WINDOWS\SYSTEM\ and C:\WINDOWS\; empty disables). Default VBRUN100,
+FIELD100 and WEPUTIL need no padding and stay byte-identical; COMMDLG gets 1 byte, WEP4UTIL
+some. With it the same Hercules shell run shows COMMDLG's block 0x650 long, OFSTRUCT at
+0x60C and the NUL intact, and no System Error by 51M (V20). Another directory layout can
+still hit the KERNEL behaviour; the padding only covers the listed directories.
+
+### Tic Tac Drop's "Invalid property value"
+
+Not an allocation failure: no LocalAlloc failure, four in-place GlobalReAlloc failures of
+0x470 bytes from VBRUN seg 105 that VB retries, and the error is unchanged with the larger
+heaps. Trace (V20, deterministic, error raised at 487.95M through entry 106 = seg 7:0294 with
+BX=0x17C): VBRUN seg 83:03D5 calls the subclassed control's original window procedure
+(CallWindowProc) with message 0x040E (CB_SETCURSEL), wParam 0xFFFE (-2), on hwnd 1A90; USER's
+combo box code returns -1 (CB_ERR) and VB turns that into error 380. Where the index -2 comes
+from (e.g. a list count of -1) is not established. Beside MS-DOS Executive (default build,
+8088, ~521M) the same error appears. With the converted COMMDLG but the original
+CMDIALOG/THREED/GAUGE (V20) VB stops at load with "Custom control 'CommonDialog' not found",
+so the original controls cannot be compared at the error.
+
+Reference runs in DOSBox 0.74-3 (386 core, 4 MB, Windows 3.0 from the same disk image,
+mounted with imgmount, MS-DOS Executive as shell):
+
+| files | mode | display | Tic Tac Drop |
+| --- | --- | --- | --- |
+| original VBRUN/VBX/COMMDLG | standard (`win /s`) | CGA | "Invalid property value" |
+| original | standard | VGA | game window (Rows/Column/Win Pattern/Level combos filled) |
+| original | standard | Hercules | game window (Rows 6) |
+| original | real (`win /r`) | Hercules | "Cannot run" (protected-only COMMDLG) |
+| converted (default build) | real | CGA | "Invalid property value" |
+| converted (default build) | real | Hercules | game window |
+
+So the CGA error belongs to the game on a 640x200 display, not to the conversion. On CGA
+one toolbar combo box gets no items and the game then selects index -2, consistent with ListIndex-1 on an empty combo (V20
+trace: CB_GETCURSEL -1 then CB_SETCURSEL -2; GetDeviceCaps(NUMCOLORS) is 2). V20 trace to
+500M: no LocalAlloc or LocalReAlloc failure. On MartyPC with Hercules (`--video herc`,
+default build, 8088, beside the Executive) the converted game instead stops with "Control
+array element '8224' does not exist"; with VGA88 "Property or control 'OptPlayersSubMenu'
+not found", with VGA88 and the larger heaps "Can't create AutoRedraw image". As the shell
+with VGA88 or Hercules, Windows shows "System Error" before the game window.
+
+The default build keeps VBLHEAP88=0x400 and VBLHEAP71=0x3000 (byte-identical runtime);
+`VBLHEAP88` is now overridable like `VBLHEAP71`. The larger heaps cost ~7 KB of locked
+memory, which matters beside MS-DOS Executive (13-20 KB free with JIGSAWED).
+
+Exits beside MS-DOS Executive on the 8088 core (Pack 2 files): RATTLER and RODENT both
+started a game, played, closed with Alt+F4 back to the Executive, End Session to DOS;
+JIGSAWED the same after About, Game>Open of C:\PUZ.BMP and the scrambled puzzle.
+Tic Tac Drop's error box is raised from VBRUN seg 21 as well (V20, i476M).
+
+### Tic Tac Drop beside MS-DOS Executive: memory (HEAPTRIM, discardable COMMDLG)
+
+Hercules, game started with `WIN /R` beside MS-DOS Executive, build of 86bfb13:
+* V20: "Property or control 'Label2' not found" during the splash (MessageBox at 52.74M,
+  deterministic without input). 8088: first launch shows the game window (~500M), Game menu,
+  Alt+F4 back to the Executive; started again from File > Run, the same "Label2" error.
+* PC samples every 2000 instructions from the last name lookup (49.3M) to the MessageBox:
+  almost all KERNEL heap code (compaction, segment loading) and disk reads, very little VB
+  code: the system is thrashing. At the MessageBox 10 KB were free, largest block 6.3 KB.
+  The exact failing allocation was not traced.
+* `CTXMIRROR=1` also passed the V20 first launch, but traced, its store fired once (15.40M)
+  and wrote the value [2E28] already held (VB's own copy in seg 5 had run just before); the
+  name lookups returned the same segment in both builds. So that pass was a layout
+  difference, not the 2E28 mechanism; CTXMIRROR stays opt-in.
+* CMDIALOG.VBX declares a 16 KB local heap, which KERNEL adds to its (FIXED after
+  conversion) data segment, but it imports no local-heap function and nothing calls
+  LocalInit for it: DS:6 stays 0 and the 16 KB stay zero in every dump, including one with
+  Save As open. GAUGE and THREED declare 1 KB the same way. `HEAPTRIM=1` (build.sh default for
+  controls) sets the heap size to 0 for a library that imports none of KERNEL 4-14
+  (conv.kernel_imports); FIELD100 imports LocalAlloc and is not changed (built without it
+  anyway), VBRUN/WEPUTIL have no heap.
+* The replacement COMMDLG's code segment is now moveable and discardable, its heap 512
+  bytes; mkne pads the imported-names table like conv.pathpad, since a discarded segment is
+  reloaded from the module path. Resident while idle: 2.7 KB (was 9.3 KB); CMDIALOG 3.2 KB
+  (was 19.6 KB). About 23 KB more of the heap can hold discardable code.
+* With both (default build): V20 first launch shows the game window by 300M; 8088 first
+  launch, Alt+F4, File > Run again: window and Game menu on the second launch (5.9 KB free
+  at that point). CDTEST with the discardable COMMDLG (V20, CGA): directory changes, Color,
+  Font, Print (no printer), Save As as before, no 80186 opcode executed.
+* Also with 13fd86d: Tic Tac Drop Save then Open in DOSBox real mode (the file is saved and
+  listed); Go Figure beside the Executive on the 8088 (CGA; uses GAUGE and THREED): Game
+  menu, F2 deals a puzzle with the timer and level gauge running, Alt+F4, End Session.
+
 ## Open items / limits
 
 * No real hardware tested. All results are MartyPC (V20 and 8088 cores, 640K, IBM CGA).
@@ -236,3 +435,51 @@ in an earlier session and crashed on close; not retried.
 * JIGSAWED as the Windows shell: exit is a UAE in stock protected mode too (not pursued).
 * Not taken: allocfixed with no seg-4 headroom (grow2 moves fixed blocks; a holder of the
   old segment made JIGSAWED spin at start).
+
+### Replacement COMMDLG.DLL and 80186 coverage runs
+
+`commdlg/` is an 8086 COMMDLG.DLL for Windows 3.0 real mode (nasm source, linked by
+`commdlg/mkne.py`; see commdlg/README.md): about 8.4 KB on disk, one fixed 5 KB code segment
+and 2 KB of data plus a 2 KB local heap, instead of the converted Microsoft DLL (64 KB of
+code in eight discardable segments). build.sh now builds it whenever a COMMDLG.DLL is among the inputs (`COMMDLG=convert`
+converts Microsoft's as before). First real-mode load hung in KERNEL's fixup-chain walk: the
+exported entries began with a relocated `mov ax, imm16`, which real-mode KERNEL also patches
+(to load the data segment) before applying relocations, so the chain's 0FFFFh end marker was
+gone. They now use the standard `push ds / pop ax / nop` prologue. Tested:
+- DOSBox, Windows 3.0 standard mode, original Chess: Open, Save As (default extension added),
+  reopen the saved game, Print (a printer DC came back; Print Manager then cannot reach LPT1).
+- CDTEST.EXE (opens every dialog in turn), standard mode in DOSBox and real mode on the V20:
+  Open (C:\WINDOWS\WIN.INI, name offset 0Bh), Color, Font (Helv bold, 20 pt from lfHeight -13
+  on CGA, LOGFONT filled), Save As (C:\NEW.TXT); PrintDlg with no printer configured returns
+  FALSE with PDERR_NODEFAULTPRN, and with Generic / Text Only configured returns a DC.
+- Tic Tac Drop through CMDIALOG.VBX, DOSBox real mode with Hercules: game window, Game > Open
+  shows the dialog with the game's file type (*.BRD).
+In DOSBox standard mode one Save As result came back on drive D: (current drive from INT 21h
+19h); not seen in real mode, not explained.
+
+`rig/coverage.sh` runs a game as the shell on MartyPC's V20 core with `MARTY_W186=1` and
+scripted keys; `rig/coverage.py` maps every executed 80186 opcode back to module:segment:offset
+(by the reported bytes at that offset) and fails when one lies in a converted module. With the
+current build: JIGSAWED (About, Open, scramble, Fast Solve, Game/Options/Help menus) and
+GOFIGURE (Game menu, New Game, Options, Skill, Help menus) executed no 80186 opcode at all. Neither did
+TICTACDP (Game, Options and Help menus, New Game; Hercules), RATTLER (start, play, menus) or
+RODENT (start, arrow keys, menus), nor CDTEST.EXE with the replacement COMMDLG (Open with directory
+changes c:\ -> c:\windows\system -> c:\windows, Color, Font, Print, Save As). These runs cover
+only the scripted steps, not whole games.
+
+The file dialog's directory line: in DOSBox, after a directory change it grew to
+`c:\windows\*.*\*.*...`. That is DOSBox's DOS, not the DLL: DOSBox accepts `CD *.*` on a FAT
+image and then reports `C:\WINDOWS\*.*` as the current directory (checked at the DOSBox prompt),
+and USER's DlgDirList tries a change to its spec first. MS-DOS refuses the change; on MartyPC the
+line reads c:\windows\system, then c:\windows. Directory navigation is therefore tested on
+MartyPC, not DOSBox.
+
+Tic Tac Drop as shell, Hercules, 8088 core, same disk except COMMDLG: Game > Save As shows the
+replacement's dialog within 60M instructions of the key; with the converted COMMDLG no dialog
+was on screen at that point. With the game idle the replacement holds 9.3 KB (fixed code and
+data), the converted one 4.4 KB (data only, code discarded), so about 5 KB more while no dialog
+is open; the converted DLL's use while a dialog is open was not measured. After Escape the game
+minimizes itself; the original files in standard mode do the same. Chess in DOSBox real mode
+with the replacement: hourglass only, as with the converted COMMDLG. After a directory change the file name box now gets its pattern selected
+(EM_SETSEL), so typing replaces it; before, typed text went in front of the pattern
+(`SYSTEM*.TXT`), on DOSBox and MartyPC alike.

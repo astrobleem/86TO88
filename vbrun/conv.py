@@ -108,10 +108,48 @@ def _lock():
 LOCK=_lock()
 NODISCARD=os.environ.get('NODISCARD')=='1'
 VB=True
+# Windows 3.0 real-mode KERNEL builds a module's in-memory table block with the file's path
+# (OFSTRUCT) at the end and allocates only up to the last path character: the terminating NUL
+# lands one byte past the block when the path ends on a paragraph boundary, i.e. in the next
+# arena header. When a discarded segment or a resource is reloaded later, OpenFile(OF_REOPEN)
+# gets the path plus that header's bytes, DOS answers "file not found" and KERNEL ends the
+# task ("System Error"). The block layout (traced): header 0x40, segment table 10*nseg,
+# resource and resident-name tables as in the file, module refs 2*nmod, 5*nseg+4 bytes,
+# imported names as in the file, entry table + 5 per movable entry + 1, then the OFSTRUCT
+# (8 bytes + path). pathpad returns how many bytes to append to the imported-names table so
+# that the NUL stays inside the block for the usual install paths (NEPATHS, ';'-separated
+# directories, default C:\WINDOWS\SYSTEM\ and C:\WINDOWS\).
+def kernel_imports(d,ne):
+    # KERNEL ordinals imported by any relocation of the (original) module
+    H=lambda o: struct.unpack_from('<H',d,ne+o)[0]
+    st,sh,n,mo,io=H(0x22),H(0x32),H(0x1c),H(0x28),H(0x2a)
+    names=[bytes(d[ne+io+H(mo+2*k)+1:ne+io+H(mo+2*k)+1+d[ne+io+H(mo+2*k)]]).upper() for k in range(H(0x1e))]
+    out=set()
+    for i in range(n):
+        o,l,f,_=struct.unpack_from('<HHHH',d,ne+st+8*i)
+        if not (o and f&0x100): continue
+        p=(o<<sh)+(l or 0x10000)
+        for j in range(struct.unpack_from('<H',d,p)[0]):
+            t,fl,off,a,b=struct.unpack_from('<BBHHH',d,p+2+8*j)
+            if fl&3==1 and names[a-1]==b'KERNEL': out.add(b)
+    return out
+
+def pathpad(d,ne,eto,cbent,nmov,name):
+    dirs=os.environ.get('NEPATHS','C:\\WINDOWS\\SYSTEM\\;C:\\WINDOWS\\')
+    if not dirs: return 0
+    H=lambda o: struct.unpack_from('<H',d,ne+o)[0]
+    nseg,nmod=H(0x1c),H(0x1e)
+    ofs=0x40+10*nseg+(H(0x28)-H(0x24))+2*nmod+5*nseg+4+(eto-H(0x2a))+cbent+5*nmov+1
+    lens=[len(x)+len(name) for x in dirs.split(';') if x]
+    for p in range(16):
+        if all((ofs+p+8+L)%16 for L in lens): return p
+    return 0
+
 def conv(src, dst, report=True, vb=True):
     global VB,RETF_SEGS,TABS
     VB=vb
     TABS={15,33,80,103,107} if vb else {4}
+    if 'TABSEGS' in os.environ: TABS={int(x) for x in os.environ['TABSEGS'].split(',') if x}   # segments holding far-pointer tables (FIELD100: 4)
     if not vb: RETF_SEGS=set()
     d=bytearray(open(src,'rb').read())
     ne=struct.unpack_from('<I',d,0x3c)[0]
@@ -125,7 +163,7 @@ def conv(src, dst, report=True, vb=True):
     blobs=[]; newents=[]
     stats=collections.Counter()
     ords={}
-    ORD0=[101]; MOVCNT=[0]
+    ORD0=[101]; MOVCNT=[0]; OUTNAME=[dst]
     def ordn(seg,off):
         k=(seg,off)
         if k not in ords: ords[k]=ORD0[0]+len(ords)
@@ -133,9 +171,12 @@ def conv(src, dst, report=True, vb=True):
     global CONV_ORDN,CONV_ORIGLEN
     CONV_ORDN=ordn; CONV_ORIGLEN=lambda a: max(ents[a-1][1],ents[a-1][3])
     eto0,etl0=struct.unpack_from('<HH',d,ne+4)
-    tot=0; q=ne+eto0
+    tot=0; q=ne+eto0; ordseg={}; ordoff={}
     while d[q]:
         c,ty=d[q],d[q+1]; q+=2
+        for k in range(c):
+            if ty==0xff: ordseg[tot+k+1]=d[q+6*k+3]; ordoff[tot+k+1]=struct.unpack_from('<H',d,q+6*k+4)[0]
+            elif ty: ordseg[tot+k+1]=ty; ordoff[tot+k+1]=struct.unpack_from('<H',d,q+3*k+1)[0]
         if ty==0: pass
         elif ty==0xff: q+=6*c
         else: q+=3*c
@@ -154,6 +195,11 @@ def conv(src, dst, report=True, vb=True):
         newrecs=[]; rem=collections.defaultdict(list); t5={}
         for r in recs:
             t,fl,off,a,b=struct.unpack('<BBHHH',r)
+            if t&15 in (2,5) and fl&3==0 and not fl&4 and a==0xff and os.environ.get('ORDSEL'):
+                # selector or offset of a movable entry (VBX controls build far pointers
+                # to their own procedures and load data segments this way): it names that
+                # entry's segment and offset, so handle it like a direct reference
+                a,b=ordseg[b],(0 if t&15==2 else ordoff[b]); r=struct.pack('<BBHHH',t,fl,off,a,b)
             if t&15==2 and fl&3==0:
                 p=off; sites=[]
                 while True:
@@ -167,6 +213,8 @@ def conv(src, dst, report=True, vb=True):
                     conv_ok = (a not in FIX) and (VB and (i+1,p)==(4,0x268)) or (a not in FIX) and (op in (0x9a,0xea) or ((i+1) in TABS and not (0xb8<=prev<=0xbf or prev==0x68)))
                     if VB and i==0 and p in (59,182):
                         continue
+                    if conv_ok and a!=0xff and not ents[a-1][2]&0x10:
+                        conv_ok=False   # target segment is FIXED in the original (CMDIALOG seg 1): keep the direct reference
                     if conv_ok:
                         lit=struct.unpack_from('<H',code,p-2)[0]
                         newrecs.append(struct.pack('<BBHHH',3,0,p-2,0xff,ordn(a,lit))); stats['call']+=1
@@ -395,7 +443,9 @@ def conv(src, dst, report=True, vb=True):
     et+=b'\0'
     MOVCNT[0]=sum(1 for e in L if e and e[0]=='M')
     nrs=struct.unpack_from('<I',d,ne+0x2c)[0]; nrsz=struct.unpack_from('<H',d,ne+0x20)[0]
-    head=bytearray(d[:ne+eto])+et
+    p=pathpad(d,ne,eto,len(et),MOVCNT[0],os.path.basename(OUTNAME[0]))
+    head=bytearray(d[:ne+eto])+b'\0'*p+et
+    if p: struct.pack_into('<H',head,ne+4,eto+p); stats['pathpad']=p
     if i186_info.get('entry'): struct.pack_into('<HH',head,ne+0x14,i186_info['entry'],i186_info['seg'])
     struct.pack_into('<H',head,ne+6,len(et))
     struct.pack_into('<I',head,ne+0x2c,len(head))
@@ -442,6 +492,14 @@ def conv(src, dst, report=True, vb=True):
         struct.pack_into('<HH',out,ne+0x38,g0,g1-g0)
     # 0x0008 = protected-mode-only: the real-mode loader refuses such modules
     struct.pack_into('<H',out,ne+0xc,struct.unpack_from('<H',out,ne+0xc)[0]&~0x0008)
+    # HEAPTRIM=1: a library that imports no local-heap function (KERNEL 4-14) never has a
+    # local heap (the real-mode loader does not call LocalInit for it: CMDIALOG's DS:6 stays 0
+    # and its 16 KB heap area stays zero), so its heap size only adds dead bytes to a FIXED
+    # data segment.
+    if os.environ.get('HEAPTRIM')=='1' and struct.unpack_from('<H',d,ne+0xc)[0]&0x8000:
+        h0=struct.unpack_from('<H',d,ne+0x10)[0]
+        if h0 and not kernel_imports(d,ne)&set(range(4,15)):
+            struct.pack_into('<H',out,ne+0x10,0); stats['heaptrim']=h0
     open(dst,'wb').write(out)
     if report: print(dict(stats),'size',len(d),'->',len(out),'nres',nres,'tail',len(tail))
 def fsw_pass(blobs,stats):
@@ -638,6 +696,11 @@ def growkeep_pass(d,ne,blobs,stats):
     c[0xec]=0xe8; struct.pack_into('<h',c,0xed,base-0xef); c[0xef]=0x90; c[0xf0]=0x90
     stats['growkeep']=1
 
+# runs before 'mov [di+2],dx' in the ctxgrow stubs (DS = DGROUP, DX = segment after the grow):
+# push ax / mov ax,[di+2] / cmp ax,[2E28] / jne +4 / mov [2E28],dx / cmp ax,[2E2A] / jne +4 /
+# mov [2E2A],dx / pop ax
+CTXMIRROR_FIX=bytes.fromhex('508b4502'+'3b06282e7504'+'8916282e'+'3b062a2e7504'+'89162a2e'+'58')
+
 def ctxgrow_pass(d,ne,blobs,ordn,stats):
     # VB module contexts (seg 4 grow paths) keep their data segment in [di+2]. Route
     # their grows through seg 105 'grow2', which falls back to a moving GlobalReAlloc
@@ -672,14 +735,19 @@ def ctxgrow_pass(d,ne,blobs,ordn,stats):
         raise AssertionError('no ordinal reloc at 4:%x'%lc)
     retarget(0xaa); retarget(0x156)
     assert bytes(c[0xaf:0xb6])==bytes.fromhex('0bc07414c1e804'), c[0xaf:0xb6].hex()
+    # VB also mirrors the main context records' segments into DGROUP words 2E28 (from
+    # 2E6C) and 2E2A (from 2E5C), set in seg 5; 4:1609 hands [2E28] out as the segment of
+    # names. When the grow moved the block, a mirror still holding the old segment is
+    # updated too (CTXMIRROR=1).
+    fix=CTXMIRROR_FIX if os.environ.get('CTXMIRROR') else b''
     sa=len(c)
-    stub=bytearray(bytes.fromhex('895502')+b'\x0b\xc0\x74\x04'+bytes.fromhex('c1e804')+b'\xc3'+b'\x83\xc4\x02\xe9\x00\x00')
+    stub=bytearray(fix+bytes.fromhex('895502')+b'\x0b\xc0\x74\x04'+bytes.fromhex('c1e804')+b'\xc3'+b'\x83\xc4\x02\xe9\x00\x00')
     struct.pack_into('<h',stub,len(stub)-2,0xc7-(sa+len(stub)))
     c+=stub
     c[0xaf]=0xe8; struct.pack_into('<h',c,0xb0,sa-0xb2)
     for k in range(0xb2,0xb6): c[k]=0x90
     assert bytes(c[0x15b:0x160])==bytes.fromhex('8bc8c1e804'), c[0x15b:0x160].hex()
-    sb=len(c); c+=bytes.fromhex('8955028bc8c1e804c3')
+    sb=len(c); c+=fix+bytes.fromhex('8955028bc8c1e804c3')
     c[0x15b]=0xe8; struct.pack_into('<h',c,0x15c,sb-0x15e); c[0x15e]=0x90; c[0x15f]=0x90
     stats['ctxgrow']=1
 

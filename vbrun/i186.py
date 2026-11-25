@@ -23,7 +23,7 @@ Which bytes are code comes from a recursive descent from every entry, relocation
 PUSH CS/CALL target and CS: jump table, which stops after calls into the runtime's
 error raiser (they never return, and the bytes after them are handler metadata).
 """
-import struct, collections, sys
+import struct, collections, sys, re
 import capstone
 from capstone import x86
 
@@ -237,6 +237,32 @@ def heuristic_roots(segs):
             if after_jump(o):
                 if c[o + 1] == 0 and plausible(c, o + 2): out[s['n']].add(o + 2)
                 elif plausible(c, o): out[s['n']].add(o)      # code right after a jump/return
+        out[s['n']] |= word_table_targets(c)
+    return out
+
+
+def word_table_targets(c):
+    """targets of the runtime's word jump tables indexed from 1 (VBRUN 2: p-code escape
+    handlers such as 2:489C, reached only through them):
+      MOV BX,table / JMP helper, helper = POP AX / ADD BX,AX / ADD BX,AX / MOV BX,CS:[BX-2] / JMP BX
+      MOV BX,table / ADD BX,AX / ADD BX,AX / JMP CS:[BX-2]
+    The tables carry no length; entries are read while they decode as plausible code and
+    stay candidates (accepted only where they agree with the definite code)."""
+    helper = b'\x58\x03\xd8\x03\xd8\x2e\x8b\x5f\xfe\xff\xe3'
+    helpers = {m.start() for m in re.finditer(re.escape(helper), c)}
+    tabs = set()
+    for m in re.finditer(rb'\xbb(..)', c, re.S):
+        p = m.end(); tab = u16(c, m.start() + 1)
+        if c[p:p + 8] == b'\x03\xd8\x03\xd8\x2e\xff\x67\xfe': tabs.add(tab)
+        elif helpers and c[p:p + 1] == b'\xe9' and (p + 3 + struct.unpack_from('<h', c, p + 1)[0]) & 0xffff in helpers: tabs.add(tab)
+        elif helpers and c[p:p + 1] == b'\xeb' and (p + 2 + struct.unpack_from('<b', c, p + 1)[0]) & 0xffff in helpers: tabs.add(tab)
+    out = set()
+    for tab in tabs:
+        for k in range(64):
+            if tab + 2 * k + 2 > len(c): break
+            t = u16(c, tab + 2 * k)
+            if not (0 < t < len(c) and plausible(c, t)): break
+            out.add(t)
     return out
 
 

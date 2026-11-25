@@ -366,5 +366,135 @@ class ReviewedList(PushedReturnFlow):
         rc, out = self.run_rc(self.img(code), '--reviewed', self.lst([self.entry(code)]))
         self.assertIn('pushes a return address at 0 and jumps far at 2 to a movable target', out); self.assertNotEqual(rc, 0)
 
+
+def ord_ne(code, recs, seg2_flags=0x0010):
+    """NE for conv.py novb: seg 1 = movable code `code` with relocation records recs,
+    seg 2 = a 4-byte code segment (flags seg2_flags); entry ordinal 1 = movable seg 1 offset 0."""
+    import struct
+    ne = 0x40; sto = 0x40; et = sto + 16; ent = bytes([1, 0xff, 3, 0xcd, 0x3f, 1, 0, 0, 0])
+    d = bytearray(0x200)
+    d[0:2] = b'MZ'; struct.pack_into('<I', d, 0x3c, ne); d[ne:ne + 2] = b'NE'
+    struct.pack_into('<HH', d, ne + 4, et, len(ent)); d[ne + et:ne + et + len(ent)] = ent
+    for k in (0x26, 0x28, 0x2a, 0x2c): struct.pack_into('<H', d, ne + k, et + len(ent))
+    struct.pack_into('<H', d, ne + 0x1c, 2); struct.pack_into('<H', d, ne + 0x22, sto)
+    struct.pack_into('<H', d, ne + 0x32, 4)
+    seg2 = (0x200 + len(code) + 2 + 8 * len(recs) + 15) & ~15
+    struct.pack_into('<HHHH', d, ne + sto, 0x200 >> 4, len(code), 0x0110 | 0x1000, len(code))
+    struct.pack_into('<HHHH', d, ne + sto + 8, seg2 >> 4, 4, seg2_flags, 4)
+    d += code + struct.pack('<H', len(recs)) + b''.join(struct.pack('<BBHHH', *r) for r in recs)
+    d += bytes(seg2 - len(d)) + b'\xcb\x90\x90\x90'
+    return bytes(d)
+
+class OrdinalRefs(unittest.TestCase):
+    """conv.py on a custom control: selector/offset references made through a movable entry
+    ordinal (THREED, GAUGE, CMDIALOG, COMMDLG) and far calls into originally FIXED segments."""
+    def conv(self, img, **env):
+        import struct
+        with tempfile.TemporaryDirectory() as td:
+            src, dst = os.path.join(td, 'a.dll'), os.path.join(td, 'b.dll')
+            with open(src, 'wb') as fh: fh.write(img)
+            e = dict(os.environ, I186='0', TABSEGS='', **env); e.pop('WRAP', None); e.pop('FIXSEGS', None)
+            subprocess.run([sys.executable, os.path.join(HERE, '..', 'conv.py'), src, dst, 'novb'],
+                           env=e, check=True, capture_output=True)
+            with open(dst, 'rb') as fh: d = fh.read()
+        ne = struct.unpack_from('<I', d, 0x3c)[0]; sto, = struct.unpack_from('<H', d, ne + 0x22)
+        o, l, f, m = struct.unpack_from('<HHHH', d, ne + sto); b = o << 4
+        n, = struct.unpack_from('<H', d, b + l)
+        recs = [struct.unpack_from('<BBHHH', d, b + l + 2 + 8 * k) for k in range(n)]
+        return d[b:b + l], recs
+    # push seg(ord 1) ; push off(ord 1) ; retf
+    CODE = bytes.fromhex('68ffff68ffffcb')
+    RECS = [(2, 0, 1, 0xff, 1), (5, 0, 4, 0xff, 1)]
+    def test_far_pointer_by_ordinal_goes_through_entry(self):
+        code, recs = self.conv(ord_ne(self.CODE, self.RECS), ORDSEL='1')
+        self.assertEqual(code[0], 0xe8)          # the push pair now calls a stub
+        self.assertTrue(any(r[0] == 3 and r[3] == 0xff for r in recs), recs)   # far pointer via an entry
+        self.assertFalse(any(r[0] in (2, 5) and r[3] == 0xff for r in recs), recs)
+    def test_without_switch_unchanged(self):
+        code, recs = self.conv(ord_ne(self.CODE, self.RECS))
+        self.assertEqual(code[:6], self.CODE[:6])
+        self.assertIn((2, 0, 1, 0xff, 1), recs)
+    def test_far_call_into_fixed_segment_stays_direct(self):
+        # call far seg2:0000 where seg 2 is FIXED in the original
+        code, recs = self.conv(ord_ne(bytes.fromhex('9a0000ffffcb'), [(2, 0, 3, 2, 0)], seg2_flags=0x0000), ORDSEL='1')
+        self.assertIn((2, 0, 3, 2, 0), recs)
+    def test_far_call_into_movable_segment_goes_through_entry(self):
+        code, recs = self.conv(ord_ne(bytes.fromhex('9a0000ffffcb'), [(2, 0, 3, 2, 0)]), ORDSEL='1')
+        self.assertTrue(any(r[0] == 3 and r[2] == 1 and r[3] == 0xff for r in recs), recs)
+
+
+class PathPad(unittest.TestCase):
+    """conv.pathpad: keep the NUL of the module's file path inside KERNEL's module block.
+    Numbers from the traced case: converted COMMDLG.DLL in C:\\WINDOWS\\SYSTEM, in-memory
+    OFSTRUCT at 0x60B, 37 bytes, block 0x630 long (NUL overwritten by the next arena)."""
+    def hdr(self):
+        import struct
+        ne = 0x40; d = bytearray(0x80)
+        for o, v in ((0x1c, 9), (0x1e, 4), (0x22, 0x40), (0x24, 0x88), (0x28, 0x2dd), (0x2a, 0x2e5)):
+            struct.pack_into('<H', d, ne + o, v)
+        return bytes(d), ne
+    def pad(self, dirs, name='COMMDLG.DLL'):
+        sys.path.insert(0, os.path.join(HERE, '..')); import conv
+        d, ne = self.hdr(); old = os.environ.get('NEPATHS')
+        os.environ['NEPATHS'] = dirs
+        try: return conv.pathpad(d, ne, 0x2ff, 0x18d, 63, name)
+        finally:
+            if old is None: del os.environ['NEPATHS']
+            else: os.environ['NEPATHS'] = old
+    def test_traced_case_needs_one_byte(self):
+        self.assertEqual(self.pad('C:\\WINDOWS\\SYSTEM\\'), 1)
+    def test_other_length_needs_none(self):
+        self.assertEqual(self.pad('C:\\WINDOWS\\SYSTEM\\', 'COMMDLG2.DLL'), 0)
+    def test_both_default_dirs_avoided(self):
+        p = self.pad('C:\\WINDOWS\\SYSTEM\\;C:\\WINDOWS\\')
+        for L in (29, 22):
+            self.assertNotEqual((0x60b + p + 8 + L) % 16, 0)
+    def test_disabled(self):
+        self.assertEqual(self.pad(''), 0)
+
+
+@unittest.skipUnless(subprocess.run(['which', 'nasm'], capture_output=True).returncode == 0, 'nasm missing')
+class CommdlgLink(unittest.TestCase):
+    """The replacement COMMDLG.DLL as linked by commdlg/mkne.py: moveable discardable code,
+    path padding for the install directories, and conv.kernel_imports on it."""
+    @classmethod
+    def setUpClass(cls):
+        import struct
+        sys.path.insert(0, os.path.join(HERE, '..')); import conv
+        cls.conv = conv; cls.td = tempfile.TemporaryDirectory(); cls.files = {}
+        for tag, dirs in (('default', None), ('other', 'C:\\WIN\\SYSTEM\\;D:\\W30\\')):
+            env = dict(os.environ); env.pop('NEPATHS', None)
+            if dirs: env['NEPATHS'] = dirs
+            out = os.path.join(cls.td.name, tag)
+            subprocess.run([os.path.join(HERE, '..', 'commdlg', 'build.sh'), out], env=env, check=True, capture_output=True)
+            cls.files[tag] = (open(os.path.join(out, 'COMMDLG.DLL'), 'rb').read(), dirs)
+    @classmethod
+    def tearDownClass(cls): cls.td.cleanup()
+    def hdr(self, d):
+        import struct
+        ne = struct.unpack_from('<H', d, 0x3c)[0]
+        return ne, (lambda o: struct.unpack_from('<H', d, ne + o)[0])
+    def test_code_moveable_discardable(self):
+        import struct
+        d, _ = self.files['default']; ne, H = self.hdr(d)
+        fl = struct.unpack_from('<H', d, ne + H(0x22) + 4)[0]
+        self.assertEqual(fl & 0x1010, 0x1010)
+        self.assertEqual(H(0x30), 17)            # one moveable entry per export
+    def test_path_nul_inside_block(self):
+        for tag, (d, dirs) in self.files.items():
+            ne, H = self.hdr(d); old = os.environ.get('NEPATHS')
+            if dirs: os.environ['NEPATHS'] = dirs
+            else: os.environ.pop('NEPATHS', None)
+            try: self.assertEqual(self.conv.pathpad(d, ne, H(4), H(6), H(0x30), 'COMMDLG.DLL'), 0, tag)
+            finally:
+                if old is None: os.environ.pop('NEPATHS', None)
+                else: os.environ['NEPATHS'] = old
+    def test_kernel_imports(self):
+        d, _ = self.files['default']; ne, H = self.hdr(d)
+        k = self.conv.kernel_imports(d, ne)
+        self.assertIn(4, k)                       # LocalInit: HEAPTRIM leaves such a heap alone
+        self.assertTrue({15, 17, 18, 19, 50} <= k)
+
+
 if __name__ == '__main__':
     unittest.main()
