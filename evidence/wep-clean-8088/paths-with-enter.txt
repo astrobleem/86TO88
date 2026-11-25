@@ -1,0 +1,41 @@
+OPEN_PREFIX = 'C:\\G'
+WINMINE.EXE open ax 5 cf 0 handles[0] 0500000000003412
+  seg hdr len 1088 read 1088 match 0
+  seg 1 len 11038 read 11038 match 0
+  seg 2 len 2298 read 2298 match 0
+ABOUTWEP.DLL open ax 5 cf 0 handles[0] 0500000000013412
+  seg hdr len 192 read 192 match 0
+  seg 1 len 838 read 838 match 0
+  seg 2 len 308 read 308 match 0
+slots (3613, 9175, 0, 0, 0, 0) arena_top 0x25bd
+OPEN_PREFIX = 'C:\\GAME'
+WINMINE.EXE open ax 5 cf 0 handles[0] 0500000000003412
+  seg hdr len 1088 read 1088 match 0
+  seg 1 len 11038 read 11038 match 0
+  seg 2 len 2298 read 2298 match 0
+ABOUTWEP.DLL open ax 5 cf 0 handles[0] 0500000000013412
+  seg hdr len 192 read 192 match 0
+  seg 1 len 838 read 838 match 0
+  seg 2 len 308 read 308 match 0
+slots (3613, 9175, 0, 0, 0, 0) arena_top 0x25bd
+OPEN_PREFIX = ''
+WINMINE.EXE open ax 5 cf 0 handles[0] 0500000000003412
+  seg hdr len 1088 read 1088 match 0
+  seg 1 len 11038 read 11038 match 0
+  seg 2 len 2298 read 2298 match 0
+ABOUTWEP.DLL open ax 5 cf 0 handles[0] 0500000000013412
+  seg hdr len 192 read 192 match 0
+  seg 1 len 838 read 838 match 0
+  seg 2 len 308 read 308 match 0
+slots (3613, 9175, 0, 0, 0, 0) arena_top 0x25bd
+OPEN_PREFIX = 'C:\\WINDOWS\\SYSTEM'
+WINMINE.EXE open ax 5 cf 0 handles[0] 0500000000003412
+  seg hdr len 1088 read 1088 match 0
+  seg 1 len 11038 read 11038 match 0
+  seg 2 len 2298 read 2298 match 0
+ABOUTWEP.DLL open ax 5 cf 0 handles[0] 0500000000013412
+  seg hdr len 192 read 192 match 0
+  seg 1 len 838 read 838 match 0
+  seg 2 len 308 read 308 match 0
+slots (3613, 9175, 0, 0, 0, 0) arena_top 0x25bd
+PASS: short, normal, bare-name and long module paths

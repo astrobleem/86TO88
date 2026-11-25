@@ -10,6 +10,7 @@ Module image (.W8x): 'W8M1', nsites w, nconf b, pad b, vtab[8]{start w,cnt w} (8
  {segoff w, type b, reg b, imm w, len b, srcreg b, foff_lo w, foff_hi b, vec b}, then nconf x word: crc-lo ids of
  library modules that clash with this one (the TSR drops those when this module loads)
  types 0 push,1 shl,2 shr,3 sar,4 imul rr,5 cc-push,6 cc-leave,7 imul r,[bp+d],imm8,
+ 10 ENTER imm16,0 (nonzero nesting remains unsupported)
  8 static byte patch (imm lo/hi = replacement bytes, len 1|2, segoff FFFFh, never trapped)
 Vector keys (vec,segoff) are unique library-wide (same key only for identical semantics).
 """
@@ -85,6 +86,10 @@ not_imulm:
  JNE not_imulw
  JMP do_imulw
 not_imulw:
+ CMP AL, 10
+ JNE not_enter
+ JMP do_enter
+not_enter:
  JMP do_shift
 ; lookup: vecidx + site_off -> BX = entry ptr or FFFF ; clobbers AX,CX,DX,SI,DI
 lookup:
@@ -371,6 +376,53 @@ push_tail:
  POP AX
  MOV BP, CS:[save_bp]
  IRET
+; ENTER imm16,0: push guest BP, set BP, allocate without changing flags.
+; Restore registers before writing the new frame: small allocations can overlap
+; the handler's saved-register slots.
+do_enter:
+ MOV AX, [BP-2]
+ MOV [ent_ax], AX
+ MOV AX, [BP-4]
+ MOV [ent_bx], AX
+ MOV AX, [BP]
+ MOV [ent_oldbp], AX
+ MOV AX, BP
+ ADD AX, 6
+ MOV [tmp_newbp], AX
+ MOV AX, BP
+ SUB AX, [SI+4]
+ MOV [tmp_sp], AX
+ MOV AX, [site_off]
+ ADD AX, 4
+ MOV [tmp_newip], AX
+ MOV AX, [BP+4]
+ MOV [ent_cs], AX
+ MOV AX, [BP+6]
+ MOV [ent_flags], AX
+ POP ES
+ POP DS
+ POP DI
+ POP SI
+ POP DX
+ POP CX
+ POP BX
+ POP AX
+ POP BP
+ MOV BX, CS:[tmp_newbp]
+ MOV AX, CS:[ent_oldbp]
+ MOV SS:[BX], AX
+ MOV BX, CS:[tmp_sp]
+ MOV AX, CS:[tmp_newip]
+ MOV SS:[BX], AX
+ MOV AX, CS:[ent_cs]
+ MOV SS:[BX+2], AX
+ MOV AX, CS:[ent_flags]
+ MOV SS:[BX+4], AX
+ MOV AX, CS:[ent_ax]
+ MOV BX, CS:[ent_bx]
+ MOV BP, CS:[tmp_newbp]
+ MOV SP, CS:[tmp_sp]
+ IRET
 restore_iret:
  POP ES
  POP DS
@@ -485,6 +537,11 @@ tmp_hi: DB 0
 vecidx: DB 0
 v20: DB 0
 site_off: DW 0
+ent_ax: DW 0
+ent_bx: DW 0
+ent_oldbp: DW 0
+ent_cs: DW 0
+ent_flags: DW 0
 save_bp: DW 0
 tmp_imm: DW 0
 tmp_newip: DW 0
@@ -773,6 +830,11 @@ bl_back:
  DEC CX
  JMP bl_back
 bl_start:
+ ; CX is the prefix length left after scanning backwards. Convert it to
+ ; the basename length before the forward copy (also works without a path).
+ MOV AX, CS:[o_len]
+ SUB AX, CX
+ MOV CX, AX
  MOV DI, CS:[libend]
  XOR BX, BX
 bl_copy:
@@ -1337,7 +1399,12 @@ install:
  CMP BYTE ES:[BX-1], 56
  JE already_p
 not_inst:
- MOV SI, 81h
+ MOV AX, 0100h
+ DB 0D5h, 010h
+ CMP AL, 10
+ JNE ic_nov
+ MOV BYTE [v20], 1
+ic_nov: MOV SI, 81h
  MOV DI, lpath
 ic_sk0: CMP BYTE [SI], 32
  JNE ic_opt
@@ -1348,8 +1415,13 @@ ic_opt: CMP BYTE [SI], 47
  MOV AL, [SI+1]
  AND AL, 0DFh
  CMP AL, 86
+ JE ic_v
+ CMP AL, 18h          ; '8' (38h) after AND 0DFh
  JNE ic_bad
- MOV BYTE [v20], 1
+ MOV BYTE [v20], 0
+ ADD SI, 2
+ JMP ic_sk0
+ic_v: MOV BYTE [v20], 1
  ADD SI, 2
  JMP ic_sk0
 ic_bad: JMP usage
@@ -1493,7 +1565,7 @@ def build():
         hv += [f" MOV DX, stub{i}", f" MOV AX, {0x2500 | (0xF8 + i)}", " INT 21h"]
     a = a.replace("__HOOKVEC__", "\n".join(hv))
     msgs = {"TITLE": "WM88X3 - Win3.0 8088 bridge (library driven)", "OK": "Installed. Library modules load on demand.", "ALREADY": "Already installed.",
-            "USAGE": "usage: WM88X3 [/V] [library dir, default C:\\W8X]  (/V = NEC V20/V30: leave 80186 code native)"}
+            "USAGE": "usage: WM88X3 [/V|/8] [library dir, default C:\\W8X]  (NEC V20/V30 auto-detected and left native; /8 forces 8088 rewriting, /V forces native)"}
     for k, v in msgs.items(): a = a.replace(f"__MSG_{k}__", dbs(v))
     code, labels = assemble(a + "\n", org=0x100)
     # scratch labels: assemble() needs them defined; append zero-length via extra pass

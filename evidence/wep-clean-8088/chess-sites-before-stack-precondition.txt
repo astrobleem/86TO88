@@ -1,0 +1,9 @@
+errcnt 0 vecidx 7 site_off 41557 ip 0xa256
+total {0: 11860, 1: 770, 10: 800, 4: 450, 7: 560, 2: 150, 9: 40, 3: 70, 6: 2150, 5: 130}
+FAIL {7: 2}
+({'segoff': 18590, 'type': 7, 'reg': 0, 'imm': 65526, 'len': 100, 'srcreg': 26, 'foff': 21182, 'mod': 0, 'vec': 0}, {'AX': 35344, 'BX': 31261, 'CX': 35126, 'DX': 962, 'SI': 17525, 'DI': 44405, 'BP': 36868, 'SP': 36864}, {'AX': 24640, 'BX': 31261, 'CX': 35126, 'DX': 962, 'SI': 17525, 'DI': 44405, 'BP': 36868, 'SP': 36864}, '0x801', '0x801')
+Traceback (most recent call last):
+  File "/workspace/scratch/f5a27a7a28fd/86TO88/tools/wep/unittest_sites3.py", line 124, in <module>
+    assert not fails, dict(fails)
+           ^^^^^^^^^
+AssertionError: {7: 2}

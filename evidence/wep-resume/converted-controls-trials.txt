@@ -1,0 +1,34 @@
+Converted-control command output (private original/output files excluded)
+
+--- threed.log ---
+{'call': 2, 'left': 7, 'i186_push16': 175, 'i186_push8': 539, 'i186_push16_reloc': 14, 'i186_imul': 3, 'i186_shift': 11, 'reloc_merged': 10, 'res_delta': 1824, 'entries': 1} size 55248 -> 57072 nres 0 tail 17616
+
+--- gauge.log ---
+Traceback (most recent call last):
+  File "/workspace/scratch/f5a27a7a28fd/86TO88/vbrun/conv.py", line 883, in <module>
+    if __name__=='__main__': conv(sys.argv[1],sys.argv[2],vb=(len(sys.argv)<4))
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/f5a27a7a28fd/86TO88/vbrun/conv.py", line 186, in conv
+    patch_sites(i,code,rem,t5,newrecs,stats)
+  File "/workspace/scratch/f5a27a7a28fd/86TO88/vbrun/conv.py", line 83, in patch_sites
+    gs=getseg(a); tt=tmp(); st=len(code)
+       ^^^^^^^^^
+  File "/workspace/scratch/f5a27a7a28fd/86TO88/vbrun/conv.py", line 36, in getseg
+    off=CBOFF if a==107 else CONV_ORIGLEN(a)
+                             ^^^^^^^^^^^^^^^
+  File "/workspace/scratch/f5a27a7a28fd/86TO88/vbrun/conv.py", line 134, in <lambda>
+    CONV_ORDN=ordn; CONV_ORIGLEN=lambda a: max(ents[a-1][1],ents[a-1][3])
+                                               ~~~~^^^^^
+IndexError: list index out of range
+
+--- cmdialog.log ---
+{'call': 1, 'left': 3, 'i186_push16': 26, 'i186_push8': 67, 'i186_imul': 9, 'i186_push16_reloc': 4, 'reloc_merged': 1, 'res_delta': 384, 'entries': 1} size 16000 -> 16384 nres 0 tail 5864
+
+--- commdlg.log ---
+{'left': 21, 'reloc_merged': 0, 'res_delta': -144, 'entries': 0} size 89248 -> 89104 nres 0 tail 15222
+
+
+The first GAUGE attempt above failed on internal-ordinal selector references.
+Follow-up with FIXSEGS=1,2,3,4,5,6,7,8,9,10,255 produced 29456 bytes.
+Existing i186.py --check reported OK for THREED, GAUGE, CMDIALOG and COMMDLG.
+This checks rewritten instruction sites, not Windows API compatibility or exit behavior.

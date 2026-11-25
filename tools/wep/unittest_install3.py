@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Install-time command line test for WM88X3: runs the transient installer under a minimal fake DOS and checks the
-/V switch (V20 mode flag), the default (8088 mode), a library path after /V, and rejection of an unknown option."""
+CPU probe (Unicorn runs AAD 10h like an Intel 8088; nec=True makes the probe return the NEC V20/V30 result), the /V
+and /8 switches, a library path after a switch, and rejection of an unknown option."""
 import sys, struct, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / 'src'))
 import build_tsr3 as bt
@@ -10,7 +11,7 @@ code, L = bt.build()
 SEG = 0x2000
 
 
-def run(tail):
+def run(tail, nec=False):
     mu = Uc(UC_ARCH_X86, UC_MODE_16); mu.mem_map(0, 0x100000)
     mu.mem_write(SEG * 16 + 0x100, code)
     t = tail.encode() + b'\r'
@@ -33,6 +34,13 @@ def run(tail):
         elif ah in (0x31, 0x4C):
             out['exit'] = (ah, ax & 255 if ah == 0x4C else 0); uc.emu_stop()
     mu.hook_add(UC_HOOK_INTR, dos)
+    probe = SEG * 16 + L['not_inst'] + 3                     # MOV AX,0100h (3 bytes), then AAD 10h
+    assert bytes(mu.mem_read(probe, 2)) == b'\xd5\x10'
+    if nec:
+        def aad_nec(uc, addr, size, ud):                     # NEC ignores the AAD operand: AL = AH*10 + AL, AH = 0
+            if addr == probe:
+                uc.reg_write(UC_X86_REG_AX, 10); uc.reg_write(UC_X86_REG_IP, uc.reg_read(UC_X86_REG_IP) + 2)
+        mu.hook_add(UC_HOOK_CODE, aad_nec, begin=probe, end=probe)
     for r in (UC_X86_REG_CS, UC_X86_REG_DS, UC_X86_REG_ES, UC_X86_REG_SS): mu.reg_write(r, SEG)
     mu.reg_write(UC_X86_REG_SP, 0xFFFE)
     try: mu.emu_start(0x100, 0, count=200000)
@@ -43,16 +51,21 @@ def run(tail):
 
 
 ok = True
-for tail, want_v20, want_exit, want_path in [
-        ('', 0, (0x31, 0x00), 'C:\\W8X\\'),
-        (' /V', 1, (0x31, 0x00), 'C:\\W8X\\'),
-        (' /v', 1, (0x31, 0x00), 'C:\\W8X\\'),
-        (' /V D:\\LIB', 1, (0x31, 0x00), 'D:\\LIB\\'),
-        (' D:\\LIB', 0, (0x31, 0x00), 'D:\\LIB\\'),
-        (' /X', 0, (0x4C, 2), None)]:
-    r = run(tail)
+for tail, nec, want_v20, want_exit, want_path in [
+        ('', False, 0, (0x31, 0x00), 'C:\\W8X\\'),
+        ('', True, 1, (0x31, 0x00), 'C:\\W8X\\'),
+        (' /8', True, 0, (0x31, 0x00), 'C:\\W8X\\'),
+        (' /8 D:\\LIB', True, 0, (0x31, 0x00), 'D:\\LIB\\'),
+        (' /8', False, 0, (0x31, 0x00), 'C:\\W8X\\'),
+        (' D:\\LIB', True, 1, (0x31, 0x00), 'D:\\LIB\\'),
+        (' /V', False, 1, (0x31, 0x00), 'C:\\W8X\\'),
+        (' /v', False, 1, (0x31, 0x00), 'C:\\W8X\\'),
+        (' /V D:\\LIB', False, 1, (0x31, 0x00), 'D:\\LIB\\'),
+        (' D:\\LIB', False, 0, (0x31, 0x00), 'D:\\LIB\\'),
+        (' /X', False, 0, (0x4C, 2), None)]:
+    r = run(tail, nec)
     good = r['v20'] == want_v20 and r['exit'] == want_exit and (want_path is None or r['lpath'] == want_path)
     ok &= good
-    print('%-4s tail=%-12r v20=%d exit=%s lpath=%r err=%s' % ('ok' if good else 'FAIL', tail, r['v20'], r['exit'], r['lpath'], r.get('err')))
+    print('%-4s nec=%d tail=%-12r v20=%d exit=%s lpath=%r err=%s' % ('ok' if good else 'FAIL', nec, tail, r['v20'], r['exit'], r['lpath'], r.get('err')))
 print('OK' if ok else 'FAIL')
 sys.exit(0 if ok else 1)

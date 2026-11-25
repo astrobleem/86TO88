@@ -68,7 +68,10 @@ def call21(regs, ds_data=None):
     return mu.reg_read(UC_X86_REG_AX), mu.reg_read(UC_X86_REG_EFLAGS) & 1
 for mi, (d, path) in enumerate(specs):
     name = path.split('/')[-1]
-    full = ('C:\\WINDOWS\\' + ('SYSTEM\\' if d else '') + name).encode() + b'\0'
+    prefix = os.environ.get('OPEN_PREFIX')
+    if prefix is None:
+        prefix = 'C:\\WINDOWS' + ('\\SYSTEM' if d else '')
+    full = ((prefix.rstrip('\\') + '\\' if prefix else '') + name).encode() + b'\0'
     mu.mem_write(DSEG*16+0x100, full)
     ax, cf = call21({'AX': 0x3d00, 'DX': 0x100, 'DS': DSEG})
     print(name, 'open ax', ax, 'cf', cf, 'handles[0]', bytes(mu.mem_read(TS*16+L['handles'], 8)).hex())
@@ -102,5 +105,6 @@ for mi, (d, path) in enumerate(specs):
             elif typ in (5, 6): exp[o] = 0xCC
             else: exp[o] = 0xCD; exp[o+1] = 0xF8 + (mv & 7)
         print('  seg', s['n'], 'len', s['ln'], 'read', ax, 'match' if got == bytes(exp) else 'MISMATCH', sum(1 for a, b in zip(got, exp) if a != b))
+        assert got == bytes(exp), (name, s['n'], full, 'loader read was not patched as expected')
     call21({'AX': 0x3e00, 'BX': h, 'DS': DSEG})
 print('slots', struct.unpack('<6H', bytes(mu.mem_read(TS*16+L['slots'], 12))), 'arena_top', hex(struct.unpack('<H', bytes(mu.mem_read(TS*16+L['arena_top'], 2)))[0]))

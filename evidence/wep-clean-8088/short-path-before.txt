@@ -1,0 +1,8 @@
+WINMINE.EXE open ax 5 cf 0 handles[0] ffff000000000000
+  seg hdr len 1088 read 1088 match 0
+  seg 1 len 11038 read 11038 MISMATCH 909
+Traceback (most recent call last):
+  File "/workspace/scratch/f5a27a7a28fd/86TO88/tools/wep/unittest_io3.py", line 106, in <module>
+    assert got == bytes(exp), (name, s['n'], full, 'loader read was not patched as expected')
+           ^^^^^^^^^^^^^^^^^
+AssertionError: ('WINMINE.EXE', 1, b'C:\\GAME\\WINMINE.EXE\x00', 'loader read was not patched as expected')

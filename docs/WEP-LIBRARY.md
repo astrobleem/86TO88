@@ -1,6 +1,22 @@
 # Entertainment Pack games on a stock 8088: the module library
 
+**Latest 8088 follow-up:** [Clean interaction tests and short-path module lookup fix](WEP-CLEAN-8088.md). The inventory and historical results below are retained as an earlier record.
+
 Technical notes. The README links here; nothing in it depends on this file.
+
+**Fresh follow-up:** [DOSBox-X 8086-prefetch diagnostics](WEP-FRESH-DOSBOXX.md) are available separately; they are incomplete and are not MartyPC 8088 or physical-hardware results.
+
+
+
+**Historical test record, not a current all-pack pass claim.** This report describes
+the earlier `WM88X3` module-library tests. Since then, the separate `vbrun/`
+converter brought the Pack 2 JIGSAWED, RATTLER, RODENT and PIPE executables
+through gameplay on emulated V20 and 8088 cores. The older failures for those
+VB games below apply to the earlier `WM88X3`-only setup, not the converted VB
+runtime. **[See the November 2026 five-edition, 44-entry coverage audit](WEP-COVERAGE.md)**
+for all game titles, which versions were tried, launch-only results, Pack 4
+gaps and remaining historical failures. The latest media audit did not run
+new games or produce new emulator screenshots.
 
 The WM88 bridge started as one hard-coded patch table for `WINMINE.EXE`. This work
 generalises it: an offline analyzer finds every 80186 instruction in a Windows 3.x NE file,
@@ -33,6 +49,7 @@ direct flow (this removed a false `shr cl,0` inside a `mov ax,imm` in one game).
 | 5 / 6 | calling-convention push / leave | `INT 3` key, ctx-aware |
 | 7 | `imul reg,[ea],imm8` | |
 | 9 | `imul reg,[ea],imm16` | the immediate is read from the code stream by the handler |
+| 10 | `ENTER imm16,0` | experimental zero-nesting frame setup; requires the bridge from PR #4 on (3,991 bytes; 4,069 with CPU auto-detection) |
 | 8 | static byte patch | never trapped; used for the version stamp and similar |
 
 Immediates that are covered by a relocation fix-up are resolved by the generator rather
@@ -64,6 +81,9 @@ A pack's library is a handful of modules, 7-17 KB of images in total (Pack 1: 16
   Unicorn (tens of thousands of executions per module set: zero differences for
   `WINMINE`, `TETRAVEX` + `WEPUTIL`, and `VBRUN100`).
 * `tools/wep/unittest_io3.py` exercises the file-read patching, including conflict eviction.
+  It opens the files as `C:\WINDOWS\...`; set `OPEN_PREFIX` to open them from another directory
+  (`OPEN_PREFIX='C:\G'`, or `OPEN_PREFIX=` for a bare name), and it stops on any mismatch.
+  `tools/wep/unittest_paths3.py` runs it over several prefixes.
 * End to end in MartyPC, below.
 
 Dependencies: Python 3, `capstone`, `unicorn`. The tools take the original files as input;
@@ -96,8 +116,7 @@ These are real-mode limits, not bridge faults. Each was checked on a V20 with no
 * **Blackjack** is flagged protected-mode-only and contains no 80186 code at all. With the flag and the
   `GetWinFlags` gate patched it exits quietly; with the module loaded it corrupts memory, so it is not shipped.
 * **Chips** ("Insufficient memory to run this application").
-* **Rodent, Rattler, Jigsawed** use VBRUN100.DLL, which is flagged protected-mode-only. With the flag cleared Rodent hangs
-  on an 8088 and on a V20. Rattler and Jigsawed also hang on the hourglass.
+* **Rodent, Rattler, Jigsawed (older WM88X3-only attempt):** these use VBRUN100.DLL and did not run in the original module-library setup. **Superseded:** Pack 2 editions subsequently ran with the separately converted VBRUN100/FIELD100 runtime on MartyPC V20 and 8088 cores; see [vbrun/REPORT.md](../vbrun/REPORT.md). That newer result does not validate the Best of RODENT binary or every other build.
 * **Stones**: its style DLLs (`STONE00`..`STONEE03`) carry the protected-mode flag and the game reports that they
   are corrupted or missing; clearing the flag does not change that.
 
@@ -110,6 +129,11 @@ These are real-mode limits, not bridge faults. Each was checked on a V20 with no
    (Stones) need `w8lib.py add LIB FILE 1` for each DLL.
 3. Copy `LIB` into the guest and add `WM88X3.COM <libdir>` to `AUTOEXEC.BAT` before starting Windows
    (`artifacts/WM88X3.COM`, built by `src/build_tsr3.py`).
+   Command line: `WM88X3 [/V|/8] [libdir]`. At install it tells an NEC V20/V30 from an Intel
+   8088/8086 with `AAD 10h` (NEC ignores the operand). On a V20/V30 it leaves 80186 code native
+   and applies only the static byte patches; on an 8088 it rewrites as described above. `/8`
+   forces the 8088 rewriting, `/V` forces native. Checked with `unittest_install3.py` and by
+   reading the flag back after install on MartyPC's V20 (set) and 8088 (clear) models.
 
 The test-disk and emulator-runner scripts are not included: they are tied to a local
 MartyPC setup. MartyPC's CGA card crashes with turbo on; use normal speed.
@@ -120,3 +144,13 @@ Idlewild contains two `imul reg,[bp-4],imm16` instructions (opcode `69`). The fi
 handled the `6B` (imm8) form, so those two ran unpatched on the 8088 and Idlewild hung on the hourglass.
 Type 9 fixes that; its differential test passes. Running a game on a V20 with no bridge, as a reference, is what
 separated bridge faults from real-mode limits.
+
+A second loader bug, found later: when it built the module file name (`BASE.W8x`) from the
+opened path, it used the length of the directory part as the length of the file name. A game
+opened from a directory path shorter than its own name plus two characters (`C:\GAME\TETRAVEX.EXE`,
+or a bare name) got a truncated module name, so no module loaded and the game ran unpatched;
+TetraVex then stops with "Please obtain a newer version of WepUtil.DLL". Games under `C:\WINDOWS`
+were long enough to hide it. Fixed in `build_lpath` (found and fixed independently in PR #4 and PR #5, same three
+instructions); `unittest_io3.py` with `OPEN_PREFIX='C:\G'` shows 625 unpatched bytes in TetraVex
+before the fix and none after. Checked end to end with
+TetraVex in `C:\GAME` on MartyPC's 8088 core (CGA) and in DOSBox-X's Tandy machine (8086).
