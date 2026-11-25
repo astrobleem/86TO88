@@ -38,6 +38,16 @@ def collect(specs):
                     if nxt == 0xFFFF or guard > 5000: break
                     loc = nxt; guard += 1
             relocbytes = chain
+            # Windows 3.1-only USER exports that Windows 3.0 lacks (installable-driver API: OpenDriver 252,
+            # SendDriverMessage 251, CloseDriver 253).  Point those import records at the MMSYSTEM replacement DLL,
+            # which exports the same ordinals (src/build_glider_shims.py).  Only done for files that import MMSYSTEM.
+            mm_idx = next((i + 1 for i, n_ in enumerate(imports_of(data)) if n_ == 'MMSYSTEM'), 0)
+            user_idx = {i + 1 for i, n_ in enumerate(imports_of(data)) if n_ == 'USER'}
+            if mm_idx and 'reloc_fo' in seg:
+                for r, (at, rf, ro, mi_, val) in enumerate(relocs):
+                    if (rf & 3) == 1 and mi_ in user_idx and val in (251, 252, 253):
+                        entries.append(dict(mod=mi, seg=sg['seg'], segoff=0xFFFF, type=8, reg=0, srcreg=0, imm=mm_idx, len=2,
+                                            foff=seg['reloc_fo'] + 8 * r + 4))
             # real-mode gate: code that calls KERNEL.GetWinFlags (ordinal 132) and refuses to run unless WF_PMODE (bit 0) is set
             # -> NOP the following 'je' so it always continues as if in protected mode
             if kmod:
@@ -59,6 +69,24 @@ def collect(specs):
                                 off = loc + 4 + k + tst
                                 entries.append(dict(mod=mi, seg=sg['seg'], segoff=0xFFFF, type=8, reg=0, srcreg=0, imm=0x9090, len=2, foff=seg['fo'] + off))
                                 break
+            # version gate: code that calls KERNEL.GetVersion (ordinal 3) and refuses to run below Windows 3.10.  The usual
+            # Pascal/Delphi-style 'IsWinVersion(major, minor)' helper tests AL (major) then 'mov al,ah' (minor) against the
+            # argument; real-mode Windows 3.0 reports 3.00, so make the minor-version operand 0xFF ('mov al,0FFh').
+            if kmod:
+                for at, rf, ro, mi_, val in relocs:
+                    if (rf & 3) != 1 or mi_ != kmod or val != 3: continue
+                    loc = ro; guard = 0; locs = []
+                    while True:
+                        locs.append(loc)
+                        nxt = struct.unpack_from('<H', sb, loc)[0]
+                        if rf & 4 or nxt == 0xFFFF or guard > 500: break
+                        loc = nxt; guard += 1
+                    for loc in locs:
+                        if loc < 1 or sb[loc - 1] != 0x9A: continue
+                        k = bytes(sb[loc + 4: loc + 4 + 48]).find(b'\x8a\xc4\x32\xe4')   # mov al,ah ; xor ah,ah
+                        if k >= 0:
+                            entries.append(dict(mod=mi, seg=sg['seg'], segoff=0xFFFF, type=8, reg=0, srcreg=0, imm=0xFFB0, len=2,
+                                                foff=seg['fo'] + loc + 4 + k))
             def add(off, typ, reg, srcreg, imm, ln):
                 entries.append(dict(mod=mi, seg=sg['seg'], segoff=off, type=typ, reg=reg, srcreg=srcreg, imm=imm, len=ln, foff=seg['fo'] + off))
             for s in sg['sites']:
